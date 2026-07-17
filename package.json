@@ -1,0 +1,23 @@
+{
+  "name": "ugonote2",
+  "version": "1.0.0",
+  "description": "ブラウザで動くパラパラまんがエディタ（うごくノート2）",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:min": "node build.mjs --min",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm run build:min"
+  },
+  "license": "CC0-1.0",
+  "dependencies": {
+    "mediabunny": "^1.50.6",
+    "perfect-freehand": "^1.2.3",
+    "preact": "^10.29.7"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "typescript": "^6.0.3"
+  }
+}
