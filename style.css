@@ -489,7 +489,7 @@ body[data-vflip="1"] #flipWrap { transform: scaleX(-1); }
 #frameNo.xlong { font-size: 10.5px; letter-spacing: -0.55px; }
 #frameNo:active { background: var(--acc-soft); transform: scale(0.98); }
 .tgap { flex: 1 1 auto; min-width: 0; }
-#fs { --fcw: 86px; --fgap: 7px; height: 78px; overflow-x: auto; overflow-y: hidden; padding: 3px 10px 10px; scrollbar-width: thin; }
+#fs { --fcw: 86px; --fgap: 7px; height: 78px; overflow-x: auto; overflow-y: hidden; padding: 3px 10px 10px; scrollbar-width: thin; touch-action: pan-x; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; -webkit-touch-callout: none; }
 #fsTrack { position: relative; height: 100%; }
 body[data-tl="0"] #fs { display: none; }
 .fcell {
@@ -499,6 +499,7 @@ body[data-tl="0"] #fs { display: none; }
   box-shadow: 0 2px 6px rgba(120, 80, 40, 0.16);
 }
 .fcell canvas { width: 100%; height: 100%; border-radius: 7px; image-rendering: pixelated; background: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06); }
+.fcell, .fcell canvas, #fsGhost, #fsGhost canvas { -webkit-user-drag: none; }
 .fcell.on { border-color: var(--acc); background: var(--acc-soft); box-shadow: 0 0 0 3px var(--acc-soft), 0 4px 12px rgba(255, 122, 26, 0.3); }
 .fcell.inab { border-bottom-color: var(--acc2); }
 .fcell .fno { position: absolute; left: 3px; top: 2px; font-size: 10.5px; font-weight: 900; color: #fff; background: var(--acc); border-radius: 6px; padding: 0 5px; pointer-events: none; }
