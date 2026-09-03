@@ -366,6 +366,14 @@ function r_frameinfo(): void {
   frame_no.title = frame_current + ' / ' + frame_count + '。番号を指定して移動'
   frame_no.setAttribute('aria-label', frame_no.title)
   const canDelete = frame_count > 1
+  const firstButton = q<HTMLButtonElement>('homeBtn')
+  const lastButton = q<HTMLButtonElement>('lastBtn')
+  firstButton.classList.toggle('off', frame_current === 1)
+  firstButton.disabled = frame_current === 1
+  firstButton.setAttribute('aria-disabled', frame_current === 1 ? 'true' : 'false')
+  lastButton.classList.toggle('off', frame_current === frame_count)
+  lastButton.disabled = frame_current === frame_count
+  lastButton.setAttribute('aria-disabled', frame_current === frame_count ? 'true' : 'false')
   const deleteButton = q<HTMLButtonElement>('delBtn')
   deleteButton.classList.toggle('off', !canDelete)
   deleteButton.disabled = !canDelete
@@ -598,6 +606,8 @@ function r_dock(): void {
   q('dockMain').classList.toggle('on', t === T_PEN)
   const d = TOOL_DEFS.find(x => x.t === t)
   const main = q('dockMain')
+  main.classList.toggle('hasopts', tool_has_options(t) ? true : false)
+  main.title = d && tool_has_options(t) ? d.label + 'の設定' : 'ほかのどうぐ'
   const cur = main.dataset.ic || ''
   if (d && cur !== d.icon) {
     main.dataset.ic = d.icon

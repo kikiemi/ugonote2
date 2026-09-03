@@ -21,13 +21,16 @@ export const TOOL_DEFS: { t: number, icon: string, label: string, key: string }[
 ]
 
 const RAIL_SEP_BEFORE = new Map<number, string>([[T_LINE, 'ずけい'], [T_TEXT, 'もじ'], [T_SELECT, 'はんい'], [T_HAND, 'いどう']])
+const OPTION_TOOLS = new Set([T_PEN, T_ERASER, T_FILL, T_PIXEL, T_LINE, T_RECT, T_CIRCLE, T_STAR, T_HEART, T_SELECT, T_LASSO])
 
 function rail(): string {
   let s = '<i class="rsep" aria-hidden="true">かく</i>'
   for (const d of TOOL_DEFS) {
     const sec = RAIL_SEP_BEFORE.get(d.t)
     if (sec !== undefined) s += `<i class="rsep" aria-hidden="true">${sec}</i>`
-    s += `<button class="rb" id="tl_${d.t}" data-t="${d.t}" title="${d.label}${d.key ? ' (' + d.key + ')' : ''}">${ic(d.icon)}<i class="rlbl">${d.label}</i></button>`
+    const options = OPTION_TOOLS.has(d.t)
+    const hint = options ? '・選択中にもう一度押すと設定' : ''
+    s += `<button class="rb${options ? ' hasopts' : ''}" id="tl_${d.t}" data-t="${d.t}" title="${d.label}${d.key ? ' (' + d.key + ')' : ''}${hint}"${options ? ' aria-haspopup="dialog"' : ''}>${ic(d.icon)}<i class="rlbl">${d.label}</i></button>`
   }
   s += `<button class="rb" id="tfBtn" title="うごかす（スライド・かいてん・かくだい）">${ic('zoomin')}<i class="rlbl">うごかす</i></button>`
   return `<div class="rtools" id="railTools">${s}</div>
@@ -111,6 +114,14 @@ function color_pop(): string {
 
 function layer_pop(): string {
   return `<div id="layerRows"></div>
+  <div class="photoTools">
+    <div class="photoToolsHead">${ic('image')}<span><b>写真レイヤー</b><small>参考画像や下書きを置く</small></span></div>
+    <div class="prow tgl3">
+      <button class="pbtn primary" id="photoLayerBtn" title="画像を写真レイヤーへ追加">${ic('image')}画像を追加</button>
+      <button class="pbtn" id="photoDraftBtn" title="写真レイヤーを下書き表示にする">${ic('eye')}<span>下書き35%</span></button>
+      <button class="pbtn warn" id="photoClearBtn" title="いまのコマの写真を消去">${ic('trash')}写真を消去</button>
+    </div>
+  </div>
   <div class="prow tgl3">
     <button class="pbtn" id="mergeBtn" title="いまのレイヤーを下と結合">${ic('mergedown')}下と結合</button>
     <button class="pbtn" id="lclearBtn" title="いまのレイヤーを消去">${ic('trash')}消去</button>
@@ -249,22 +260,24 @@ export function shell_build(root: HTMLElement): void {
     <button class="hbtn" id="tutBtn" title="つかいかた">${ic('help')}</button>
   </header>
   <div id="mainRow">
-    <div id="modePill" class="mOnly">
-    <button class="mp" id="mp_draw">${ic('pen')}<i>かく</i></button>
-    <button class="mp" id="mp_fill">${ic('fill')}<i>ぬる</i></button>
-    <button class="mp" id="mp_shape">${ic('rect')}<i>図形</i></button>
-    <button class="mp" id="mp_text">${ic('text')}<i>もじ</i></button>
-  </div>
-  <div id="dock" class="mOnly">
-    <div id="dockRow">
-      <button class="dkb" id="dockMore" title="ほかのどうぐ">${ic('menu')}</button>
-      <button class="dkb" id="dockEraser" title="けしごむ">${ic('eraser')}</button>
-      <button class="dkb main" id="dockMain" title="いまのどうぐ">${ic('pen')}</button>
-      <button class="dkb" id="dockColor" title="いろ"><span class="chip" id="dockChip"></span></button>
-      <button class="dkb" id="dockSize" title="ふとさ"><span class="dotwrap"><span class="dot" id="dockDot"></span></span></button>
+    <div id="mobileTools" class="mOnly">
+      <div id="modePill">
+        <button class="mp hasopts" id="mp_draw" title="選択中にもう一度押すとペン設定" aria-haspopup="dialog">${ic('pen')}<i>かく</i></button>
+        <button class="mp hasopts" id="mp_fill" title="選択中にもう一度押すとぬり設定" aria-haspopup="dialog">${ic('fill')}<i>ぬる</i></button>
+        <button class="mp hasopts" id="mp_shape" title="選択中にもう一度押すと図形設定" aria-haspopup="dialog">${ic('rect')}<i>図形</i></button>
+        <button class="mp" id="mp_text">${ic('text')}<i>もじ</i></button>
+      </div>
+      <div id="dock">
+        <div id="dockRow">
+          <button class="dkb" id="dockMore" title="ほかのどうぐ">${ic('menu')}</button>
+          <button class="dkb" id="dockEraser" title="けしごむ">${ic('eraser')}</button>
+          <button class="dkb main hasopts" id="dockMain" title="選択中にもう一度押すと設定" aria-haspopup="dialog">${ic('pen')}</button>
+          <button class="dkb" id="dockColor" title="いろ"><span class="chip" id="dockChip"></span></button>
+          <button class="dkb" id="dockSize" title="ふとさ"><span class="dotwrap"><span class="dot" id="dockDot"></span></span></button>
+        </div>
+        <div id="dockColors"></div>
+      </div>
     </div>
-    <div id="dockColors"></div>
-  </div>
   <nav id="rail">${rail()}</nav>
     <div id="stageWrap">
       <div id="flipWrap"><div id="stagePan">
@@ -275,6 +288,7 @@ export function shell_build(root: HTMLElement): void {
         <canvas id="floCv"></canvas>
       </div></div>
       <div id="quick">
+        <button class="qb pcImageQuick" id="photoQuickBtn" title="画像を写真レイヤーへ追加">${ic('image')}<i class="qlbl">画像</i></button>
         <button class="qb" id="layerBtn" title="レイヤー">${ic('layers')}<i class="qlbl">レイヤー</i><b id="layerTag">A</b></button>
         <button class="qb" id="onionBtn" title="オニオンスキン">${ic('onion')}<i class="qlbl">オニオン</i></button>
         <button class="qb" id="gridBtn" title="グリッド">${ic('grid')}<i class="qlbl">グリッド</i></button>
@@ -301,6 +315,7 @@ export function shell_build(root: HTMLElement): void {
         <button class="tb" id="prevBtn" title="前のコマ">${ic('prev')}</button>
         <button class="tb primary" id="playBtn" title="再生/停止 (Space)">${ic('play')}</button>
         <button class="tb" id="nextBtn" title="次のコマ">${ic('next')}</button>
+        <button class="tb" id="lastBtn" title="さいごのコマへ">${ic('last')}</button>
       </div>
       <div class="tlGroup tlLoop">
         <button class="tb" id="loopBtn" title="ループ">${ic('loop')}</button>
@@ -362,7 +377,7 @@ export function shell_build(root: HTMLElement): void {
           <div class="phint">えらんだマークはキャンバスに配置して、回転・拡大できます</div>
         </div>
         <div class="pop" id="popOnion"><div class="popHead"><b>オニオンスキン</b><button class="popx" title="とじる">✕</button></div><div class="prow"><span class="plab">まえ後の枚数</span><input type="range" id="onionCount" min="0" max="3" step="1"><b id="onionCountVal"></b></div></div>
-        <div class="pop" id="popSettings"><div class="popHead"><b>せってい</b><button class="popx" title="とじる">✕</button></div>
+        <div class="pop" id="popSettings"><div class="popHead"><b class="popTitleIcon">${ic('gear')}設定</b><button class="popx" title="とじる">✕</button></div>
           <div class="pbk"><div class="plab">筆箱（つかえるどうぐ）</div>
             <div class="prow tgl3">
               <button class="tgl" id="kitAdv">上級筆箱</button>

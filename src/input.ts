@@ -30,6 +30,7 @@ const FS_EDGE = 62
 const FS_SPEED = 17
 type FsDrag = {
   on: number
+  scrolling: number
   from: number
   to: number
   timer: ReturnType<typeof setTimeout> | 0
@@ -45,7 +46,7 @@ type FsDrag = {
   raf: number
   lock: number
 }
-const FS_DRAG_IDLE: FsDrag = { on: 0, from: -1, to: -1, timer: 0, sx: 0, sy: 0, x: 0, y: 0, sl: 0, ghost: null, pointerId: -1, captured: 0, touchId: -1, raf: 0, lock: 0 }
+const FS_DRAG_IDLE: FsDrag = { on: 0, scrolling: 0, from: -1, to: -1, timer: 0, sx: 0, sy: 0, x: 0, y: 0, sl: 0, ghost: null, pointerId: -1, captured: 0, touchId: -1, raf: 0, lock: 0 }
 let fsDrag: FsDrag = { ...FS_DRAG_IDLE }
 let onionLp: ReturnType<typeof setTimeout> | 0 = 0
 let onionLpFired = 0
@@ -109,6 +110,10 @@ function frame_home(): void {
   if (dispatch('frame.goto', 0) === 0) sfx_play('tap')
 }
 
+function frame_last(): void {
+  if (dispatch('frame.goto', st().doc.frames.length - 1) === 0) sfx_play('tap')
+}
+
 function frame_duplicate(): void {
   dispatch('frame.dup', null)
 }
@@ -137,6 +142,7 @@ function tl_more_open(): void {
   const button = q('tlMoreBtn')
   const items = [
     { label: tr('さいしょのコマへ'), icon: 'skipback', fn: frame_home, off: g.doc.cur === 0 ? 1 : 0 },
+    { label: tr('さいごのコマへ'), icon: 'last', fn: frame_last, off: g.doc.cur === g.doc.frames.length - 1 ? 1 : 0 },
     { label: tr(g.doc.loop ? 'ループを解除' : 'ループ再生'), icon: 'loop', fn: loop_toggle },
     { label: tr('A-B区間ループ'), icon: 'ab', fn: ab_cycle },
     { label: tr('このコマの表示時間'), icon: 'clock', fn: () => hold_toggle(button) },
@@ -152,7 +158,7 @@ function tl_more_open(): void {
 }
 
 function fs_drag_clear(): void {
-  if (fsDrag.pointerId < 0 && fsDrag.touchId < 0 && !fsDrag.timer && !fsDrag.ghost) return
+  if (fsDrag.pointerId < 0 && fsDrag.touchId < 0 && !fsDrag.timer && !fsDrag.ghost && !fsDrag.scrolling) return
   if (fsDrag.timer) clearTimeout(fsDrag.timer)
   if (fsDrag.raf) cancelAnimationFrame(fsDrag.raf)
   const fs = fsRoot
@@ -296,6 +302,7 @@ function fs_press(fs: HTMLElement, cell: HTMLElement, x: number, y: number): num
   fsDrag.from = from
   fsDrag.to = from
   fsDrag.on = 0
+  fsDrag.scrolling = 0
   fsDrag.sx = x
   fsDrag.sy = y
   fsDrag.x = x
@@ -345,6 +352,10 @@ function fs_pointer(fs: HTMLElement): void {
       if (!t) return
       const cell = fs_closest_cell(t.target)
       if (!cell) return
+      // iOS Safari must be told at the start of the gesture that the app owns
+      // it. Horizontal scrolling is reproduced below until a long press turns
+      // the same gesture into a frame reorder.
+      if (e.cancelable) e.preventDefault()
       fs_drag_clear()
       if (!fs_press(fs, cell, t.clientX, t.clientY)) return
       const from = fsDrag.from
@@ -359,28 +370,49 @@ function fs_pointer(fs: HTMLElement): void {
         fs_drag_begin(cell)
       }, LONGPRESS_MS)
     },
-    { passive: true }
+    { passive: false }
   )
-  fs.addEventListener(
+  window.addEventListener(
     'touchmove',
     e => {
       if (fsDrag.touchId < 0 || fsDrag.from < 0) return
       const t = fs_touch_of(e.touches)
       if (!t) return
-      if (fsDrag.on && e.cancelable) e.preventDefault()
+      if (e.cancelable) e.preventDefault()
+      if (!fsDrag.on) {
+        const dx = t.clientX - fsDrag.sx
+        const dy = t.clientY - fsDrag.sy
+        if (!fsDrag.scrolling && Math.hypot(dx, dy) > DRAG_SLOP) {
+          if (fsDrag.timer) clearTimeout(fsDrag.timer)
+          fsDrag.timer = 0
+          fsDrag.scrolling = 1
+        }
+        if (fsDrag.scrolling) {
+          const max = Math.max(0, fs.scrollWidth - fs.clientWidth)
+          fs.scrollLeft = clamp(fsDrag.sl - dx, 0, max)
+          fsDrag.x = t.clientX
+          fsDrag.y = t.clientY
+          return
+        }
+      }
       fs_drag_track(t.clientX, t.clientY)
     },
-    { passive: false }
+    { passive: false, capture: true }
   )
   const touch_finish = (e: TouchEvent): void => {
     if (fsDrag.touchId < 0 || fsDrag.from < 0) return
     const t = fs_touch_of(e.changedTouches)
     if (!t) return
-    if (fsDrag.on && e.cancelable) e.preventDefault()
+    if (e.cancelable) e.preventDefault()
+    if (fsDrag.scrolling) {
+      fs_drag_clear()
+      return
+    }
+    if (fsDrag.on) fs_drag_track(t.clientX, t.clientY)
     fs_drag_finish(fs_closest_cell(t.target), e.type === 'touchcancel' ? 1 : 0)
   }
-  fs.addEventListener('touchend', touch_finish, { passive: false })
-  fs.addEventListener('touchcancel', touch_finish, { passive: false })
+  window.addEventListener('touchend', touch_finish, { passive: false, capture: true })
+  window.addEventListener('touchcancel', touch_finish, { passive: false, capture: true })
   const move = (e: PointerEvent): void => {
     if (fsDrag.touchId >= 0 || e.pointerId !== fsDrag.pointerId || fsDrag.from < 0) return
     fs_drag_track(e.clientX, e.clientY)
@@ -660,7 +692,12 @@ function layer_pop_events(): void {
     }
     const pick = (e.target as HTMLElement).closest('.lpick') as HTMLElement | null
     if (pick) {
-      dispatch('pen.set_layer', Number(pick.dataset.l))
+      const layer = Number(pick.dataset.l)
+      if (layer === 0) {
+        q('photoLayerBtn').click()
+        return
+      }
+      dispatch('pen.set_layer', layer)
       sfx_play('tap')
     }
   })
@@ -765,14 +802,24 @@ let lastShape = T_RECT
 
 function mobile_ui_events(): void {
   const g = st()
-  q('mp_draw').addEventListener('click', () => tool_pick(T_PEN))
-  q('mp_fill').addEventListener('click', () => tool_pick(T_FILL))
+  const pick_or_options = (id: string, tool: number): void => {
+    const button = q(id)
+    if (st().pen.tool === tool && tool_has_options(tool)) {
+      pop_toggle('popTool', button)
+      return
+    }
+    tool_pick(tool)
+  }
+  q('mp_draw').addEventListener('click', () => pick_or_options('mp_draw', T_PEN))
+  q('mp_fill').addEventListener('click', () => pick_or_options('mp_fill', T_FILL))
   q('mp_text').addEventListener('click', () => tool_pick(T_TEXT))
   q('mp_shape').addEventListener('click', () => {
     const t = g.pen.tool
     const i = SHAPES.indexOf(t)
     if (i >= 0) {
-      lastShape = SHAPES[(i + 1) % SHAPES.length]
+      lastShape = t
+      pop_toggle('popTool', q('mp_shape'))
+      return
     }
     tool_pick(lastShape)
   })
@@ -780,10 +827,11 @@ function mobile_ui_events(): void {
   q('sbC').addEventListener('click', () => dispatch('sel.copy', null))
   q('sbX').addEventListener('click', () => dispatch('sel.cut', null))
   q('sbQ').addEventListener('click', () => dispatch('sel.clear', null))
-  q('dockEraser').addEventListener('click', () => tool_pick(T_ERASER))
+  q('dockEraser').addEventListener('click', () => pick_or_options('dockEraser', T_ERASER))
   q('dockMain').addEventListener('click', () => {
-    if (g.pen.tool === T_PEN) pop_toggle('popTool', q('dockMain'))
-    else tool_pick(T_PEN)
+    const t = st().pen.tool
+    if (tool_has_options(t)) pop_toggle('popTool', q('dockMain'))
+    else rail_sheet(1)
   })
   q('dockColor').addEventListener('click', () => pop_toggle('popColor', q('dockColor')))
   q('dockSize').addEventListener('click', () => pop_toggle('popTool', q('dockSize')))
@@ -870,6 +918,7 @@ function tl_events(): void {
     if (dispatch('frame.step', 1) === 0) sfx_play('tap')
   })
   q('homeBtn').addEventListener('click', frame_home)
+  q('lastBtn').addEventListener('click', frame_last)
   q('frameNo').addEventListener('click', () => {
     dispatch('play.stop', null)
     modal_prompt_num('コマへジャンプ', '何コマ目にとぶ？（1〜' + g.doc.frames.length + '）', g.doc.cur + 1, 1, g.doc.frames.length, v => {
@@ -1062,12 +1111,20 @@ function zoom_step(f: number): void {
 }
 
 function pop_chrome_events(): void {
-  q('popScrim').addEventListener('click', () => {
+  const close_all = (e?: Event): void => {
+    if (e?.cancelable) e.preventDefault()
+    e?.stopPropagation()
     pop_close()
     rail_sheet(0)
-  })
+  }
+  q('popScrim').addEventListener('pointerdown', close_all)
+  q('popScrim').addEventListener('click', close_all)
   const pops = document.querySelectorAll('.pop .popx')
-  for (let i = 0; i < pops.length; i++) (pops[i] as HTMLElement).addEventListener('click', pop_close)
+  for (let i = 0; i < pops.length; i++) {
+    const close = pops[i] as HTMLElement
+    close.addEventListener('pointerdown', close_all)
+    close.addEventListener('click', close_all)
+  }
 }
 
 function outside_close(): void {
@@ -1142,6 +1199,12 @@ export function input_mount(): void {
   window.addEventListener('keyup', keyup)
   window.addEventListener('blur', input_interrupt)
   window.addEventListener('pagehide', input_interrupt)
+  window.addEventListener('orientationchange', () => {
+    input_interrupt()
+    pop_close()
+    rail_sheet(0)
+    ctx_hide()
+  }, { passive: true })
   window.addEventListener('resize', view_fit_if_stale)
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(view_fit_if_stale).observe(q('stageWrap'))
@@ -1152,4 +1215,3 @@ export function input_mount(): void {
     store_save_auto()
   })
 }
-

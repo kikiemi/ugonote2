@@ -67,6 +67,14 @@ function commit_pixels(g: Globals, p: PixelCommit): number {
   return 0
 }
 
+function clear_layer(g: Globals, layer: number): number {
+  if (!Number.isInteger(layer) || layer < 0 || layer >= g.doc.frames[g.doc.cur].pk.length) return ERR_BAD
+  stop_if_playing(g)
+  const before = rect_grab(layer, 0, 0, g.doc.w, g.doc.h)
+  live_slot(layer).clearRect(0, 0, g.doc.w, g.doc.h)
+  return commit_pixels(g, { grp: hist_grp(), frame: g.doc.cur, changes: [{ layer, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before }] })
+}
+
 export type Cmds = {
   'frame.goto': number
   'frame.step': number
@@ -94,6 +102,7 @@ export type Cmds = {
   'layer.reorder_swap': { i: number, j: number }
   'layer.set_alpha': { l: number, a255: number }
   'layer.clear': null
+  'layer.clear_at': number
   'layer.copy_to': number
   'layer.merge_down': null
   'layer.add': null
@@ -409,12 +418,10 @@ export const FRAME_COMMANDS = {
   },
 
   'layer.clear': (g: Globals, _p: null): number => {
-    stop_if_playing(g)
-    const layer = g.pen.layer
-    const before = rect_grab(layer, 0, 0, g.doc.w, g.doc.h)
-    live_slot(layer).clearRect(0, 0, g.doc.w, g.doc.h)
-    return commit_pixels(g, { grp: hist_grp(), frame: g.doc.cur, changes: [{ layer, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before }] })
+    return clear_layer(g, g.pen.layer)
   },
+
+  'layer.clear_at': (g: Globals, layer: number): number => clear_layer(g, layer),
 
   'layer.copy_to': (g: Globals, dst: number): number => {
     const src = g.pen.layer
@@ -620,6 +627,7 @@ export const FRAME_EFFECTS: Partial<Record<keyof Cmds, number>> = {
   'layer.reorder_swap': D_STAGE | D_LAYER,
   'layer.set_alpha': D_STAGE | D_LAYER,
   'layer.clear': D_PIXELS,
+  'layer.clear_at': D_PIXELS | D_LAYER,
   'layer.copy_to': D_PIXELS,
   'layer.merge_down': D_PIXELS | D_LAYER,
   'layer.add': D_LAYER | D_STAGE | D_TOOLS,
@@ -638,7 +646,7 @@ export const FRAME_TOUCH = new Set<keyof Cmds>([
   'frame.add', 'frame.dup', 'frame.del', 'frame.paste', 'frame.move', 'frame.add_many',
   'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.delete_range',
   'frame.reverse_range', 'frame.duplicate_range', 'frame.commit_pixels', 'history.undo', 'history.redo',
-  'layer.toggle_visible', 'layer.reorder_swap', 'layer.set_alpha', 'layer.clear', 'layer.copy_to', 'layer.merge_down', 'layer.add', 'layer.delete',
+  'layer.toggle_visible', 'layer.reorder_swap', 'layer.set_alpha', 'layer.clear', 'layer.clear_at', 'layer.copy_to', 'layer.merge_down', 'layer.add', 'layer.delete',
   'doc.set_name', 'doc.set_paper', 'doc.set_fps_idx', 'doc.toggle_loop', 'doc.set_loop_a', 'doc.set_loop_b',
   'doc.clear_loop_ab', 'doc.set_meta',
 ])

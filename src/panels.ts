@@ -28,7 +28,7 @@ import {
   type Frame,
 } from './h'
 import { canvas_make, clamp, file_pick, rle_pack } from './lib'
-import { layer_name, mode_canvas, mode_frame_limit, mode_name, mode_order } from './mode'
+import { layer_name, mode_allows_layer_alpha, mode_canvas, mode_frame_limit, mode_name, mode_order } from './mode'
 import { store_delete, store_list, store_load_key, store_save_slot } from './persist'
 import { pref_theme_toggle, pref_uisfx_toggle } from './prefs'
 import { snd_bgm_preview, snd_recording, snd_se_preview, snd_stop_all, sfx_play } from './snd'
@@ -40,6 +40,7 @@ import { transition_insert } from './trans'
 import { file_open, file_save, modal_export, rec_kind, rec_toggle, recsync_toggle } from './ui/export_ui'
 import { flipnote_maker_pick } from './ui/flipnote_maker'
 import { image_file_decode } from './ui/image_file'
+import { drawer_set, pop_close } from './ui/overlay'
 import { modal_animation_assist } from './ui/animation_assist'
 import { modal_addmany, modal_close, modal_confirm, modal_goto, modal_is_open, modal_open, modal_progress, modal_set_cleanup } from './ui/modal'
 import { anim_stop } from './ui/playback'
@@ -279,6 +280,9 @@ function photo_import(): void {
         context.imageSmoothingQuality = 'high'
         source.draw(context, 0, 0, width, height)
         const globals = st()
+        if (q('drawer').classList.contains('on')) drawer_set(0)
+        pop_close()
+        if (!globals.doc.lvis[L_P]) dispatch('layer.toggle_visible', L_P)
         dispatch('view.set_page', 'canvas')
         if (dispatch('flo.begin_image', { canvas, kind: K_PHOTO, x: globals.doc.w / 2, y: globals.doc.h / 2, continuous: 0 }) < 0) throw new Error('image placement command was rejected')
         toast('ドラッグで位置、ボタンで回転・大きさ、✓で決定')
@@ -861,6 +865,28 @@ export function panels_mount(): void {
   bind('saveFileBtn', file_save)
   bind('exportBtn', () => modal_export())
   bind('photoBtn', photo_import)
+  bind('photoQuickBtn', photo_import)
+  bind('photoLayerBtn', photo_import)
+  bind('photoDraftBtn', () => {
+    const g = st()
+    if (!mode_allows_layer_alpha(g.doc.mode)) {
+      toast('このモードでは写真の透明度を変えられないよ')
+      return
+    }
+    if (!g.doc.lvis[L_P]) dispatch('layer.toggle_visible', L_P)
+    const draft = g.doc.lalpha[L_P] >= 250
+    dispatch('layer.set_alpha', { l: L_P, a255: draft ? Math.round(255 * 0.35) : 255 })
+    toast(draft ? '写真を下書き表示にしました' : '写真を100%表示に戻しました')
+    sfx_play('tap')
+  })
+  bind('photoClearBtn', () => {
+    if (dispatch('layer.clear_at', L_P) < 0) {
+      toast('このコマに写真はないよ')
+      return
+    }
+    toast('写真レイヤーを消しました')
+    sfx_play('del')
+  })
   bind('videoBtn', video_import)
   bind('zipInBtn', zip_import)
   bind('flipInBtn', flip_import_ui)

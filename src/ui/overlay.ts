@@ -18,12 +18,11 @@ export function pop_close_hook(fn: (id: string) => void): void {
 }
 
 export function pop_close(): void {
-  if (!openPop) return
   const was = openPop
-  q(openPop).classList.remove('on')
+  for (const pop of document.querySelectorAll<HTMLElement>('.pop.on')) pop.classList.remove('on')
   q('popScrim').classList.remove('on')
   openPop = ''
-  if (onPopClose) onPopClose(was)
+  if (was && onPopClose) onPopClose(was)
 }
 
 export function pop_open(id: string, anchor: HTMLElement): void {

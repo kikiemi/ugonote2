@@ -26,7 +26,7 @@ function layer_row(layer: number, index: number, count: number, alphaOk: number)
     h('button', { class: 'lbtn leye', 'data-l': layer, title: '表示/非表示' }, icon(visible ? 'eye' : 'eyeoff')),
     h(
       'button',
-      { class: 'lpick', 'data-l': layer },
+      { class: 'lpick' + (layer === L_P ? ' lphotoPick' : ''), 'data-l': layer, title: layer === L_P ? '画像を写真レイヤーへ追加' : 'このレイヤーに描く' },
       h('span', { class: 'lchip', style: 'width:12px;height:12px;border-radius:4px;background:' + L_TINTS[layer] }),
       layer_name(layer)
     ),
@@ -47,4 +47,11 @@ export function layer_panel_render(): void {
   const normal = g.doc.mode === MODE_NORMAL
   q('laddBtn').classList.toggle('off', !normal || g.doc.lord.length >= L_DRAW_MAX)
   q('ldelBtn').classList.toggle('off', !normal || g.pen.layer <= L_DRAW_DEFAULT)
+  const draft = q('photoDraftBtn')
+  const draftOn = alphaOk && g.doc.lalpha[L_P] < 250
+  draft.classList.toggle('on', draftOn ? true : false)
+  draft.classList.toggle('off', alphaOk ? false : true)
+  const draftLabel = draft.querySelector('span')
+  if (draftLabel) draftLabel.textContent = draftOn ? '100%に戻す' : '下書き35%'
+  q('photoClearBtn').classList.toggle('off', g.doc.frames[g.doc.cur].pk[L_P] ? false : true)
 }

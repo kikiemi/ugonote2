@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ug2-3.3.4'
+const CACHE_NAME = 'ug2-3.3.10'
 const CORE_ASSETS = [
   './',
   './index.html',
