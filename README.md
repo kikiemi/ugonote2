@@ -418,43 +418,6 @@ http://localhost:8080/
 
 ---
 
-## アーキテクチャの概要
-
-詳しい責務分担と変更時の規則は[ARCHITECTURE.md](./ARCHITECTURE.md)にまとめています。
-
-```text
-src/
-├─ main.ts              起動と各モジュールの結線
-├─ binary.ts            バイナリ入出力とCRC32
-├─ shell.ts             画面の基本構造
-├─ input.ts             UIイベントとショートカット
-├─ animset.ts           再生時エフェクト設定の正規化
-├─ animfx.ts            コマを増やさない手描きゆらぎと動作合成
-├─ animout.ts           再生時エフェクトを各書き出し形式の出力tickへ展開
-├─ assist.ts            端末内の絵分析と移動量推定
-├─ state/               編集状態、コマンド、再描画通知
-├─ ui/                  モーダル、パネル、入力、再生、画像変換UI
-├─ flipnote/            実機色変換、制約維持、音声前処理
-├─ codec/               PPM / KWZの読み書き、署名、音声圧縮
-├─ doc.ts               フレーム・レイヤー・合成
-├─ engine.ts            実行時Canvasキャッシュ
-├─ hist.ts              Undo / Redo
-├─ tool.ts              描画ツール
-├─ brush.ts             ブラシ処理
-├─ sel.ts               選択と変形
-├─ snd.ts               音声管理
-├─ effect.ts            エフェクト
-├─ trans.ts             トランジション生成
-├─ fmt.ts               .ugn2プロジェクト形式
-├─ persist.ts           IndexedDB、自動保存、保存スロット
-├─ storage.ts           Local Storageの安全な読み書き
-├─ diagnostics.ts       警告・エラー診断の共通処理
-├─ vid.ts / gif.ts      動画・GIF書き出し
-├─ worker.ts            重い変換処理用Worker
-└─ lang.ts              日本語・英語UI
-```
-
----
 
 ## プロジェクト構成
 
