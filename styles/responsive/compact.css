@@ -1,0 +1,332 @@
+@media (max-width: 620px) {
+  #popTool,
+  #popColor,
+  #rail {
+    inset: 0px;
+    transform: none;
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0px;
+    outline: 0px;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .strokeSample {
+    margin: 0px 14px 6px;
+  }
+  .strokeSample canvas {
+    height: 56px;
+  }
+  #toolOptions,
+  #rail .toolboxBody {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .toolPageTabs button {
+    border-width: 2px;
+  }
+  .rtools {
+    grid-template-columns: repeat(3, minmax(0px, 1fr));
+    gap: 12px 6px;
+  }
+  .rfix {
+    padding: 12px 10px;
+    gap: 5px;
+  }
+  .rfix .rb {
+    flex-direction: column;
+    min-height: 58px;
+    gap: 2px;
+    border-width: 2px;
+    border-radius: 14px;
+  }
+  .rfix .rlbl {
+    font-size: 11px;
+  }
+  #drawerBody {
+    padding: 20px 14px 28px;
+  }
+  .menuActions {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .menuAction {
+    min-height: 82px;
+    padding: 12px 14px;
+  }
+  .soundTracks {
+    grid-template-columns: 1fr;
+  }
+  .soundSlot {
+    padding: 14px;
+  }
+  .soundButtons .sbtn {
+    font-size: 12px;
+    min-height: 52px;
+  }
+  .soundSlotHead {
+    margin-bottom: 10px;
+  }
+  .exportHead {
+    padding: 8px 12px;
+  }
+  .exportHead .mhead {
+    font-size: 18px;
+  }
+  .exportHead .popx {
+    font-size: 12px;
+    padding: 0px 10px;
+  }
+  #exportContent {
+    padding: 6px 14px 16px;
+  }
+  .formatCopy b {
+    font-size: 16px;
+  }
+  .formatCopy small {
+    font-size: 12px;
+  }
+  .fmgrid,
+  .aagrid {
+    grid-template-columns: 1fr;
+  }
+  .aapreview {
+    position: static;
+  }
+  .aapreview canvas,
+  #fmPreview {
+    max-width: 340px;
+    margin: auto;
+  }
+  .lrow {
+    gap: 3px;
+  }
+  .lbtn {
+    width: 32px;
+  }
+  .lrow input[type="range"] {
+    width: 45px;
+  }
+  .mbox {
+    padding: 16px;
+  }
+  .efgrid {
+    grid-template-columns: repeat(3, minmax(0px, 1fr));
+  }
+  .palgrid {
+    gap: 5px;
+  }
+  #drawerHead {
+    min-height: 60px;
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  #menuHeading {
+    font-size: 22px;
+  }
+  #drawerHead .hbtn {
+    padding: 0px 10px;
+    font-size: 13px;
+  }
+  #drawer[data-page="home"] #menuHomeBack {
+    display: none;
+  }
+  #menuHome {
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 20px;
+    padding: 16px 14px 10px;
+  }
+  .menuNotebook {
+    display: grid;
+    grid-template-columns: 128px minmax(0px, 1fr);
+    gap: 12px;
+    align-items: center;
+  }
+  .noteAlbum {
+    grid-area: 1 / 1;
+    margin: 0px;
+    width: 128px;
+  }
+  .notePreview canvas {
+    max-height: 100px;
+  }
+  .noteCaption {
+    grid-area: 1 / 2;
+    text-align: left;
+    gap: 5px;
+  }
+  .noteCaption b {
+    font-size: 18px;
+  }
+  .noteCaption small {
+    font-size: 11px;
+  }
+  #menuPreviewPlay {
+    left: auto;
+    right: -4px;
+    bottom: -8px;
+    transform: none;
+    width: 44px;
+    height: 44px;
+  }
+  .workLibrary {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    gap: 8px;
+  }
+  .menuChoices {
+    gap: 15px 12px;
+  }
+  .menuChoice,
+  #menuDraw {
+    min-height: 132px;
+    font-size: 16px;
+  }
+  .menuArt {
+    height: 85px;
+  }
+  .menuChoice > span {
+    min-height: 44px;
+  }
+  .menuHomeFoot {
+    gap: 8px;
+    justify-content: space-between;
+  }
+  .menuHomeFoot > button {
+    padding: 0px 10px;
+    font-size: 11px;
+  }
+  .menuHomeFoot #modeBtn {
+    order: 2;
+    width: 100%;
+  }
+  .menuExtras {
+    order: 3;
+  }
+  #toolOptions {
+    padding: 0px 12px 12px;
+  }
+  .toolPageTabs button {
+    border: 0px;
+  }
+}
+
+@media (max-width: 480px) {
+  #mobileTools {
+    width: 104px;
+    right: 7px;
+  }
+  #dockRow {
+    gap: 6px;
+  }
+  .dkb {
+    min-height: 49px;
+    font-size: 10px;
+  }
+  .dkb .ic {
+    width: 20px;
+    height: 20px;
+  }
+  #tlBar {
+    padding: 9px 8px 6px;
+    gap: 6px;
+    min-height: 70px;
+  }
+  .tlGroup {
+    gap: 6px;
+  }
+  .tlTail .tb {
+    min-width: 50px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  .tlTail #tlToggle {
+    min-width: 58px;
+  }
+  .tlTail #addBtn {
+    min-width: 44px;
+  }
+  .tlTransport .tb {
+    width: 44px;
+    height: 44px;
+  }
+  .tlTransport .tb .ic {
+    width: 23px;
+    height: 23px;
+  }
+  #frameNo {
+    bottom: 76px;
+    right: 10px;
+    font-size: 12px;
+    min-width: 76px;
+  }
+  #layerStack {
+    left: 7px;
+    width: 44px;
+  }
+  .liveLayer {
+    width: 44px;
+    min-height: 44px;
+    font-size: 21px;
+  }
+  #fs {
+    height: 100px;
+    padding: 16px 10px;
+    --fcw: 116px;
+    --fgap: 10px;
+  }
+  .fcell,
+  #fsTrack {
+    height: 68px;
+  }
+  #fsGhost {
+    width: 116px;
+    height: 68px;
+  }
+  body[data-tl="1"] #mainRow {
+    bottom: 226px;
+  }
+  #popTool .strokeSample {
+    display: none;
+  }
+  .brushb {
+    flex-basis: 64px;
+    min-height: 106px;
+  }
+  #popTool .toolPageTabs {
+    flex-wrap: wrap;
+  }
+  #popTool .toolPageTabs button {
+    flex: 1 0 40%;
+  }
+  #rail .rtools {
+    grid-template-columns: repeat(2, minmax(0px, 1fr));
+  }
+  #rail .toolboxBody {
+    padding: 0px 10px 12px;
+  }
+  #rail .rfix {
+    grid-template-columns: repeat(2, minmax(0px, 1fr));
+  }
+  #rail .rfix .rb {
+    min-height: 44px;
+    flex-direction: row;
+  }
+  #rail .rfix .rlbl {
+    font-size: 10px;
+  }
+  #popColor .paltabs {
+    flex-wrap: wrap;
+  }
+  #popColor .ptab {
+    flex: 1 0 40%;
+  }
+  #popColor .inkSample {
+    display: none;
+  }
+  #mainRow {
+    bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}
+

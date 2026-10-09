@@ -1,0 +1,1329 @@
+.phint {
+  color: var(--dim);
+}
+
+.ptab.on {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+  border-color: var(--acc);
+}
+
+#popWrap {
+  position: fixed;
+  inset: 0px;
+  pointer-events: none;
+}
+
+#popScrim {
+  position: fixed;
+  inset: 0px;
+  z-index: 25;
+  background: rgba(56, 61, 53, 0.25);
+  display: none;
+}
+
+#popScrim.on {
+  display: block;
+}
+
+.pop {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, -24px + 100vw);
+  max-height: calc(100dvh - 24px);
+  background: var(--bg2);
+  border: 4px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 10px;
+  box-shadow: none;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+#rail {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg2);
+  box-shadow: none;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.pop.on,
+#rail.on {
+  display: flex;
+}
+
+#rail {
+  z-index: 26;
+}
+
+.popHead,
+.toolboxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--acc-soft);
+  flex: 0 0 auto;
+}
+
+.popHead b,
+.toolboxHead b {
+  font-size: 20px;
+  color: var(--acc-d);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popBody,
+.toolboxBody {
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  min-height: 0px;
+  padding: 4px 16px 16px;
+}
+
+.toolboxBody {
+  flex: 1 1 0%;
+}
+
+.pbk {
+  padding: 9px 0px 12px;
+}
+
+.pbk.off {
+  display: none;
+}
+
+.plab {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tx);
+}
+
+.phint {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 7px;
+}
+
+.prow {
+  display: flex;
+  align-items: center;
+  margin: 8px 0px;
+  flex-wrap: wrap;
+}
+
+.prow b {
+  font-size: 13px;
+  min-width: 25px;
+  text-align: right;
+}
+
+.paltabs {
+  display: flex;
+  gap: 6px;
+}
+
+.ptab {
+  flex: 1 1 0%;
+  min-height: 44px;
+  border-radius: 24px;
+  background: var(--acc-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.palgrid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0px, 1fr));
+  gap: 7px;
+  margin: 12px 0px;
+}
+
+.palc {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line2);
+  border-radius: 50%;
+}
+
+.palc.on {
+  outline: 3px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.palc.addc {
+  font-size: 24px;
+  background: var(--bg3);
+}
+
+#hexIn {
+  width: 100px;
+}
+
+.mkgrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0px, 1fr));
+  gap: 8px;
+  margin: 12px 0px;
+}
+
+.mkb {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgb(255, 255, 255);
+  padding: 5px;
+}
+
+.mkb img {
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+}
+
+#popTool,
+#popColor {
+  width: min(760px, -40px + 100vw);
+  height: min(680px, 100dvh - 40px);
+  max-height: none;
+  border: 0px;
+  outline: 1px solid var(--line2);
+  border-radius: 8px;
+  background-color: var(--bg2);
+  background-image: linear-gradient(var(--desk-line) 1px,transparent 1px),linear-gradient(90deg,var(--desk-line) 1px,transparent 1px);
+  background-size: 24px 24px;
+}
+
+#rail {
+  width: min(760px, -40px + 100vw);
+  height: min(680px, 100dvh - 40px);
+  max-height: none;
+  border: 0px;
+  outline: 1px solid var(--line2);
+  border-radius: 8px;
+  background-color: var(--bg2);
+  background-size: 24px 24px;
+}
+
+#popTool .popHead,
+#popColor .popHead,
+#rail .toolboxHead {
+  background: var(--bg2);
+}
+
+#popTool .popHead .ic,
+#popColor .popHead .ic,
+#rail .toolboxHead .ic {
+  color: var(--acc);
+}
+
+#popTool .popx,
+#popColor .popx,
+#rail .popx {
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 26px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+.strokeSample {
+  flex: 0 0 auto;
+  margin: 0px 20px 8px;
+  border-bottom: 1px solid var(--line2);
+  background: var(--bg2);
+}
+
+.sampleCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--acc-d);
+}
+
+.sampleCaption span {
+  font-size: 13px;
+}
+
+.strokeSample canvas {
+  display: block;
+  width: 100%;
+  height: 70px;
+  object-fit: contain;
+}
+
+#toolOptions {
+  flex: 1 1 0%;
+  touch-action: pan-x pan-y;
+}
+
+#toolOptions .pbk {
+  padding: 8px 0px 12px;
+}
+
+#toolOptions .plab {
+  color: var(--acc-d);
+  font-size: 14px;
+}
+
+#toolOptions [data-options-page="detail"],
+#toolOptions[data-tool-detail="1"] .pbk {
+  display: none;
+}
+
+#toolOptions[data-tool-detail="1"] [data-options-page="detail"]:not(.off) {
+  display: block;
+}
+
+#toolOptions .pbk.off {
+  display: none;
+}
+
+.toolPageTabs {
+  display: flex;
+  flex: 0 0 auto;
+  background: var(--bg2);
+}
+
+.toolPageTabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0px;
+  flex: 1 1 0%;
+  color: var(--acc-d);
+  font-weight: 700;
+}
+
+.toolPageTabs .ic {
+  width: 19px;
+  height: 19px;
+  color: var(--acc);
+}
+
+.toolPageTabs button[aria-pressed="true"] {
+  outline-color: var(--acc);
+}
+
+.brushgrid {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scroll-snap-type: x;
+  padding: 10px 4px 14px;
+  margin-top: 6px;
+}
+
+.brushb {
+  position: relative;
+  flex: 0 0 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border: 0px;
+  border-radius: 0px;
+  background: none;
+  font-size: 12px;
+  scroll-snap-align: start;
+  color: var(--tx);
+}
+
+.penHandle {
+  display: block;
+  width: 42px;
+  flex: 0 0 auto;
+  transition: transform 0.12s;
+}
+
+.penHandle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brushb canvas {
+  width: 64px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.brushb > span:last-child {
+  padding: 4px 6px;
+  border-radius: 16px;
+  min-height: 26px;
+  white-space: nowrap;
+}
+
+.brushb.on .penHandle {
+  transform: translateY(-4px);
+}
+
+.brushb.on > span:last-child {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+.szrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 7px;
+  padding: 3px;
+  margin: 10px 0px;
+}
+
+.szb {
+  flex: 0 0 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 2px;
+}
+
+.patb {
+  width: 48px;
+  height: 48px;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 50%;
+}
+
+.patb.on {
+  outline: 2px solid var(--acc);
+  background: var(--acc-soft);
+}
+
+#rail .toolboxBody {
+  padding: 4px 20px 16px;
+}
+
+.rtools {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0px, 1fr));
+  gap: 14px 8px;
+}
+
+.rsep {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--acc-d);
+  padding: 18px 2px 0px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rsep::after {
+  content: "";
+  height: 1px;
+  background: var(--line2);
+  flex: 1 1 0%;
+}
+
+.rb {
+  min-width: 0px;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: 0px;
+  border-radius: 0px;
+}
+
+.rb > .ic {
+  width: 38px;
+  height: 38px;
+  padding: 0px;
+  background: none;
+  color: var(--acc);
+}
+
+.rb .rlbl {
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  min-height: 26px;
+  border-radius: 16px;
+}
+
+.rb.on .rlbl {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+.rb.on > .ic {
+  color: var(--acc);
+}
+
+.rb.off {
+  display: none;
+}
+
+.rfix {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0px, 1fr));
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.rfix .rb {
+  min-height: 48px;
+  flex-direction: row;
+  gap: 6px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 26px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+.rfix .rb > .ic {
+  width: 22px;
+  height: 22px;
+}
+
+.rfix .rlbl {
+  padding: 0px;
+}
+
+#popColor .popBody {
+  flex: 1 1 0%;
+}
+
+.inkSample {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 8px 0px 24px;
+}
+
+.inkSample > span {
+  width: 64px;
+  height: 64px;
+  border: 5px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.inkSample div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--acc-d);
+}
+
+.inkSample div span {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+#layerRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px;
+}
+
+.lrow.on {
+  border-color: var(--acc);
+  background: var(--acc-soft);
+}
+
+.lpick {
+  flex: 1 1 0%;
+  min-width: 0px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.lbtn {
+  width: 40px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.lbtn.off {
+  visibility: hidden;
+}
+
+.lrow input[type="range"] {
+  width: 60px;
+  min-width: 40px;
+  flex: 0 0 auto;
+}
+
+.lth {
+  width: 32px;
+  height: 26px;
+  background: rgb(255, 255, 255);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+
+.photoTools {
+  background: var(--bg3);
+  border-radius: 16px;
+  padding: 12px;
+  margin: 14px 0px;
+}
+
+.photoToolsHead {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--acc-d);
+}
+
+.photoToolsHead span {
+  display: flex;
+  flex-direction: column;
+}
+
+.photoToolsHead small {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.photoTools .pbtn {
+  font-size: 12px;
+  padding: 8px;
+}
+
+.paperSettings {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.paperSettings label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 120px;
+  flex: 1 1 0%;
+  font-size: 13px;
+}
+
+.paperSettings select {
+  min-height: 48px;
+}
+
+.paperSettings #sizeApply {
+  background: var(--acc-soft);
+  color: var(--acc-d);
+  min-height: 48px;
+}
+
+.paperColors {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.paperColors label {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.paperTurns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 10px;
+}
+
+.paperTurns .pbtn {
+  min-height: 60px;
+  border-radius: 22px;
+}
+
+.psw.on {
+  outline: 2px solid var(--acc);
+}
+
+#onionCv {
+  pointer-events: none;
+}
+
+#drawingBay #popTool,
+#drawingBay #popColor {
+  z-index: 27;
+}
+
+body[data-drawing-menu="1"] #popTool,
+body[data-drawing-menu="1"] #popColor,
+body[data-drawing-menu="1"] #rail {
+  left: 8px;
+  right: var(--drawing-right,133px);
+  top: 8px;
+  bottom: 84px;
+  transform: none;
+  width: auto;
+  height: auto;
+  max-width: 760px;
+  margin: 0px auto;
+  border-radius: 14px;
+  border: 2px solid var(--bg2);
+  outline: 1px solid var(--line2);
+}
+
+body[data-drawing-layout="sheet"][data-drawing-menu="1"] #drawingBay #popTool,
+body[data-drawing-layout="sheet"][data-drawing-menu="1"] #drawingBay #popColor {
+  top: max(42%, 150px);
+  bottom: var(--drawing-bottom, 190px);
+  left: 8px;
+  right: 8px;
+  max-height: none;
+}
+
+#popTool .popHead,
+#popColor .popHead,
+#rail .toolboxHead {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+#popTool .popHead b,
+#popColor .popHead b,
+#rail .toolboxHead b {
+  font-size: 16px;
+}
+
+#popTool .popx,
+#popColor .popx,
+#rail .popx {
+  min-height: 44px;
+  padding: 0px 10px;
+  font-size: 11px;
+}
+
+body[data-drawing-layout="sheet"] #popTool .brushgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+}
+
+body[data-drawing-layout="sheet"] #popTool .brushb {
+  min-width: 44px;
+  min-height: 72px;
+  height: 72px;
+  gap: 2px;
+}
+
+body[data-drawing-layout="sheet"] #popTool .penHandle {
+  height: 24px;
+}
+
+body[data-drawing-layout="sheet"] #popTool .brushb canvas {
+  height: 12px;
+}
+
+body[data-drawing-layout="sheet"] #popTool .strokeSample {
+  display: none;
+}
+
+#popTool .strokeSample {
+  margin: 0px 12px 4px;
+}
+
+#popTool .strokeSample canvas {
+  height: 30px;
+}
+
+.sampleCaption {
+  font-size: 12px;
+  padding: 4px 0px;
+}
+
+#toolOptions {
+  padding: 0px 12px 12px;
+}
+
+.brushgrid {
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--acc-soft) transparent;
+}
+
+.brushb {
+  flex-basis: 70px;
+  min-height: 112px;
+  gap: 4px;
+}
+
+.penHandle {
+  height: 56px;
+}
+
+.szb {
+  height: 66px;
+  flex-basis: 44px;
+  flex-direction: column;
+  gap: 3px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 22px;
+  background: none;
+  color: var(--tx);
+}
+
+.sizeInk {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line2);
+  border-radius: 50%;
+  background: var(--bg2);
+}
+
+.szb small {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.szb.on {
+  outline: 0px;
+  background: none;
+  color: var(--acc-d);
+}
+
+.szb.on .sizeInk {
+  border: 2px solid var(--acc);
+  background: var(--acc-soft);
+}
+
+.toolPageTabs {
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.toolPageTabs button {
+  min-height: 44px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 8px;
+  background: none;
+  font-size: 11px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 0px;
+}
+
+.toolPageTabs button[aria-pressed="true"] {
+  background: var(--acc-soft);
+  outline: 0px;
+  color: var(--acc-d);
+}
+
+.toolPageTabs button[aria-pressed="true"] .ic {
+  color: var(--acc);
+}
+
+#popColor .ptab {
+  font-size: 10px;
+}
+
+#popColor .popBody {
+  padding: 4px 12px 14px;
+}
+
+#popColor .inkSample {
+  margin: 8px 0px 16px;
+  gap: 12px;
+}
+
+#popColor .inkSample > span {
+  width: 44px;
+  height: 44px;
+}
+
+body[data-drawing-layout="split"] #drawingBay #popTool,
+body[data-drawing-layout="split"] #drawingBay #popColor,
+body[data-drawing-layout="split"] #drawingBay #rail {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  max-width: none;
+  margin: 0px;
+  padding: 0px;
+  flex-direction: column;
+}
+
+body[data-drawing-layout="split"] #popTool.on {
+  display: flex;
+}
+
+body[data-drawing-layout="split"] #popScrim {
+  display: none;
+}
+
+body[data-drawing-layout="split"] #rail .toolboxBody {
+  padding: 0px 8px 12px;
+}
+
+body[data-drawing-layout="split"] #rail .rtools {
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 6px 0px;
+}
+
+body[data-drawing-layout="split"] #rail .rb {
+  min-height: 70px;
+}
+
+body[data-drawing-layout="split"] #rail .rfix {
+  gap: 2px;
+  padding: 6px;
+}
+
+body[data-drawing-layout="split"] #rail .rfix .rb {
+  flex-direction: column;
+  min-height: 50px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 8px;
+  gap: 3px;
+  background: none;
+}
+
+body[data-drawing-layout="split"] #rail .rfix .rlbl {
+  font-size: 10px;
+}
+
+body[data-drawing-menu="1"] #popScrim {
+  background: transparent;
+}
+
+body[data-drawing-menu="1"] #popTool.on {
+  display: flex;
+}
+
+body[data-drawing-layout="full"] #drawingBay #popTool,
+body[data-drawing-layout="full"] #drawingBay #popColor,
+body[data-drawing-layout="full"] #drawingBay #rail {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  max-width: none;
+  margin: 0px;
+  padding: 0px;
+  transform: none;
+  border: 0px;
+  outline: 0px;
+  border-radius: 0px;
+  background: var(--bg2);
+  flex-direction: column;
+}
+
+body[data-drawing-layout="full"] #onionBtn {
+  display: none;
+}
+
+body[data-drawing-layout="full"] #popTool .popHead,
+body[data-drawing-layout="full"] #popColor .popHead,
+body[data-drawing-layout="full"] #rail .toolboxHead {
+  min-height: 58px;
+  padding: 6px 14px;
+  margin-bottom: 64px;
+  flex: 0 0 auto;
+}
+
+body[data-drawing-menu="1"] #toolOptions,
+body[data-drawing-layout="full"] #rail .toolboxBody,
+body[data-drawing-layout="full"] #popColor .popBody {
+  flex: 1 1 0%;
+  min-height: 0px;
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body[data-drawing-layout="full"] #popTool .strokeSample {
+  display: none;
+}
+
+body[data-drawing-menu="1"] #toolOptions .pbk {
+  display: none;
+  background: none;
+  border: 0px;
+  padding-top: 8px;
+}
+
+body[data-drawing-menu="1"] #toolOptions[data-tool-page="brush"] #blkBrush:not(.off),
+body[data-drawing-menu="1"] #toolOptions[data-tool-page="size"] #blkSize:not(.off),
+body[data-drawing-menu="1"] #toolOptions[data-tool-page="pattern"] #blkPat:not(.off),
+body[data-drawing-menu="1"] #toolOptions[data-tool-page="detail"] [data-options-page="detail"]:not(.off) {
+  display: block;
+}
+
+body[data-drawing-layout="full"] #popTool .toolPageTabs {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  min-height: 58px;
+  padding: 6px 10px;
+}
+
+body[data-drawing-layout="full"] #popTool .toolPageTabs button {
+  flex: 1 0 0px;
+  min-height: 44px;
+  font-size: 12px;
+}
+
+body[data-drawing-layout="full"] #rail .rtools {
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 14px 8px;
+}
+
+body[data-drawing-layout="full"] #rail .rb {
+  min-height: 80px;
+}
+
+body[data-drawing-layout="full"] #rail .rfix {
+  grid-template-columns: repeat(4, minmax(0px, 1fr));
+  padding: 8px;
+  flex: 0 0 auto;
+}
+
+body[data-drawing-layout="full"] #rail .rfix .rb {
+  min-height: 48px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+body[data-drawing-layout="full"] #rail .rfix .rlbl {
+  font-size: 11px;
+}
+
+body[data-drawing-layout="full"] #popScrim {
+  display: none;
+}
+
+.onionDirections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#onionSkip {
+  grid-column: 1 / -1;
+}
+
+#onionChoices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 8px;
+  margin: 14px 0px;
+}
+
+#onionChoices button {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg3);
+  color: var(--dim);
+  font-size: 14px;
+}
+
+#onionChoices button[aria-pressed="true"] {
+  border-color: var(--acc);
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+#popOnion {
+  width: min(340px, -24px + 100vw);
+}
+
+#popOnion .prow input {
+  min-width: 0px;
+  flex: 1 1 0%;
+}
+
+#popWrap {
+  z-index: 29;
+}
+
+.pop,
+#rail,
+.toolboxBody,
+body[data-drawing-layout="full"] #drawingBay #popTool,
+body[data-drawing-layout="full"] #drawingBay #popColor,
+body[data-drawing-layout="full"] #drawingBay #rail {
+  background-image: none;
+}
+
+.adjustHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0px 0px 10px;
+  font-size: 13px;
+  color: var(--acc-d);
+}
+
+.adjustHeading > span {
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.adjustHeading .tgl {
+  min-height: 44px;
+  padding: 6px 12px;
+}
+
+.adjustChoices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0px, 1fr));
+  gap: 6px;
+}
+
+.adjustChoices button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg2);
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.adjustChoices button[aria-pressed="true"] {
+  border-color: var(--acc);
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+.adjustChoices button:disabled {
+  opacity: 0.45;
+}
+
+.adjustScale {
+  display: flex;
+  justify-content: space-between;
+  margin: 7px 0px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+#toolOptions #blkGrid,
+#toolOptions #blkPxn {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 14px;
+}
+
+#toolOptions #blkGrid,
+#toolOptions #blkPxn {
+  display: none;
+}
+
+#toolOptions[data-tool-page="grid"] #blkGrid,
+#toolOptions[data-tool-page="grid"] #blkPxn:not(.off) {
+  display: block;
+}
+
+#toolOptions[data-tool-page="grid"] #blkSize {
+  display: none;
+}
+
+#popColor .palgrid {
+  grid-template-columns: repeat(auto-fill, 44px);
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0px;
+}
+
+#popColor .palc {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  aspect-ratio: auto;
+}
+
+#popColor .palc.on {
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+
+#popPaper {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, -24px + 100vw);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: var(--bg2);
+}
+
+#popPaper .popBody {
+  padding: 12px 16px 16px;
+}
+
+#paperSw,
+.paperChoices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.psw {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--tx);
+  font-size: 12px;
+}
+
+.psw > span {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(136, 136, 136, 0.333);
+  border-radius: 8px;
+}
+
+.psw b {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.psw[aria-pressed="true"] {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc-soft);
+}
+
+#paperCustomLabel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+#paperCustomLabel[hidden],
+#paperCanvasCustom[hidden] {
+  display: none;
+}
+
+#paperCustom {
+  width: 52px;
+  height: 44px;
+}
+
+.paperShortcut {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin: 12px 0px;
+}
+
+#paperChip {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+}
+
+.prow {
+  gap: 10px;
+}
+
+.prow input[type="range"] {
+  min-width: 40px;
+}
+
+.prow input[type="text"] {
+  min-width: 0px;
+}
+
+.paperColors {
+  gap: 12px;
+}
+
+.paperColors label {
+  gap: 10px;
+}
+
+.tgl3 {
+  gap: 8px;
+}
+
+.psw {
+  width: auto;
+  height: auto;
+  min-width: 44px;
+}
+
+body[data-drawing-layout="full"] #rail .rfix {
+  gap: 10px;
+}

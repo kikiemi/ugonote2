@@ -1,0 +1,750 @@
+#drawer {
+  position: fixed;
+  inset: 0px;
+  z-index: 30;
+  display: none;
+  flex-direction: column;
+  background: inherit;
+  overflow: hidden;
+}
+
+#drawer.on {
+  display: flex;
+}
+
+#drawerHead {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px max(16px, -530px + 50vw);
+  flex: 0 0 auto;
+}
+
+#drawerHead .hbtn {
+  min-height: 44px;
+  padding: 0px 14px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+#menuHeading {
+  font-size: 26px;
+  color: var(--acc);
+  letter-spacing: 0.07em;
+}
+
+#drawerClose {
+  margin-left: auto;
+}
+
+#drawer[data-page="home"] #menuHomeBack {
+  visibility: hidden;
+}
+
+#drawer[data-page="home"] #menuHeading {
+  margin: auto;
+}
+
+#drawer:not([data-page="home"]) #menuHome,
+#drawer[data-page="home"] #drawerBody {
+  display: none;
+}
+
+#menuHome {
+  flex: 1 1 0%;
+  min-height: 0px;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0px, 560px);
+  align-content: safe center;
+  gap: 28px 48px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 20px max(24px, -530px + 50vw) 12px;
+}
+
+.menuNotebook {
+  min-width: 0px;
+  align-self: center;
+}
+
+.noteAlbum {
+  position: relative;
+  margin: 0px auto 22px;
+  max-width: 320px;
+}
+
+.notePreview {
+  width: 100%;
+  display: block;
+  border: 3px solid var(--acc);
+  border-radius: 17px;
+  padding: 0px;
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+.notePreview canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 230px;
+  object-fit: contain;
+  background: rgb(255, 255, 255);
+}
+
+#menuPreviewPlay {
+  position: absolute;
+  left: 50%;
+  bottom: -17px;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgb(255, 255, 255);
+  outline: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--acc-soft);
+  color: var(--acc);
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.noteCaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.noteCaption b {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+  color: var(--acc);
+}
+
+.noteCaption small {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.workLibrary {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.workLibrary button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 0%;
+  min-height: 44px;
+  font-size: 12px;
+  background: var(--acc-soft);
+  border: 3px solid var(--bg2);
+  border-radius: 14px;
+  color: var(--acc-d);
+}
+
+.workLibrary button:first-child {
+  background: var(--bg4);
+}
+
+.workLibrary .ic {
+  width: 19px;
+  height: 19px;
+}
+
+.menuChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 20px 24px;
+  align-self: center;
+}
+
+.menuChoice,
+#menuDraw {
+  min-width: 0px;
+  min-height: 156px;
+  padding: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  background: none;
+  border: 0px;
+  outline: 0px;
+  border-radius: 20px;
+  color: var(--acc-d);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.menuArt {
+  display: block;
+  width: 100%;
+  height: 112px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.menuChoice > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  background: var(--acc-soft);
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.menuChoice:hover > span,
+.menuChoice:focus-visible > span {
+  background: var(--acc-soft);
+}
+
+.menuHomeFoot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.menuHomeFoot > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0px 12px;
+  border-radius: 24px;
+  background: var(--bg4);
+  color: var(--acc-d);
+  font-size: 12px;
+}
+
+.menuExtras button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.menuHomeFoot .ic {
+  width: 18px;
+  height: 18px;
+}
+
+.menuHomeFoot #modeBtn {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  gap: 8px;
+}
+
+.menuHomeFoot #modeName {
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.menuExtras {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.menuExtras .ic {
+  color: var(--acc);
+}
+
+#drawerBody {
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  flex: 1 1 0%;
+  min-height: 0px;
+  padding: 26px max(24px, -410px + 50vw) 36px;
+}
+
+.menuPage {
+  max-width: 820px;
+  margin: 0px auto;
+}
+
+.menuPage > * + * {
+  margin-top: 20px;
+}
+
+.menuActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 18px;
+}
+
+.menuAction {
+  min-width: 0px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 18px;
+  background: var(--acc-soft);
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 20px;
+  text-align: left;
+  min-height: 88px;
+  color: var(--acc-d);
+}
+
+.actionGlyph {
+  width: 36px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--acc);
+}
+
+.actionGlyph .ic {
+  width: 31px;
+  height: 31px;
+}
+
+.actionCopy {
+  flex: 1 1 0%;
+  min-width: 0px;
+}
+
+.actionCopy b {
+  font-size: 16px;
+  display: block;
+}
+
+.actionCopy small {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--acc-d);
+  line-height: 1.5;
+}
+
+.menuAction.featured {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+  outline-color: var(--acc);
+}
+
+.menuAction.featured .ic,
+.menuAction.featured small {
+  color: rgb(255, 255, 255);
+}
+
+.pageRule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--acc-d);
+  font-size: 14px;
+  margin: 30px 0px 16px;
+}
+
+.pageRule::after {
+  content: "";
+  height: 1px;
+  background: var(--line);
+  flex: 1 1 0%;
+}
+
+.noteNameLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 26px;
+  color: var(--acc-d);
+  font-size: 14px;
+}
+
+.noteNameLabel input {
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.soundTracks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 14px;
+}
+
+.soundSlot {
+  padding: 16px 12px;
+  border: 0px;
+  border-radius: 20px;
+  min-width: 0px;
+  background: var(--bg3);
+}
+
+.soundSlotHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.soundSlotHead .ic {
+  color: var(--acc);
+  width: 23px;
+  height: 23px;
+}
+
+.soundSlotHead > b {
+  color: var(--acc-d);
+  font-size: 15px;
+}
+
+.soundButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.soundButtons .sbtn {
+  min-width: 0px;
+  width: auto;
+  flex: 1 1 0%;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--acc-soft);
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--tx);
+}
+
+.soundButtons .sbtn .ic {
+  color: var(--acc);
+  width: 20px;
+  height: 20px;
+}
+
+.soundButtons .sbtn:last-child,
+.soundButtons .sbtn:last-child .ic {
+  color: var(--dim);
+}
+
+.soundButtons .sbtn.rec {
+  background: var(--warn);
+  color: rgb(255, 255, 255);
+}
+
+.soundButtons .sbtn.rec .ic {
+  color: rgb(255, 255, 255);
+}
+
+.soundPreset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.soundPreset select {
+  min-height: 44px;
+  width: 100%;
+  background: var(--bg3);
+  border-color: transparent;
+}
+
+.menuLocation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0px;
+}
+
+.menuLocation small {
+  font-size: 11px;
+  color: var(--dim);
+}
+
+#drawer[data-page="home"] .menuLocation {
+  margin: auto;
+}
+
+#drawer[data-page="home"] #menuCrumb {
+  display: none;
+}
+
+#drawer:not([data-page="home"]) #menuHeading {
+  font-size: 20px;
+  letter-spacing: 0px;
+}
+
+#drawer:not([data-page="home"]) #menuHomeBack {
+  flex: 0 0 auto;
+}
+
+.workLibrary button {
+  outline: 1px solid var(--line);
+}
+
+.menuExtras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 8px;
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.menuExtras button {
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  color: var(--acc-d);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-height: 48px;
+  justify-content: flex-start;
+  font-size: 12px;
+}
+
+.menuExtras button .ic:last-child {
+  margin-left: auto;
+  width: 15px;
+  height: 15px;
+  color: var(--dim);
+}
+
+.menuHomeFoot #menuDetails {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  margin-left: 0px;
+}
+
+.soundAssignBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+  margin-top: 10px;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.soundAssignBtn .ic {
+  width: 18px;
+  height: 18px;
+}
+
+.soundAssignBtn .ic:last-child {
+  margin-left: auto;
+}
+
+.soundAssignment {
+  width: 640px;
+  max-width: 100%;
+  padding: 18px;
+}
+
+.soundAssignment .mhead {
+  font-size: 20px;
+}
+
+.soundAssignment .mbody {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 8px 0px 12px;
+}
+
+.soundAssignment .mixbody {
+  position: relative;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+}
+
+.soundAssignment .mixhead,
+.soundAssignment .mixrow {
+  grid-template-columns: 60px repeat(4, minmax(44px, 1fr));
+  gap: 3px;
+  padding: 5px;
+}
+
+.soundAssignment .mixhead {
+  background: var(--bg2);
+  min-height: 54px;
+}
+
+.soundAssignment .mixse {
+  min-width: 0px;
+  font-size: 12px;
+  color: var(--acc-d);
+}
+
+.soundAssignment .mixse em {
+  font-size: 10px;
+  line-height: 1.3;
+  max-height: 26px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-style: normal;
+}
+
+.soundAssignment .mixse.selected {
+  border-bottom: 2px solid var(--acc);
+}
+
+.soundAssignment .mixFrame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 58px;
+  min-width: 44px;
+  border-radius: 8px;
+  padding: 3px;
+  color: var(--fg);
+  font-size: 11px;
+}
+
+.soundAssignment .mixFrame canvas {
+  width: 48px;
+  height: 32px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg2);
+  image-rendering: pixelated;
+}
+
+.soundAssignment .mixrow.cur .mixFrame {
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+.soundAssignment .mixc {
+  min-height: 50px;
+  min-width: 44px;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--dim);
+  background: var(--bg2);
+}
+
+.soundAssignment .mixc .ic {
+  width: 17px;
+  height: 17px;
+}
+
+.soundAssignment .mixc.on {
+  background: var(--acc-soft);
+  color: var(--acc-d);
+  border-color: var(--acc);
+}
+
+.soundAssignment .mixJump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.soundAssignment .mixJump input {
+  width: 70px;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg2);
+  color: var(--fg);
+  font-size: 16px;
+}
+
+.soundAssignment .mixJump .mbtn {
+  margin-left: auto;
+}
+
+.soundAssignment .mixPages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.soundAssignment .mrow.end {
+  margin: 12px 0px 0px;
+}
+
+.soundAssignment {
+  position: relative;
+  height: min(640px, 100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.soundAssignment .mhead,
+.soundAssignment .mbody,
+.soundAssignment .mixToolbar,
+.soundAssignment .mrow.end {
+  flex: 0 0 auto;
+}
+
+.soundAssignment .mhead {
+  margin-bottom: 0px;
+}
+
+.soundAssignment .mixToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.soundAssignment .mixJump {
+  flex: 1 1 0%;
+  margin: 0px;
+}
+
+.soundAssignment .mixPages {
+  flex: 0 0 auto;
+  margin: 0px;
+}
+
+.soundAssignment .mixbody {
+  flex: 1 1 0%;
+  min-height: 96px;
+  max-height: none;
+}
+
+.noteNameLabel {
+  margin-bottom: 20px;
+}

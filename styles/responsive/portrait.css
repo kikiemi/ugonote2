@@ -1,0 +1,175 @@
+@media (orientation: portrait) and (min-height: 600px) {
+  body[data-drawing-layout="sheet"][data-drawing-menu="1"] #popTool,
+  body[data-drawing-layout="sheet"][data-drawing-menu="1"] #popColor {
+    inset: max(42%, 150px) 8px var(--drawing-bottom,190px);
+    width: auto;
+    height: auto;
+    max-width: 760px;
+  }
+  #popTool .toolPageTabs {
+    flex-wrap: nowrap;
+  }
+  #popTool .toolPageTabs button {
+    flex: 1 0 0px;
+  }
+}
+
+@media (orientation: portrait) {
+  body[data-drawing-layout="full"] #popTool .brushgrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0px, 1fr));
+    gap: 10px 4px;
+    overflow: visible;
+  }
+  body[data-drawing-layout="full"] #popTool .brushb {
+    width: 100%;
+    min-width: 0px;
+    flex-basis: auto;
+  }
+  body[data-drawing-layout="full"] #popTool .brushb > span:last-child {
+    font-size: 10px;
+    padding: 4px 2px;
+    white-space: normal;
+  }
+  body[data-tl="0"] #mainRow {
+    inset: 0px;
+  }
+  body[data-tl="1"] #mainRow {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+  }
+}
+
+@media (orientation: portrait) and (min-width: 600px) {
+  body[data-drawing-layout="full"] #popTool .brushgrid {
+    grid-template-columns: repeat(6, minmax(0px, 1fr));
+  }
+}
+
+@media (orientation: portrait) and (min-width: 600px) {
+  body[data-drawing-layout="full"] #dockRow {
+    grid-template-columns: repeat(7, minmax(0px, 1fr));
+  }
+}
+
+@media (orientation: portrait) and (max-width: 599px) {
+  #layerStack {
+    position: fixed;
+    top: max(8px,env(safe-area-inset-top));
+    left: 122px;
+    width: calc(100% - 130px);
+    max-height: 46px;
+    transform: none;
+    flex-direction: row;
+    gap: 5px;
+    overflow: auto hidden;
+  }
+  #liveLayerTabs {
+    flex-direction: row;
+    gap: 5px;
+  }
+  .liveLayer {
+    min-height: 44px;
+    width: 44px;
+    font-size: 21px;
+  }
+  #mobileTools {
+    left: max(8px,env(safe-area-inset-left));
+    right: max(8px,env(safe-area-inset-right));
+    top: auto;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: auto;
+  }
+  #dockRow {
+    grid-template-columns: repeat(4, minmax(0px, 1fr));
+    gap: 6px;
+  }
+  .dkb {
+    min-height: 48px;
+    font-size: 11px;
+  }
+  #mainRow {
+    top: calc(112px + env(safe-area-inset-top));
+    bottom: calc(188px + env(safe-area-inset-bottom));
+  }
+  #frameNo {
+    position: fixed;
+    right: 50%;
+    transform: translateX(50%);
+    top: calc(60px + env(safe-area-inset-top));
+    bottom: auto;
+    min-width: 86px;
+    font-size: 12px;
+  }
+  body[data-tl="1"] #mainRow {
+    bottom: calc(226px + env(safe-area-inset-bottom));
+  }
+  body[data-tl="1"] #mobileTools {
+    display: none;
+  }
+  body[data-tl="1"] #frameNo {
+    bottom: auto;
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    display: block;
+    top: calc(64px + env(safe-area-inset-top));
+    bottom: auto;
+    width: auto;
+    max-width: none;
+  }
+  body[data-drawing-layout="full"] #dockRow {
+    grid-template-columns: repeat(3, minmax(0px, 1fr));
+  }
+  .menuExtras button {
+    font-size: 12px;
+  }
+  .menuLocation {
+    gap: 2px;
+  }
+  #drawer:not([data-page="home"]) #menuHeading {
+    font-size: 17px;
+  }
+  #drawerHead .hbtn {
+    padding: 0px 7px;
+  }
+  #homeBtn {
+    position: fixed;
+    top: calc(60px + env(safe-area-inset-top));
+    left: max(12px,env(safe-area-inset-left));
+    border-radius: 12px;
+    height: 44px;
+  }
+  #dockGrid {
+    position: fixed;
+    left: auto;
+    right: max(8px,env(safe-area-inset-right));
+    top: calc(60px + env(safe-area-inset-top));
+    width: 64px;
+    height: 44px;
+    min-height: 44px;
+  }
+  #lastBtn {
+    position: fixed;
+    top: calc(60px + env(safe-area-inset-top));
+    border-radius: 12px;
+    height: 44px;
+  }
+  #homeBtn {
+    width: 44px;
+  }
+  #lastBtn {
+    left: calc(62px + env(safe-area-inset-left));
+    right: auto;
+    width: 44px;
+  }
+  body[data-drawing-layout="full"] #popTool .popHead,
+  body[data-drawing-layout="full"] #popColor .popHead,
+  body[data-drawing-layout="full"] #rail .toolboxHead {
+    margin-bottom: 180px;
+  }
+
+  #paperFit { inset: calc(104px + env(safe-area-inset-top)) 0 calc(184px + env(safe-area-inset-bottom)); }
+  body[data-tl="1"] #paperFit { bottom: 0; }
+}
+

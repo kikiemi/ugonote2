@@ -1,0 +1,926 @@
+.sb.q {
+  color: var(--warn);
+}
+
+.sbtns {
+  display: flex;
+  gap: 4px;
+}
+
+#ctxMenu {
+  position: fixed;
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  max-width: calc(-16px + 100vw);
+  background: var(--bg2);
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  overscroll-behavior: contain;
+}
+
+#ctxMenu.hide {
+  display: none;
+}
+
+.citem {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.citem .ic {
+  color: var(--acc);
+  width: 18px;
+  height: 18px;
+}
+
+.tbody {
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+#app {
+  --safe-top: env(safe-area-inset-top);
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  --desk-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M0 .5H30M.5 0V30' fill='none' stroke='%23dce1ef' stroke-dasharray='3 3'/%3E%3C/svg%3E");
+}
+
+body[data-theme="dark"] #app {
+  background-size: 30px 30px;
+}
+
+#mainRow {
+  position: absolute;
+  inset: 0px 0px 78px;
+  min-height: 0px;
+  min-width: 0px;
+}
+
+#stageWrap {
+  position: absolute;
+  inset: 0px;
+  overflow: hidden;
+  touch-action: none;
+  min-height: 0px;
+  min-width: 0px;
+  background: none;
+}
+
+#flipWrap {
+  position: absolute;
+  inset: 0px;
+}
+
+body[data-vflip="1"] #flipWrap {
+  transform: scaleX(-1);
+}
+
+#stagePan {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  transform-origin: 0px 0px;
+}
+
+#stagePan canvas {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  image-rendering: pixelated;
+}
+
+#stage {
+  background: none;
+  mix-blend-mode: multiply;
+  box-shadow: none;
+}
+
+body[data-theme="dark"] #stage {
+  mix-blend-mode: normal;
+}
+
+#floCv {
+  pointer-events: none;
+}
+
+#zoomLabel {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--bg2);
+  font-size: 11px;
+  color: var(--dim);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#zoomLabel.on {
+  opacity: 1;
+}
+
+#hd {
+  position: absolute;
+  z-index: 10;
+  left: max(12px,env(safe-area-inset-left));
+  top: max(8px,env(safe-area-inset-top));
+  display: flex;
+  gap: 10px;
+  pointer-events: none;
+}
+
+#hd .hbtn {
+  pointer-events: auto;
+  width: 46px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0px;
+  border: 0px;
+  border-radius: 0px;
+  clip-path: polygon(15% 0px, 90% 0px, 100% 50%, 90% 100%, 15% 100%, 0px 50%);
+}
+
+#hd .ic {
+  width: 21px;
+  height: 21px;
+}
+
+.hlab {
+  display: none;
+}
+
+#mobileTools {
+  position: absolute;
+  z-index: 12;
+  right: max(9px,env(safe-area-inset-right));
+  top: max(8px,env(safe-area-inset-top));
+  width: 116px;
+  pointer-events: none;
+}
+
+#dockRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 8px;
+}
+
+#dock {
+  pointer-events: none;
+}
+
+.dkb {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.dkb .ic {
+  width: 23px;
+  height: 23px;
+  color: var(--acc);
+}
+
+.dkb.on,
+.dkb[aria-expanded="true"] {
+  background: var(--bg2);
+  outline: 2px solid var(--acc);
+  color: var(--acc-d);
+}
+
+.dkb.on .ic {
+  color: var(--acc-d);
+}
+
+.dkb .chip {
+  width: 25px;
+  height: 25px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 6px;
+}
+
+.dkb .dotwrap {
+  height: 23px;
+}
+
+#dockSize .dot {
+  max-height: 23px;
+  max-width: 23px;
+  background: var(--acc-d);
+}
+
+#layerStack {
+  position: absolute;
+  z-index: 11;
+  left: max(10px,env(safe-area-inset-left));
+  top: calc(50% + 24px);
+  transform: translateY(-50%);
+  width: 48px;
+  max-height: calc(100% - 72px);
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  pointer-events: none;
+}
+
+#liveLayerTabs {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.liveLayer {
+  pointer-events: auto;
+  width: 48px;
+  min-width: 44px;
+  min-height: 46px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  background: var(--bg4);
+  color: var(--acc);
+  border: 3px solid var(--bg2);
+  border-radius: 9px;
+}
+
+.liveLayer[aria-pressed="true"] {
+  background: var(--acc-soft);
+  color: var(--acc);
+}
+
+.liveLayer .ic {
+  width: 23px;
+  height: 23px;
+}
+
+#tl {
+  position: absolute;
+  z-index: 10;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: none;
+}
+
+#tlBar {
+  order: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+  pointer-events: none;
+  background: none;
+}
+
+.tlGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  flex: 0 0 auto;
+}
+
+.tlTail {
+  order: 0;
+}
+
+.tlTransport {
+  order: 1;
+}
+
+.tlGroup > button,
+#frameNo {
+  pointer-events: auto;
+}
+
+.tb .ic {
+  width: 21px;
+  height: 21px;
+  color: var(--acc);
+}
+
+.tlTail .tb {
+  flex-direction: column;
+  gap: 2px;
+  min-width: 60px;
+}
+
+.tlTail #addBtn {
+  min-width: 52px;
+}
+
+.tlTransport .tb {
+  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  padding: 0px;
+  min-height: 44px;
+}
+
+.tlTransport #playBtn {
+  background: var(--acc-soft);
+  color: var(--acc);
+}
+
+.tlTransport .tb .ic {
+  width: 25px;
+  height: 25px;
+}
+
+#frameNo {
+  position: absolute;
+  right: max(14px,env(safe-area-inset-right));
+  bottom: 80px;
+  height: 32px;
+  min-width: 94px;
+  border-radius: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--acc);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 3px 12px;
+  box-shadow: 0 2px 0 var(--line);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#frameNo.long {
+  font-size: 12px;
+}
+
+#frameNo.xlong {
+  font-size: 11px;
+}
+
+#framePanel {
+  display: none;
+  order: 0;
+  pointer-events: auto;
+  background: var(--bg2);
+  padding: 6px 12px;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-height: 56px;
+  border-top: 1px solid var(--line);
+}
+
+body[data-tl="1"] #framePanel {
+  display: flex;
+}
+
+#frameCommands {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+#frameCommands .tb,
+#viewCommands .tb {
+  height: 44px;
+  border-radius: 24px;
+  box-shadow: none;
+  min-width: 44px;
+  padding: 0px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+#fs {
+  order: 1;
+  pointer-events: auto;
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  height: 120px;
+  padding: 17px 12px;
+  --fcw: 152px;
+  --fgap: 12px;
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  background-color: rgb(33, 34, 42);
+  background-image: repeating-linear-gradient(90deg, rgb(255, 255, 255) 0px, rgb(255, 255, 255) 7px, transparent 7px, transparent 17px), repeating-linear-gradient(90deg, rgb(255, 255, 255) 0px, rgb(255, 255, 255) 7px, transparent 7px, transparent 17px);
+  background-size: 100% 6px;
+  background-position: left 5px, left bottom 5px;
+  background-repeat: no-repeat;
+}
+
+body[data-tl="0"] #fs {
+  display: none;
+}
+
+#fsTrack {
+  position: relative;
+  height: 86px;
+}
+
+.fcell {
+  position: absolute;
+  top: 0px;
+  width: var(--fcw);
+  height: 86px;
+  border: 3px solid rgb(255, 255, 255);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(255, 255, 255);
+  cursor: pointer;
+  touch-action: pan-x;
+}
+
+.fcell.on {
+  border-color: var(--acc);
+  outline: 1px solid var(--acc);
+}
+
+.fcell canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.fnum {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  background: rgb(255, 138, 54);
+  color: rgb(255, 255, 255);
+  font-size: 11px;
+  min-width: 18px;
+  text-align: center;
+  border-radius: 0px 0px 8px;
+  line-height: 18px;
+}
+
+.fhold {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  font-size: 11px;
+  background: rgb(255, 255, 255);
+  border-radius: 8px;
+  padding: 2px 4px;
+}
+
+.fcell.drop {
+  outline: 3px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.fcell.lift {
+  opacity: 0.35;
+}
+
+#fsGhost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  width: 152px;
+  height: 86px;
+  opacity: 0.9;
+  border: 3px solid var(--acc);
+  border-radius: 8px;
+  background: rgb(255, 255, 255);
+  overflow: hidden;
+}
+
+#fsGhost canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+body[data-tl="1"] #mainRow {
+  bottom: 252px;
+}
+
+#floBar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg2);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  max-width: calc(100% - 12px);
+  overflow: auto;
+}
+
+#floBar.on {
+  display: flex;
+}
+
+#floInfo {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+#selBar {
+  position: absolute;
+  display: none;
+  z-index: 15;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 4px;
+}
+
+#selBar.on {
+  display: flex;
+}
+
+.sb.q {
+  min-width: 36px;
+}
+
+#layerShelf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#quick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 9px;
+}
+
+#quick .qb {
+  min-height: 56px;
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+body[data-drawing-menu="1"] #mobileTools {
+  z-index: 28;
+}
+
+
+
+#app button:focus-visible {
+  outline-offset: 2px;
+  outline: 3px solid var(--acc) !important;
+}
+
+#hd .hbtn:focus-visible {
+  clip-path: none;
+  border-radius: 8px;
+}
+
+body[data-focus="1"] #mobileTools,
+body[data-focus="1"] #layerStack,
+body[data-focus="1"] #framePanel,
+body[data-focus="1"] #fs,
+body[data-focus="1"] #focusBtn {
+  display: none;
+}
+
+#stagePan {
+  background-image: none;
+}
+
+#mobileTools .dkb,
+#layerStack .liveLayer {
+  touch-action: none;
+}
+
+body[data-pop="popLayer"] #layerStack {
+  z-index: 28;
+}
+
+#layerStack[data-scroll="y"],
+#layerStack[data-scroll="y"] .liveLayer {
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+#layerStack[data-scroll="x"],
+#layerStack[data-scroll="x"] .liveLayer {
+  pointer-events: auto;
+  touch-action: pan-x;
+}
+
+#frameNo {
+  min-height: 44px;
+}
+
+body[data-drawing-layout="full"] #hd,
+body[data-drawing-layout="full"] #layerStack,
+body[data-drawing-layout="full"] #tl,
+body[data-drawing-layout="full"] #floBar {
+  visibility: hidden;
+}
+
+body[data-drawing-layout="full"] #mobileTools {
+  display: block;
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  right: calc(8px + env(safe-area-inset-right));
+  width: auto;
+  max-width: 680px;
+  margin: 0px auto;
+  z-index: 44;
+}
+
+body[data-drawing-layout="full"] #dockRow {
+  grid-template-columns: repeat(6, minmax(0px, 1fr));
+}
+
+body[data-drawing-layout="full"] .dkb {
+  min-height: 48px;
+  font-size: 10px;
+  border-width: 2px;
+  padding: 2px;
+  gap: 2px;
+}
+
+body.canvasWriting #mobileTools,
+body.canvasWriting #layerStack,
+body.canvasWriting #hd,
+body.canvasWriting #tl,
+body.canvasWriting #focusBtn,
+body.canvasWriting #selBar,
+body.canvasWriting #floBar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#mainRow {
+  bottom: calc(78px + env(safe-area-inset-bottom));
+}
+
+body[data-free="1"][data-focus="1"] #hd,
+body[data-free="1"][data-focus="1"] #tl {
+  visibility: hidden;
+}
+
+#app {
+  background-color: rgb(250, 249, 245);
+  background-image: var(--desk-grid);
+}
+
+#stage {
+  outline: none;
+}
+
+#stagePan {
+  background-color: var(--bg2);
+  outline: var(--paper-line,1px) solid #c0c6d0;
+}
+
+body[data-theme="dark"] #app {
+  background-color: rgb(29, 36, 43);
+  --desk-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M0 .5H30M.5 0V30' fill='none' stroke='%2335414e' stroke-dasharray='3 3'/%3E%3C/svg%3E");
+  background-image: var(--desk-grid);
+}
+
+body[data-theme="dark"] #stagePan {
+  outline-color: rgb(102, 113, 124);
+}
+
+body[data-free="1"] #app {
+  background-color: var(--bg2);
+  background-image: var(--desk-grid);
+}
+
+body[data-free="1"] #stagePan {
+  outline: none;
+}
+
+body[data-focus="1"] #hd,
+body[data-focus="1"] #tl,
+body[data-focus="1"] #mobileTools,
+body[data-focus="1"] #layerStack,
+body[data-focus="1"] #focusBtn,
+body[data-focus="1"] #selBar,
+body[data-focus="1"] #floBar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body[data-pop="popFps"] #tl,
+body[data-pop="popHold"] #tl,
+body[data-pop="popView"] #tl,
+body[data-pop="popOnion"] #mobileTools {
+  z-index: 28;
+}
+
+#stagePan {
+  box-shadow: 0 calc(2 * var(--paper-line,1px)) calc(6 * var(--paper-line,1px)) #394b6412;
+}
+
+body[data-free="1"] #stagePan {
+  box-shadow: none;
+}
+
+.liveLayer {
+  border-width: 3px;
+  box-sizing: border-box;
+  text-shadow: none;
+}
+
+.liveLayer[aria-pressed="true"] {
+  text-shadow: none;
+  box-shadow: inset 0 0 0 1px var(--acc);
+}
+
+.dkb,
+#tlBar .tb {
+  border-width: 3px;
+  box-sizing: border-box;
+}
+
+#homeBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+#homeBtn .ic {
+  width: 19px;
+  height: 19px;
+}
+
+body[data-free="1"] #mainRow,
+body[data-focus="1"] #mainRow {
+  inset: 0px;
+}
+
+body[data-drawing-layout="full"] #mobileTools .dkb {
+  border-width: 3px;
+}
+
+#dock .dkb,
+#hd .hbtn,
+.tlTail .tb,
+#layerStack:not([data-scroll="x"]):not([data-scroll="y"]) .liveLayer {
+  touch-action: none;
+}
+
+body[data-drawing-layout="full"] #dockGrid {
+  position: static;
+  display: flex;
+  inset: auto;
+  width: auto;
+  height: auto;
+}
+
+body[data-drawing-layout="full"] #mobileTools .dkb {
+  touch-action: pan-y;
+}
+
+.tlTransport .tb,
+#frameNo {
+  touch-action: none;
+}
+
+#hd .hbtn {
+  background: var(--acc-soft);
+  color: var(--acc-d);
+}
+
+#hd #undoBtn {
+  clip-path: polygon(20% 0px, 100% 0px, 100% 100%, 20% 100%, 0px 50%);
+}
+
+#hd #redoBtn {
+  clip-path: polygon(0px 0px, 80% 0px, 100% 50%, 80% 100%, 0px 100%);
+}
+
+#hd .off {
+  opacity: 0.5;
+}
+
+#framePanel {
+  position: relative;
+  overflow: visible;
+}
+
+#frameOperations {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0px;
+  flex: 1 1 0%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+#tlClose {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  flex-direction: column;
+  gap: 0px;
+  padding: 2px 8px;
+  font-size: 10px;
+  touch-action: manipulation;
+}
+
+#tlClose .ic {
+  width: 18px;
+  height: 18px;
+}
+
+#lastBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+#lastBtn .ic {
+  width: 19px;
+  height: 19px;
+}
+
+body[data-recordsync="1"] #hd,
+body[data-recordsync="1"] #layerStack,
+body[data-recordsync="1"] #mobileTools,
+body[data-recordsync="1"] .tlTail,
+body[data-recordsync="1"] #frameNo,
+body.canvasWriting #drawingBay {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#frameOperations,
+#frameOperations button {
+  touch-action: pan-x;
+}
+
+#frameOperations {
+  padding: 3px 2px;
+  scroll-padding-inline: 2px;
+}
+
+#frameCommands,
+body[data-drawing-layout="full"] #dockRow {
+  gap: 10px;
+}
+
+#paperFit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  visibility: hidden;
+}

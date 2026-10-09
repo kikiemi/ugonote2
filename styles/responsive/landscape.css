@@ -1,0 +1,621 @@
+@media (orientation: landscape) {
+  #homeBtn span,
+  #lastBtn span {
+    display: none;
+  }
+  #homeBtn .ic,
+  #lastBtn .ic {
+    width: 23px;
+    height: 23px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  #popTool,
+  #popColor,
+  #rail {
+    inset: 8px;
+    transform: none;
+    width: auto;
+    height: calc(100dvh - 16px);
+    padding: 0px;
+  }
+  #popTool {
+    display: none;
+    grid-template-columns: 180px minmax(0px, 1fr);
+    grid-template-rows: 54px minmax(0px, 1fr) 58px;
+  }
+  #popTool.on {
+    display: grid;
+  }
+  #popTool[data-sample="off"] {
+    grid-template-columns: minmax(0px, 1fr);
+  }
+  #popTool[data-sample="off"] #toolOptions {
+    grid-column: 1;
+  }
+  #popTool .popHead {
+    grid-column: 1 / -1;
+  }
+  #popTool .strokeSample {
+    grid-area: 2 / 1;
+    align-self: stretch;
+    border-bottom: 0px;
+    border-right: 1px solid var(--line2);
+    padding-right: 12px;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .sampleCaption {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .strokeSample canvas {
+    height: 70px;
+  }
+  #toolOptions {
+    grid-area: 2 / 2;
+  }
+  #popTool .toolPageTabs {
+    grid-area: 3 / 1 / auto / -1;
+    padding: 5px 16px;
+    gap: 12px;
+  }
+  #rail .toolboxBody {
+    padding: 0px 16px 12px;
+  }
+  .rtools {
+    grid-template-columns: repeat(5, minmax(0px, 1fr));
+    gap: 6px;
+  }
+  .rsep {
+    padding-top: 8px;
+  }
+  .rb {
+    min-height: 70px;
+  }
+  .rfix {
+    padding: 6px 16px;
+  }
+  .rfix .rb {
+    flex-direction: row;
+    min-height: 44px;
+  }
+  .strokeSample .sampleCaption {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #popColor .popBody {
+    padding-top: 0px;
+  }
+  .inkSample {
+    margin: 4px 0px 14px;
+  }
+  .inkSample > span {
+    width: 48px;
+    height: 48px;
+  }
+  #drawerBody {
+    padding: 16px 24px;
+  }
+  .exportHead {
+    padding: 6px 12px;
+  }
+  .exportHead .mhead {
+    font-size: 18px;
+  }
+  #exportTabs {
+    padding-bottom: 4px;
+  }
+  #exportContent {
+    padding: 4px 16px 12px;
+  }
+  #drawerHead {
+    min-height: 50px;
+    padding: 3px 12px;
+  }
+  #menuHeading {
+    font-size: 23px;
+  }
+  #menuHome {
+    grid-template-columns: minmax(170px, 260px) minmax(0px, 1fr);
+    align-content: start;
+    gap: 14px 32px;
+    padding: 12px 20px;
+  }
+  .noteAlbum {
+    max-width: 240px;
+    margin-bottom: 20px;
+  }
+  .notePreview canvas {
+    max-height: 146px;
+  }
+  .noteCaption b {
+    font-size: 18px;
+  }
+  .noteCaption small {
+    font-size: 11px;
+  }
+  .workLibrary {
+    margin-top: 12px;
+    gap: 6px;
+  }
+  .workLibrary button {
+    font-size: 11px;
+  }
+  .menuChoices {
+    gap: 12px 16px;
+  }
+  .menuChoice,
+  #menuDraw {
+    min-height: 123px;
+    font-size: 17px;
+  }
+  .menuArt {
+    height: 76px;
+  }
+  .menuChoice > span {
+    min-height: 44px;
+  }
+  .menuHomeFoot {
+    gap: 6px;
+  }
+  .menuHomeFoot > button {
+    font-size: 11px;
+    padding: 0px 10px;
+  }
+  .menuHomeFoot #modeName {
+    display: none;
+  }
+  #popColor .popBody {
+    padding: 4px 12px 14px;
+  }
+  .dkb {
+    font-size: 10px;
+  }
+  #hd .hbtn {
+    width: 44px;
+  }
+  .liveLayer {
+    width: 44px;
+    min-height: 44px;
+  }
+  #tlBar {
+    padding-top: 8px;
+    padding-bottom: 6px;
+  }
+  #fs {
+    height: 86px;
+    --fcw: 100px;
+    --fgap: 10px;
+    padding: 14px 10px;
+  }
+  .fcell,
+  #fsTrack {
+    height: 58px;
+  }
+  #fsGhost {
+    width: 100px;
+    height: 58px;
+  }
+
+  body[data-drawing-layout="split"] #drawingBay {
+    right: 122px;
+    bottom: 70px;
+    width: clamp(248px, 34vw, 320px);
+  }
+  #popTool .strokeSample,
+  body[data-drawing-layout="split"] #toolOptions .pbk {
+    display: none;
+  }
+  body[data-drawing-layout="split"] #toolOptions[data-tool-page="brush"] #blkBrush:not(.off),
+  body[data-drawing-layout="split"] #toolOptions[data-tool-page="size"] #blkSize:not(.off),
+  body[data-drawing-layout="split"] #toolOptions[data-tool-page="pattern"] #blkPat:not(.off),
+  body[data-drawing-layout="split"] #toolOptions[data-tool-page="detail"] [data-options-page="detail"]:not(.off) {
+    display: block;
+  }
+  #popTool .penHandle {
+    height: 38px;
+  }
+  #popTool .plab {
+    font-size: 11px;
+  }
+  body[data-drawing-layout="split"] #popTool .toolPageTabs {
+    gap: 2px;
+    padding: 4px;
+  }
+  body[data-drawing-layout="split"] #popTool .toolPageTabs button {
+    min-height: 44px;
+    flex-direction: row;
+    font-size: 10px;
+    gap: 2px;
+  }
+  body[data-drawing-layout="split"] #popTool .toolPageTabs .ic {
+    width: 16px;
+    height: 16px;
+  }
+  #popTool .brushgrid {
+    padding: 4px 0px 8px;
+    margin: 0px;
+  }
+  #popTool .brushb {
+    min-height: 90px;
+    gap: 2px;
+  }
+  #popTool .brushb canvas {
+    height: 24px;
+  }
+  #popTool .brushb > span:last-child {
+    min-height: 22px;
+    padding: 3px 5px;
+  }
+  #popTool #blkBrush > .plab {
+    display: none;
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    bottom: auto;
+    max-width: none;
+    margin: 0px;
+  }
+  body[data-drawing-layout="full"] #popTool .popHead,
+  body[data-drawing-layout="full"] #popColor .popHead,
+  body[data-drawing-layout="full"] #rail .toolboxHead {
+    margin-bottom: 0px;
+  }
+  body[data-drawing-layout="full"] #toolOptions,
+  body[data-drawing-layout="full"] #rail .toolboxBody,
+  body[data-drawing-layout="full"] #popColor .popBody,
+  body[data-drawing-layout="full"] #popTool .toolPageTabs,
+  body[data-drawing-layout="full"] #rail .rfix {
+    margin-left: 128px;
+  }
+  #mainRow {
+    top: 0px;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  #hd {
+    left: calc(140px + env(safe-area-inset-left));
+    gap: 6px;
+  }
+  #layerStack {
+    position: fixed;
+    left: calc(78px + env(safe-area-inset-left));
+    top: max(8px,env(safe-area-inset-top));
+    bottom: auto;
+    width: 44px;
+    max-height: calc(100% - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    transform: none;
+    flex-direction: column;
+    gap: 5px;
+    overflow: hidden auto;
+  }
+  #liveLayerTabs {
+    flex-direction: column;
+    gap: 5px;
+  }
+  #tlBar {
+    height: 64px;
+    min-height: 64px;
+    padding: 8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+    justify-content: center;
+  }
+  .tlTail {
+    position: fixed;
+    left: calc(8px + env(safe-area-inset-left));
+    top: max(8px,env(safe-area-inset-top));
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tlTail .tb,
+  .tlTail #tlToggle,
+  .tlTail #addBtn {
+    width: 60px;
+    min-width: 60px;
+    min-height: 48px;
+    height: 48px;
+    padding: 3px;
+    font-size: 10px;
+  }
+  .tlTransport {
+    gap: 6px;
+  }
+  .tlTransport .tb {
+    width: 44px;
+    height: 44px;
+  }
+  #mobileTools {
+    width: 104px;
+    right: calc(8px + env(safe-area-inset-right));
+    top: max(8px,env(safe-area-inset-top));
+  }
+  #dockRow {
+    grid-template-columns: repeat(2, minmax(0px, 1fr));
+    gap: 5px;
+  }
+  .dkb {
+    min-height: 44px;
+    height: 44px;
+    border-width: 3px;
+    gap: 0px;
+    padding: 1px;
+  }
+  .dkb .ic,
+  .dkb .chip {
+    width: 19px;
+    height: 19px;
+  }
+  .dkb .dotwrap {
+    height: 19px;
+  }
+  .dkb i {
+    font-size: 10px;
+    line-height: 12px;
+  }
+  #frameNo {
+    position: fixed;
+    top: max(8px,env(safe-area-inset-top));
+    bottom: auto;
+    right: calc(120px + env(safe-area-inset-right));
+    transform: none;
+    min-width: 86px;
+    height: 44px;
+    font-size: 12px;
+  }
+  body[data-tl="1"] #mainRow {
+    bottom: calc(210px + env(safe-area-inset-bottom));
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    left: calc(8px + env(safe-area-inset-left));
+    right: auto;
+    top: calc(64px + env(safe-area-inset-top));
+    width: 112px;
+  }
+  body[data-drawing-layout="full"] #dockRow {
+    grid-template-columns: repeat(2, minmax(0px, 1fr));
+  }
+  body[data-tl="1"] #mobileTools,
+  body[data-tl="1"] #layerStack {
+    display: none;
+  }
+  body[data-tl="1"] #framePanel,
+  body[data-tl="1"] #fs {
+    margin-left: calc(78px + env(safe-area-inset-left));
+    margin-right: env(safe-area-inset-right);
+  }
+  body[data-tl="1"] #frameNo {
+    top: auto;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    right: calc(8px + env(safe-area-inset-right));
+  }
+  body[data-tl="1"] #hd {
+    top: auto;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: calc(8px + env(safe-area-inset-left));
+  }
+  body[data-tl="0"] #mainRow {
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+  }
+  body[data-tl="0"] #tl {
+    padding-bottom: 0px;
+  }
+  body[data-tl="0"] #tlBar {
+    height: 0px;
+    min-height: 0px;
+    padding: 0px;
+  }
+  body[data-tl="0"] .tlTransport .tb {
+    touch-action: none;
+  }
+  body[data-tl="0"] .tlTransport {
+    position: fixed;
+    left: 50%;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+  }
+  #mainRow {
+    left: 0px;
+    right: 0px;
+  }
+  #dockGrid {
+    position: fixed;
+    left: calc(8px + env(safe-area-inset-left));
+    top: calc(170px + env(safe-area-inset-top));
+    width: 60px;
+    height: 44px;
+  }
+  body[data-tl="1"] #dockGrid {
+    display: none;
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    max-height: calc(100% - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+
+  #paperFit { inset: calc(52px + env(safe-area-inset-top)) calc(116px + env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) calc(126px + env(safe-area-inset-left)); }
+  body[data-tl="1"] #paperFit { inset: 0 calc(8px + env(safe-area-inset-right)) 0 calc(78px + env(safe-area-inset-left)); }
+}
+
+@media (orientation: landscape) and (max-height: 400px) {
+  .soundAssignment .mixJump {
+    margin-bottom: 6px;
+  }
+  .soundAssignment .mrow.end {
+    margin-top: 8px;
+  }
+  .soundAssignment .mixJump {
+    margin: 0px;
+  }
+  .soundAssignment {
+    padding: 10px;
+  }
+  .soundAssignment .mhead {
+    font-size: 18px;
+    padding-right: 90px;
+  }
+  .soundAssignment .mbody {
+    margin: 4px 0px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .soundAssignment .mixToolbar {
+    margin-bottom: 6px;
+  }
+  .soundAssignment .mrow.end {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    margin: 0px;
+  }
+  .soundAssignment .mrow.end .mbtn {
+    min-height: 44px;
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+  .soundAssignment .mixhead {
+    min-height: 38px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+  .soundAssignment .mixPages .mbtn,
+  .soundAssignment .mixJump .mbtn {
+    padding: 6px 12px;
+  }
+  .soundAssignment .mixJump {
+    gap: 6px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  #layerStack .liveLayer {
+    min-height: 44px;
+  }
+  body[data-drawing-layout="split"] #drawingBay {
+    bottom: 60px;
+  }
+  body[data-tl="1"] #framePanel {
+    min-height: 46px;
+    padding: 2px 8px;
+  }
+  #popTool .popHead b,
+  #rail .toolboxHead b,
+  #popColor .popHead b {
+    font-size: 13px;
+  }
+  #popTool .popHead,
+  #rail .toolboxHead,
+  #popColor .popHead {
+    padding: 2px 7px;
+  }
+  #layerStack {
+    overflow-x: auto;
+  }
+  #layerStack .liveLayer {
+    min-width: 44px;
+  }
+  body[data-drawing-menu="1"] #popTool,
+  body[data-drawing-menu="1"] #popColor,
+  body[data-drawing-menu="1"] #rail {
+    right: 226px;
+    bottom: 60px;
+  }
+  body[data-drawing-menu="1"] #rail .rtools {
+    grid-template-columns: repeat(5, minmax(0px, 1fr));
+  }
+  body[data-drawing-layout="full"] #rail .rtools {
+    grid-template-columns: repeat(5, minmax(0px, 1fr));
+    gap: 8px;
+  }
+  body[data-drawing-layout="full"] #rail .rb {
+    min-height: 70px;
+  }
+  body[data-drawing-layout="full"] #rail .rfix {
+    padding: 4px;
+  }
+  body[data-drawing-layout="full"] #rail .rfix .rb {
+    min-height: 44px;
+    flex-direction: row;
+  }
+  body[data-drawing-layout="full"] #popTool .popHead,
+  body[data-drawing-layout="full"] #popColor .popHead,
+  body[data-drawing-layout="full"] #rail .toolboxHead {
+    min-height: 48px;
+    padding: 2px 12px;
+  }
+  body[data-drawing-layout="full"] #popTool .toolPageTabs {
+    min-height: 48px;
+    padding: 2px 10px;
+  }
+  body[data-drawing-layout="full"] #toolOptions,
+  body[data-drawing-layout="full"] #rail .toolboxBody,
+  body[data-drawing-layout="full"] #popColor .popBody {
+    padding: 4px 12px 8px;
+  }
+  .newNoteHead {
+    padding: 10px 18px;
+  }
+  .newNoteHint {
+    display: none;
+  }
+  .newNoteBody {
+    padding: 10px 18px;
+  }
+  .newNoteActions {
+    padding: 8px 18px;
+  }
+  body[data-drawing-layout="full"] .dkb {
+    min-height: 44px;
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    top: calc(52px + env(safe-area-inset-top));
+  }
+  body[data-tl="1"] #mainRow {
+    bottom: calc(192px + env(safe-area-inset-bottom));
+  }
+  body[data-drawing-layout="full"] #mobileTools {
+    max-height: calc(100% - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 300px) {
+  #menuHome {
+    grid-template-columns: 180px minmax(0px, 1fr);
+    gap: 10px 20px;
+  }
+  .menuChoices {
+    gap: 8px 12px;
+  }
+  .menuArt {
+    height: 44px;
+  }
+  .menuChoice,
+  #menuDraw {
+    min-height: 90px;
+    font-size: 14px;
+  }
+  .notePreview canvas {
+    max-height: 75px;
+  }
+  .noteAlbum {
+    margin-bottom: 18px;
+  }
+  .noteCaption b {
+    font-size: 15px;
+  }
+  .workLibrary {
+    margin-top: 8px;
+  }
+  .workLibrary button {
+    padding: 0px 4px;
+    font-size: 10px;
+  }
+  .menuHomeFoot #modeBtn {
+    order: 0;
+    width: auto;
+  }
+}
+

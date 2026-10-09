@@ -1,0 +1,28 @@
+@media (hover: hover) {
+  button:not(.on):not(.primary):not(.accent):not([aria-pressed="true"]):hover {
+    background-color: var(--acc-soft);
+    color: var(--acc-d);
+  }
+  .primary:hover,
+  .accent:hover {
+    filter: brightness(0.95);
+  }
+}
+
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: auto ease 0s 1 normal none running none !important;
+    transition: none !important;
+  }
+}
+

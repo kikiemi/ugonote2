@@ -1,0 +1,213 @@
+.wideTool {
+  display: none;
+}
+
+@media (min-width: 600px) and (min-height: 600px) {
+  #mobileTools {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    left: auto;
+    bottom: auto;
+    width: 204px;
+  }
+  #dockRow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #mobileTools .wideTool {
+    display: flex;
+  }
+  #mobileTools .dkb {
+    min-height: 54px;
+    padding: 4px 2px;
+    font-size: 11px;
+  }
+  #paperFit {
+    inset: 64px 228px 78px 64px;
+  }
+}
+
+body[data-desktop="1"] {
+  --desktop-timeline-height: 212px;
+}
+
+body[data-desktop="1"] #mainRow {
+  inset: 0;
+}
+
+body[data-desktop="1"][data-tl="1"] #paperFit {
+  bottom: var(--desktop-timeline-height);
+}
+
+body[data-wide-tools="1"] #drawingBay {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 228px;
+  bottom: 72px;
+  width: min(440px, calc(100vw - 244px));
+  z-index: 27;
+  pointer-events: none;
+  align-items: flex-start;
+}
+
+body[data-desktop="1"][data-tl="1"] #drawingBay {
+  bottom: calc(var(--desktop-timeline-height) + 8px);
+}
+
+body[data-wide-tools="1"][data-drawing-menu="1"] #drawingBay {
+  display: flex;
+}
+
+body[data-wide-tools="1"] #drawingBay #popTool,
+body[data-wide-tools="1"] #drawingBay #popColor,
+body[data-wide-tools="1"] #drawingBay #rail {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: 100%;
+  margin: 0;
+  flex-direction: column;
+}
+
+body[data-wide-tools="1"] #rail .rtools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body[data-wide-tools="1"] #rail .rb {
+  min-height: 70px;
+}
+
+body[data-wide-tools="1"] #popTool:has(#toolOptions[data-tool-page="size"]) .strokeSample {
+  display: none;
+}
+
+body[data-wide-tools="1"] #toolOptions,
+body[data-wide-tools="1"] #popColor .popBody {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg2);
+}
+
+body[data-wide-tools="1"] #popTool .toolPageTabs {
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 8px;
+}
+
+body[data-wide-tools="1"] #popTool .toolPageTabs button {
+  min-height: 44px;
+}
+
+body[data-desktop="1"] #hd {
+  left: 8px;
+  top: 8px;
+}
+
+body[data-desktop="1"] #layerStack {
+  position: absolute;
+  left: 12px;
+  top: 64px;
+  bottom: 72px;
+  transform: none;
+  width: 46px;
+  max-height: none;
+  flex-direction: column;
+}
+
+body[data-desktop="1"][data-tl="1"] #layerStack {
+  bottom: calc(var(--desktop-timeline-height) + 8px);
+}
+
+body[data-desktop="1"] #tl {
+  right: 0;
+}
+
+body[data-desktop="1"] #frameNo {
+  right: 12px;
+  top: auto;
+  bottom: 80px;
+  transform: none;
+}
+
+body[data-desktop="1"] #tlBar {
+  height: 72px;
+  min-height: 72px;
+  padding: 8px 12px;
+}
+
+body[data-desktop="1"] .tlTransport {
+  margin-right: 0;
+  gap: 8px;
+}
+
+body[data-desktop="1"] .tlTransport .tb {
+  width: 44px;
+  height: 44px;
+}
+
+body[data-desktop="1"] #fs {
+  height: 88px;
+  padding: 12px;
+  --fcw: 112px;
+  --fgap: 10px;
+}
+
+body[data-desktop="1"] .fcell,
+body[data-desktop="1"] #fsTrack {
+  height: 64px;
+}
+
+body[data-desktop="1"] #fsGhost {
+  width: 112px;
+  height: 64px;
+}
+
+body[data-desktop="1"] #holdBtn {
+  display: flex;
+}
+
+body[data-desktop="1"] #framePanel {
+  min-height: 52px;
+  padding: 4px 12px;
+}
+
+body[data-desktop="1"][data-focus="1"] #drawingBay,
+body[data-desktop="1"][data-focus="1"] #mobileTools,
+body[data-desktop="1"][data-recordsync="1"] #drawingBay,
+body[data-desktop="1"][data-recordsync="1"] #mobileTools {
+  display: none;
+}
+
+body[data-desktop="1"][data-focus="1"] #paperFit,
+body[data-desktop="1"][data-free="1"] #paperFit {
+  inset: 0;
+}
+
+body[data-desktop="1"][data-recordsync="1"] #paperFit {
+  inset: 0 0 78px;
+}
+
+@media (max-height: 760px) {
+  body[data-desktop="1"] #dockRow {
+    gap: 6px;
+  }
+  body[data-desktop="1"] .dkb {
+    min-height: 44px;
+    padding: 2px;
+    gap: 1px;
+    border-width: 2px;
+    font-size: 10px;
+  }
+  body[data-desktop="1"] .dkb .ic {
+    width: 20px;
+    height: 20px;
+  }
+}
