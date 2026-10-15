@@ -1,23 +1,25 @@
+import { pixel_source_ready, pixel_source_prepare } from './pixel_source'
+import { task_schedule } from './task_queue'
 import { animfx_active, animfx_compose, animfx_time_for_tick } from './animfx'
-import { animout_compose, animout_jobs, type AnimOutJob } from './animout'
+import { animout_compose, animout_jobs, type anim_out_job_t } from './animout'
 import { kwz_filename_make, ppm_filename_format, ppm_filename_local, rand_hex } from './codec/fname'
-import { kwz_speed_from_fps, type KwzFrame } from './codec/kwz'
-import type { FlipMeta } from './codec/kwzdec'
-import { KWZ_CANVAS_W, KWZ_CANVAS_H, kwz_pad_plane } from './codec/kwzgeom'
-import { ppm_speed_from_fps, PPM_W, PPM_H, type PpmFrame } from './codec/ppm'
+import { kwz_speed_from_fps, type kwz_frame_t } from './codec/kwz'
+import type { flip_meta_t } from './codec/kwzdec'
+import { kwz_canvas_w, kwz_canvas_h, kwz_pad_plane } from './codec/kwzgeom'
+import { ppm_speed_from_fps, ppm_w, ppm_h, type ppm_frame_t } from './codec/ppm'
 import { report_warning } from './diagnostics'
 import { doc_layer_canvas, doc_compose, doc_frame_paper, doc_frame_order } from './doc'
 import { prepare_flip_audio } from './flipnote/audio'
-import { exact_color, kwz_paper_index, nearest_color, PPM_COLORS, quantize_kwz_planes, quantize_ppm_planes } from './flipnote/color'
+import { exact_color, kwz_paper_index, nearest_color, ppm_colors, quantize_kwz_planes, quantize_ppm_planes } from './flipnote/color'
 import { native_frame_scratch, native_kwz_project_frame, native_ppm_project_frame } from './flipnote/native'
-import { HOLD_MAX, L_P, MAX_FRAMES_FLIPNOTE, MODE_3D, MODE_DSI } from './h'
+import { hold_max, l_p, max_frames_flipnote, mode_3_d, mode_dsi } from './h'
 import { canvas_make, canvas_to_blob, clamp, hex_rgb } from './lib'
 import { mode_allows_layer_alpha } from './mode'
 import { dispatch } from './state/commands/index'
 import { st } from './state/store'
 import { build_kwz_async, build_ppm_async } from './workercli'
 
-function meta_for_kwz(): FlipMeta {
+function meta_for_kwz(): flip_meta_t {
   const m = { ...st().doc.meta }
   const now = Math.floor(Date.now() / 1000)
   if (!m.created) m.created = now
@@ -31,7 +33,7 @@ function meta_for_kwz(): FlipMeta {
   return m
 }
 
-function meta_for_ppm(): FlipMeta {
+function meta_for_ppm(): flip_meta_t {
   const m = { ...st().doc.meta }
   const now = Math.floor(Date.now() / 1000)
   if (!m.created) m.created = now
@@ -59,7 +61,7 @@ function fit_rect(tw: number, th: number): [number, number, number, number] {
 
 function raster_all(i: number, tw: number, th: number, cx: CanvasRenderingContext2D): ImageData {
   const ord = doc_frame_order(i)
-  const sources: number[] = [L_P]
+  const sources: number[] = [l_p]
   for (let k = ord.length - 1; k >= 0; k--) sources.push(ord[k])
   return raster_slot(i, sources, tw, th, cx)
 }
@@ -80,7 +82,7 @@ function raster_slot(i: number, sources: number[], tw: number, th: number, cx: C
   return cx.getImageData(0, 0, tw, th)
 }
 
-function raster_animated(job: Readonly<AnimOutJob>, tw: number, th: number, cx: CanvasRenderingContext2D, source: HTMLCanvasElement, sourceContext: CanvasRenderingContext2D): ImageData {
+function raster_animated(job: Readonly<anim_out_job_t>, tw: number, th: number, cx: CanvasRenderingContext2D, source: HTMLCanvasElement, source_context: CanvasRenderingContext2D): ImageData {
   const g = st()
   const [dx, dy, dw, dh] = fit_rect(tw, th)
   const sw = Math.max(1, Math.round(dw))
@@ -89,15 +91,15 @@ function raster_animated(job: Readonly<AnimOutJob>, tw: number, th: number, cx: 
     source.width = sw
     source.height = sh
   }
-  sourceContext.clearRect(0, 0, sw, sh)
-  animout_compose(job, sourceContext, sw, sh, 0, g.doc.fps, g.doc.anim)
+  source_context.clearRect(0, 0, sw, sh)
+  animout_compose(job, source_context, sw, sh, 0, g.doc.fps, g.doc.anim)
   cx.clearRect(0, 0, tw, th)
   cx.imageSmoothingEnabled = true
   cx.drawImage(source, dx, dy, dw, dh)
   return cx.getImageData(0, 0, tw, th)
 }
 
-export function exp_kwz(onP: (p: number) => void, done: (bytes: Uint8Array | null, note: string, filename: string) => void): void {
+export function exp_kwz(on_p: (p: number) => void, done: (bytes: Uint8Array | null, note: string, filename: string) => void): void {
   let completed = 0
   const complete = (bytes: Uint8Array | null, note: string, filename: string): void => {
     if (completed) return
@@ -109,76 +111,79 @@ export function exp_kwz(onP: (p: number) => void, done: (bytes: Uint8Array | nul
   const g = st()
   const n = g.doc.frames.length
   const jobs = animout_jobs(g.doc.frames, 0, n - 1, g.doc.fps, g.doc.anim, 0)
-  if (jobs.length > MAX_FRAMES_FLIPNOTE) {
-    complete(null, 'KWZは再生時の展開後' + MAX_FRAMES_FLIPNOTE + 'コマまでです', '')
+  if (jobs.length > max_frames_flipnote) {
+    complete(null, 'KWZは再生時の展開後' + max_frames_flipnote + 'コマまでです', '')
     return
   }
-  const VW = KWZ_CANVAS_W
-  const VH = KWZ_CANVAS_H
-  const [, cx] = canvas_make(VW, VH, 1)
-  const [animatedCanvas, animatedContext] = canvas_make(1, 1, 1)
+  const vw = kwz_canvas_w
+  const vh = kwz_canvas_h
+  const [, cx] = canvas_make(vw, vh, 1)
+  const [animated_canvas, animated_context] = canvas_make(1, 1, 1)
   const animated = animfx_active(g.doc.anim)
-  const frames: KwzFrame[] = []
-  const nativeReady = !animated && g.doc.mode === MODE_3D && g.doc.w === VW && g.doc.h === VH
-  const nativeScratch = native_frame_scratch(VW * VH)
-  let jobIndex = 0
-  let cachedFrame = -1
-  let cachedRaster: { layers: [Uint8Array, Uint8Array, Uint8Array], colors: [number, number][], meta?: KwzFrame['meta'] } | null = null
+  const frames: kwz_frame_t[] = []
+  const native_ready = !animated && g.doc.mode === mode_3_d && g.doc.w === vw && g.doc.h === vh
+  const native_scratch = native_frame_scratch(vw * vh)
+  let job_index = 0
+  let cached_frame = -1
+  let cached_raster: { layers: [Uint8Array, Uint8Array, Uint8Array], colors: [number, number][], meta?: kwz_frame_t['meta'] } | null = null
   const step = (): void => {
     const started = performance.now()
-    while (jobIndex < jobs.length && performance.now() - started < 24) {
-      const job = jobs[jobIndex]
+    while (job_index < jobs.length && performance.now() - started < 24) {
+      const job = jobs[job_index]
       const frame = g.doc.frames[job.frame]
-      const paperIdx = kwz_paper_index(doc_frame_paper(job.frame))
+      if (!pixel_source_ready(frame)) { void pixel_source_prepare(frame).then(step, error => complete(null, String(error), '')); return }
+      const paper_idx = kwz_paper_index(doc_frame_paper(job.frame))
       let layers: [Uint8Array, Uint8Array, Uint8Array]
       let colors: [number, number][]
       if (animated) {
-        const quantized = quantize_kwz_planes(raster_animated(job, VW, VH, cx, animatedCanvas, animatedContext))
+        const quantized = quantize_kwz_planes(raster_animated(job, vw, vh, cx, animated_canvas, animated_context))
         layers = [kwz_pad_plane(quantized.layers[0]), kwz_pad_plane(quantized.layers[1]), kwz_pad_plane(quantized.layers[2])]
         colors = quantized.colors
       } else {
-        if (cachedFrame !== job.frame || !cachedRaster) {
-          const native = nativeReady ? native_kwz_project_frame(frame.pk, g.doc.lvis, g.doc.lalpha, nativeScratch, frame.kwz?.colors) : null
-          const quantized = native || quantize_kwz_planes(raster_all(job.frame, VW, VH, cx))
-          cachedRaster = {
+        if (cached_frame !== job.frame || !cached_raster) {
+          const native = native_ready ? native_kwz_project_frame(frame.pk, g.doc.lvis, g.doc.lalpha, native_scratch, frame.kwz?.colors) : null
+          const quantized = native || quantize_kwz_planes(raster_all(job.frame, vw, vh, cx))
+          cached_raster = {
             layers: [kwz_pad_plane(quantized.layers[0]), kwz_pad_plane(quantized.layers[1]), kwz_pad_plane(quantized.layers[2])],
             colors: quantized.colors,
             meta: native ? frame.kwz || { depth: [1, 2, 3].map(layer => doc_frame_order(job.frame).indexOf(layer)), colors: native.colors.flat(), author: xmeta.cur_id, camera: 0, reserved: 0 } : undefined,
           }
-          cachedFrame = job.frame
+          cached_frame = job.frame
         }
-        layers = cachedRaster.layers
-        colors = cachedRaster.colors
+        layers = cached_raster.layers
+        colors = cached_raster.colors
       }
-      frames.push({ layers, paper: paperIdx, colors, se: job.first ? frame.se & 0xf : 0, meta: animated ? undefined : cachedRaster?.meta })
-      jobIndex++
-      onP((jobIndex / jobs.length) * 0.8)
+      frames.push({ layers, paper: paper_idx, colors, se: job.first ? frame.se & 0xf : 0, meta: animated ? undefined : cached_raster?.meta })
+      job_index++
+      on_p((job_index / jobs.length) * 0.8)
     }
-    if (jobIndex < jobs.length) {
-      setTimeout(step, 0)
+    if (job_index < jobs.length) {
+      task_schedule(step)
       return
     }
     finish()
   }
   const finish = () => {
+    const current = g.doc.frames[Math.min(g.doc.cur, g.doc.frames.length - 1)]
+    if (!pixel_source_ready(current)) { void pixel_source_prepare(current).then(finish, error => complete(null, String(error), '')); return }
     const [tc, tx] = canvas_make(80, 64)
-    const thumbFrame = Math.min(g.doc.cur, g.doc.frames.length - 1)
-    if (animated) animfx_compose(thumbFrame, tx, 80, 64, 1, animfx_time_for_tick(thumb_frame_idx(), g.doc.fps))
-    else doc_compose(thumbFrame, tx, 80, 64, 1)
+    const thumb_frame = Math.min(g.doc.cur, g.doc.frames.length - 1)
+    if (animated) animfx_compose(thumb_frame, tx, 80, 64, 1, animfx_time_for_tick(thumb_frame_idx(), g.doc.fps))
+    else doc_compose(thumb_frame, tx, 80, 64, 1)
     tx.globalCompositeOperation = 'destination-over'
     tx.fillStyle = '#FFFFFF'
     tx.fillRect(0, 0, 80, 64)
     tx.globalCompositeOperation = 'source-over'
-    canvas_to_blob(tc, 'image/jpeg', 0.85, (blob, blobError) => {
+    canvas_to_blob(tc, 'image/jpeg', 0.85, (blob, blob_error) => {
       if (!blob) {
-        report_warning('KWZサムネイルを作成できませんでした', blobError)
+        report_warning('KWZサムネイルを作成できませんでした', blob_error)
         complete(null, 'サムネイルを作れませんでした', '')
         return
       }
       blob.arrayBuffer().then(
         buffer => {
           try {
-            onP(0.9)
+            on_p(0.9)
             const audio = prepare_flip_audio('kwz')
             build_kwz_async(
               {
@@ -186,14 +191,14 @@ export function exp_kwz(onP: (p: number) => void, done: (bytes: Uint8Array | nul
                 speed: kwz_speed_from_fps(g.doc.fps),
                 loop: g.doc.loop,
                 name: g.doc.name.slice(0, 10),
-                thumbJpeg: new Uint8Array(buffer),
-                thumbIdx: thumb_frame_idx(),
+                thumb_jpeg: new Uint8Array(buffer),
+                thumb_idx: thumb_frame_idx(),
                 bgm: audio.bgm,
                 se: audio.se,
                 meta: xmeta,
               },
               (bytes, error) => {
-                onP(1)
+                on_p(1)
                 if (!bytes) {
                   complete(null, error || 'KWZの生成に失敗', '')
                   return
@@ -217,7 +222,7 @@ export function exp_kwz(onP: (p: number) => void, done: (bytes: Uint8Array | nul
   step()
 }
 
-const PPM_THUMB_PAL: [number, number, number][] = [
+const ppm_thumb_pal: [number, number, number][] = [
   [255, 255, 255],
   [82, 82, 82],
   [255, 255, 255],
@@ -237,7 +242,7 @@ function thumb_frame_idx(): number {
   const g = st()
   let t = 0
   const cur = Math.min(g.doc.cur, g.doc.frames.length - 1)
-  for (let k = 0; k < cur; k++) t += clamp(g.doc.frames[k].hold, 1, HOLD_MAX)
+  for (let k = 0; k < cur; k++) t += clamp(g.doc.frames[k].hold, 1, hold_max)
   return t
 }
 
@@ -260,8 +265,8 @@ function ppm_thumb(): Uint8Array {
           const y0 = ty + line
           const p0 = (y0 * 64 + x0) * 4
           const p1 = (y0 * 64 + x0 + 1) * 4
-          const a = nearest_color(img.data[p0], img.data[p0 + 1], img.data[p0 + 2], PPM_THUMB_PAL)
-          const b = nearest_color(img.data[p1], img.data[p1 + 1], img.data[p1 + 2], PPM_THUMB_PAL)
+          const a = nearest_color(img.data[p0], img.data[p0 + 1], img.data[p0 + 2], ppm_thumb_pal)
+          const b = nearest_color(img.data[p1], img.data[p1 + 1], img.data[p1 + 2], ppm_thumb_pal)
           out[off++] = (a & 0xf) | ((b & 0xf) << 4)
         }
       }
@@ -270,64 +275,66 @@ function ppm_thumb(): Uint8Array {
   return out
 }
 
-export function exp_ppm(onP: (p: number) => void, done: (bytes: Uint8Array | null, note: string, filename: string) => void): void {
+export function exp_ppm(on_p: (p: number) => void, done: (bytes: Uint8Array | null, note: string, filename: string) => void): void {
   const xmeta = meta_for_ppm()
   dispatch('frame.sync_live', null)
   const g = st()
   const n = g.doc.frames.length
   const jobs = animout_jobs(g.doc.frames, 0, n - 1, g.doc.fps, g.doc.anim, 0)
-  if (jobs.length > MAX_FRAMES_FLIPNOTE) {
-    done(null, 'PPMは再生時の展開後' + MAX_FRAMES_FLIPNOTE + 'コマまでです', '')
+  if (jobs.length > max_frames_flipnote) {
+    done(null, 'PPMは再生時の展開後' + max_frames_flipnote + 'コマまでです', '')
     return
   }
-  const [, cx] = canvas_make(PPM_W, PPM_H, 1)
-  const [animatedCanvas, animatedContext] = canvas_make(1, 1, 1)
+  const [, cx] = canvas_make(ppm_w, ppm_h, 1)
+  const [animated_canvas, animated_context] = canvas_make(1, 1, 1)
   const animated = animfx_active(g.doc.anim)
-  const frames: PpmFrame[] = []
-  const nativeReady = !animated && g.doc.mode === MODE_DSI && g.doc.w === PPM_W && g.doc.h === PPM_H
-  const nativeScratch = native_frame_scratch(PPM_W * PPM_H)
+  const frames: ppm_frame_t[] = []
+  const native_ready = !animated && g.doc.mode === mode_dsi && g.doc.w === ppm_w && g.doc.h === ppm_h
+  const native_scratch = native_frame_scratch(ppm_w * ppm_h)
   let dropped = 0
-  let jobIndex = 0
-  let cachedFrame = -1
-  let cachedLayers: [Uint8Array, Uint8Array] | null = null
-  let cachedPens: [number, number] | null = null
+  let job_index = 0
+  let cached_frame = -1
+  let cached_layers: [Uint8Array, Uint8Array] | null = null
+  let cached_pens: [number, number] | null = null
   const step = (): void => {
     const started = performance.now()
-    while (jobIndex < jobs.length && performance.now() - started < 24) {
-      const job = jobs[jobIndex]
+    while (job_index < jobs.length && performance.now() - started < 24) {
+      const job = jobs[job_index]
       const frame = g.doc.frames[job.frame]
-      const paperRgb = hex_rgb(doc_frame_paper(job.frame).slice(0, 7))
-      const paperIndex = nearest_color(...paperRgb, PPM_COLORS.slice(0, 2))
-      const paper = paperIndex === 0 ? 1 : 0
-      const nativePaper = exact_color(...paperRgb, PPM_COLORS.slice(0, 2))
+      if (!pixel_source_ready(frame)) { void pixel_source_prepare(frame).then(step, error => done(null, String(error), '')); return }
+      const paper_rgb = hex_rgb(doc_frame_paper(job.frame).slice(0, 7))
+      const paper_index = nearest_color(...paper_rgb, ppm_colors.slice(0, 2))
+      const paper = paper_index === 0 ? 1 : 0
+      const native_paper = exact_color(...paper_rgb, ppm_colors.slice(0, 2))
       if (frame.se & 0x8) dropped = 1
       let layers: [Uint8Array, Uint8Array]
       let pens: [number, number]
       if (animated) {
-        const quantized = quantize_ppm_planes(raster_animated(job, PPM_W, PPM_H, cx, animatedCanvas, animatedContext), paper)
+        const quantized = quantize_ppm_planes(raster_animated(job, ppm_w, ppm_h, cx, animated_canvas, animated_context), paper)
         layers = [quantized.layers[0], quantized.layers[1]]
         pens = [quantized.pens[0], quantized.pens[1]]
       } else {
-        if (cachedFrame !== job.frame || !cachedLayers || !cachedPens) {
+        if (cached_frame !== job.frame || !cached_layers || !cached_pens) {
           const order = doc_frame_order(job.frame)
           const slots = [0, ...order, 3]
-          const native = nativeReady && nativePaper >= 0 ? native_ppm_project_frame(slots.map(layer => layer === 3 ? null : frame.pk[layer]), slots.map(layer => layer === 3 ? 0 : g.doc.lvis[layer]), slots.map(layer => g.doc.lalpha[layer]), nativePaper, nativeScratch) : null
-          const quantized = native || quantize_ppm_planes(raster_all(job.frame, PPM_W, PPM_H, cx), paper)
-          cachedLayers = [quantized.layers[0], quantized.layers[1]]
-          cachedPens = [quantized.pens[0], quantized.pens[1]]
-          cachedFrame = job.frame
+          const native = native_ready && native_paper >= 0 ? native_ppm_project_frame(slots.map(layer => layer === 3 ? null : frame.pk[layer]), slots.map(layer => layer === 3 ? 0 : g.doc.lvis[layer]), slots.map(layer => g.doc.lalpha[layer]), native_paper, native_scratch) : null
+          const quantized = native || quantize_ppm_planes(raster_all(job.frame, ppm_w, ppm_h, cx), paper)
+          cached_layers = [quantized.layers[0], quantized.layers[1]]
+          cached_pens = [quantized.pens[0], quantized.pens[1]]
+          cached_frame = job.frame
         }
-        layers = cachedLayers
-        pens = cachedPens
+        layers = cached_layers
+        pens = cached_pens
       }
       frames.push({ layers, paper, pen: pens, se: job.first ? frame.se & 0x7 : 0 })
-      jobIndex++
-      onP((jobIndex / jobs.length) * 0.85)
+      job_index++
+      on_p((job_index / jobs.length) * 0.85)
     }
-    if (jobIndex < jobs.length) {
-      setTimeout(step, 0)
+    if (job_index < jobs.length) {
+      task_schedule(step)
       return
     }
+    if (!pixel_source_ready(g.doc.frames[g.doc.cur])) { void pixel_source_prepare(g.doc.frames[g.doc.cur]).then(step, error => done(null, String(error), '')); return }
     const audio = prepare_flip_audio('ppm')
     build_ppm_async(
       {
@@ -336,13 +343,13 @@ export function exp_ppm(onP: (p: number) => void, done: (bytes: Uint8Array | nul
         loop: g.doc.loop,
         name: g.doc.name.slice(0, 10),
         thumb: ppm_thumb(),
-        thumbIdx: thumb_frame_idx(),
+        thumb_idx: thumb_frame_idx(),
         bgm: audio.bgm,
         se: audio.se,
         meta: xmeta,
       },
       (bytes, err) => {
-        onP(1)
+        on_p(1)
         if (!bytes) {
           done(null, err || 'PPMの生成に失敗', '')
           return

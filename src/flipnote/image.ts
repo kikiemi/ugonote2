@@ -1,12 +1,12 @@
-import { KWZ_CANVAS_H, KWZ_CANVAS_W } from '../codec/kwzgeom'
-import { PPM_H, PPM_W } from '../codec/ppm'
+import { kwz_canvas_h, kwz_canvas_w } from '../codec/kwzgeom'
+import { ppm_h, ppm_w } from '../codec/ppm'
 import { clamp, rle_pack } from '../lib'
-import { color_hex, KWZ_COLORS, KWZ_LAYER_PAIRS, PPM_COLORS, rgba_word, type Rgb } from './color'
+import { color_hex, kwz_colors, kwz_layer_pairs, ppm_colors, rgba_word, type rgb_t } from './color'
 
-export type FlipImageFormat = 'ppm' | 'kwz'
+export type flip_image_format_t = 'ppm' | 'kwz'
 
-export type FlipImageInput = {
-  format: FlipImageFormat
+export type flip_image_input_t = {
+  format: flip_image_format_t
   width: number
   height: number
   pixels: Uint8ClampedArray
@@ -14,46 +14,47 @@ export type FlipImageInput = {
   paper: number
   contrast: number
   saturation: number
+  dither?: number
 }
 
-export type FlipImageFrame = [null, Uint32Array | null, Uint32Array | null, Uint32Array | null]
+export type flip_image_frame_t = [null, Uint32Array | null, Uint32Array | null, Uint32Array | null]
 
-export type FlipImageResult = {
-  format: FlipImageFormat
+export type flip_image_result_t = {
+  format: flip_image_format_t
   width: number
   height: number
   paper: number
-  paperHex: string
-  frames: FlipImageFrame[]
+  paper_hex: string
+  frames: flip_image_frame_t[]
   colors: number[]
-  ppmPens: [number, number] | null
+  ppm_pens: [number, number] | null
 }
 
-type PreparedSource = {
+type prepared_source_t = {
   rgb: Float32Array
   alpha: Float32Array
 }
 
-type PaletteSetup = {
+type palette_setup_t = {
   paper: number
-  palette: readonly Rgb[]
-  paletteIndices: number[]
-  layerOf: Int8Array
-  wordOf: Uint32Array
-  ppmPens: [number, number] | null
+  palette: readonly rgb_t[]
+  palette_indices: number[]
+  layer_of: Int8Array
+  word_of: Uint32Array
+  ppm_pens: [number, number] | null
 }
 
 function srgb_to_linear(value: number): number {
   return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
 }
 
-function prepare_source(input: FlipImageInput): PreparedSource {
-  const pixelCount = input.width * input.height
-  const rgb = new Float32Array(pixelCount * 3)
-  const alpha = new Float32Array(pixelCount)
+function prepare_source(input: flip_image_input_t): prepared_source_t {
+  const pixel_count = input.width * input.height
+  const rgb = new Float32Array(pixel_count * 3)
+  const alpha = new Float32Array(pixel_count)
   const contrast = clamp(input.contrast, 0.5, 1.6)
   const saturation = clamp(input.saturation, 0, 1.8)
-  for (let pixel = 0; pixel < pixelCount; pixel++) {
+  for (let pixel = 0; pixel < pixel_count; pixel++) {
     const source = pixel * 4
     let r = input.pixels[source] / 255
     let g = input.pixels[source + 1] / 255
@@ -74,7 +75,7 @@ function prepare_source(input: FlipImageInput): PreparedSource {
   return { rgb, alpha }
 }
 
-function palette_linear(colors: readonly Rgb[]): Float32Array {
+function palette_linear(colors: readonly rgb_t[]): Float32Array {
   const out = new Float32Array(colors.length * 3)
   for (let index = 0; index < colors.length; index++) {
     const color = colors[index]
@@ -93,64 +94,64 @@ function color_error(r: number, g: number, b: number, palette: Float32Array, ind
   return dr * dr * 0.25 + dg * dg * 0.62 + db * db * 0.13
 }
 
-function blended(prepared: PreparedSource, pixel: number, paper: number, palette: Float32Array): [number, number, number] {
+function blended(prepared: prepared_source_t, pixel: number, paper: number, palette: Float32Array): [number, number, number] {
   const source = pixel * 3
-  const paperOffset = paper * 3
+  const paper_offset = paper * 3
   const alpha = prepared.alpha[pixel]
   const inverse = 1 - alpha
   return [
-    prepared.rgb[source] * alpha + palette[paperOffset] * inverse,
-    prepared.rgb[source + 1] * alpha + palette[paperOffset + 1] * inverse,
-    prepared.rgb[source + 2] * alpha + palette[paperOffset + 2] * inverse,
+    prepared.rgb[source] * alpha + palette[paper_offset] * inverse,
+    prepared.rgb[source + 1] * alpha + palette[paper_offset + 1] * inverse,
+    prepared.rgb[source + 2] * alpha + palette[paper_offset + 2] * inverse,
   ]
 }
 
-function ppm_setup(prepared: PreparedSource, requestedPaper: number): PaletteSetup {
-  const linear = palette_linear(PPM_COLORS)
-  const papers = requestedPaper === 0 || requestedPaper === 1 ? [requestedPaper] : [0, 1]
-  let bestPaper = papers[0]
-  let bestPair: [number, number] = bestPaper === 0 ? [1, 2] : [0, 2]
-  let bestScore = Number.POSITIVE_INFINITY
-  const sampleStep = Math.max(1, Math.floor(prepared.alpha.length / 32768))
+function ppm_setup(prepared: prepared_source_t, requested_paper: number): palette_setup_t {
+  const linear = palette_linear(ppm_colors)
+  const papers = requested_paper === 0 || requested_paper === 1 ? [requested_paper] : [0, 1]
+  let best_paper = papers[0]
+  let best_pair: [number, number] = best_paper === 0 ? [1, 2] : [0, 2]
+  let best_score = Number.POSITIVE_INFINITY
+  const sample_step = Math.max(1, Math.floor(prepared.alpha.length / 32768))
   for (const paper of papers) {
     const inks = [0, 1, 2, 3].filter(index => index !== paper)
     for (let first = 0; first < inks.length - 1; first++) {
       for (let second = first + 1; second < inks.length; second++) {
         const pair: [number, number] = [inks[first], inks[second]]
         let score = 0
-        for (let pixel = 0; pixel < prepared.alpha.length; pixel += sampleStep) {
+        for (let pixel = 0; pixel < prepared.alpha.length; pixel += sample_step) {
           const [r, g, b] = blended(prepared, pixel, paper, linear)
           score += Math.min(color_error(r, g, b, linear, paper), color_error(r, g, b, linear, pair[0]), color_error(r, g, b, linear, pair[1]))
         }
-        if (score < bestScore) {
-          bestScore = score
-          bestPaper = paper
-          bestPair = pair
+        if (score < best_score) {
+          best_score = score
+          best_paper = paper
+          best_pair = pair
         }
       }
     }
   }
-  const layerOf = new Int8Array(PPM_COLORS.length).fill(-1)
-  layerOf[bestPair[0]] = 1
-  layerOf[bestPair[1]] = 2
-  const wordOf = new Uint32Array(PPM_COLORS.length)
-  for (let index = 0; index < PPM_COLORS.length; index++) wordOf[index] = rgba_word(PPM_COLORS[index])
-  return { paper: bestPaper, palette: PPM_COLORS, paletteIndices: [bestPaper, bestPair[0], bestPair[1]], layerOf, wordOf, ppmPens: bestPair }
+  const layer_of = new Int8Array(ppm_colors.length).fill(-1)
+  layer_of[best_pair[0]] = 1
+  layer_of[best_pair[1]] = 2
+  const word_of = new Uint32Array(ppm_colors.length)
+  for (let index = 0; index < ppm_colors.length; index++) word_of[index] = rgba_word(ppm_colors[index])
+  return { paper: best_paper, palette: ppm_colors, palette_indices: [best_paper, best_pair[0], best_pair[1]], layer_of, word_of, ppm_pens: best_pair }
 }
 
-function kwz_paper(prepared: PreparedSource, requestedPaper: number): number {
-  if (Number.isInteger(requestedPaper) && requestedPaper >= 0 && requestedPaper < KWZ_COLORS.length) return requestedPaper
-  const linear = palette_linear(KWZ_COLORS)
-  const counts = new Float64Array(KWZ_COLORS.length)
-  const sampleStep = Math.max(1, Math.floor(prepared.alpha.length / 32768))
-  for (let pixel = 0; pixel < prepared.alpha.length; pixel += sampleStep) {
+function kwz_paper(prepared: prepared_source_t, requested_paper: number): number {
+  if (Number.isInteger(requested_paper) && requested_paper >= 0 && requested_paper < kwz_colors.length) return requested_paper
+  const linear = palette_linear(kwz_colors)
+  const counts = new Float64Array(kwz_colors.length)
+  const sample_step = Math.max(1, Math.floor(prepared.alpha.length / 32768))
+  for (let pixel = 0; pixel < prepared.alpha.length; pixel += sample_step) {
     let best = 0
-    let bestError = Number.POSITIVE_INFINITY
-    for (let paper = 0; paper < KWZ_COLORS.length; paper++) {
+    let best_error = Number.POSITIVE_INFINITY
+    for (let paper = 0; paper < kwz_colors.length; paper++) {
       const [r, g, b] = blended(prepared, pixel, paper, linear)
       const error = color_error(r, g, b, linear, paper)
-      if (error < bestError) {
-        bestError = error
+      if (error < best_error) {
+        best_error = error
         best = paper
       }
     }
@@ -161,17 +162,17 @@ function kwz_paper(prepared: PreparedSource, requestedPaper: number): number {
   return best
 }
 
-function kwz_setup(prepared: PreparedSource, requestedPaper: number): PaletteSetup {
-  const paper = kwz_paper(prepared, requestedPaper)
-  const layerOf = new Int8Array(KWZ_COLORS.length).fill(-1)
-  for (let layer = 0; layer < KWZ_LAYER_PAIRS.length; layer++) {
-    const pair = KWZ_LAYER_PAIRS[layer]
-    if (pair[0] !== paper) layerOf[pair[0]] = layer + 1
-    if (pair[1] !== paper) layerOf[pair[1]] = layer + 1
+function kwz_setup(prepared: prepared_source_t, requested_paper: number): palette_setup_t {
+  const paper = kwz_paper(prepared, requested_paper)
+  const layer_of = new Int8Array(kwz_colors.length).fill(-1)
+  for (let layer = 0; layer < kwz_layer_pairs.length; layer++) {
+    const pair = kwz_layer_pairs[layer]
+    if (pair[0] !== paper) layer_of[pair[0]] = layer + 1
+    if (pair[1] !== paper) layer_of[pair[1]] = layer + 1
   }
-  const wordOf = new Uint32Array(KWZ_COLORS.length)
-  for (let index = 0; index < KWZ_COLORS.length; index++) wordOf[index] = rgba_word(KWZ_COLORS[index])
-  return { paper, palette: KWZ_COLORS, paletteIndices: [0, 1, 2, 3, 4, 5], layerOf, wordOf, ppmPens: null }
+  const word_of = new Uint32Array(kwz_colors.length)
+  for (let index = 0; index < kwz_colors.length; index++) word_of[index] = rgba_word(kwz_colors[index])
+  return { paper, palette: kwz_colors, palette_indices: [0, 1, 2, 3, 4, 5], layer_of, word_of, ppm_pens: null }
 }
 
 function noise_value(x: number, y: number, frame: number): number {
@@ -183,9 +184,9 @@ function noise_value(x: number, y: number, frame: number): number {
 }
 
 function add_spatial(error: Float32Array, width: number, height: number, x: number, y: number, direction: number, er: number, eg: number, eb: number): void {
-  const add = (targetX: number, targetY: number, weight: number): void => {
-    if (targetX < 0 || targetX >= width || targetY < 0 || targetY >= height) return
-    const offset = (targetY * width + targetX) * 3
+  const add = (target_x: number, target_y: number, weight: number): void => {
+    if (target_x < 0 || target_x >= width || target_y < 0 || target_y >= height) return
+    const offset = (target_y * width + target_x) * 3
     error[offset] += er * weight
     error[offset + 1] += eg * weight
     error[offset + 2] += eb * weight
@@ -196,72 +197,75 @@ function add_spatial(error: Float32Array, width: number, height: number, x: numb
   add(x + direction, y + 1, 1 / 16)
 }
 
-function validate_input(input: FlipImageInput): void {
-  const expected = input.format === 'ppm' ? [PPM_W, PPM_H] : [KWZ_CANVAS_W, KWZ_CANVAS_H]
+function validate_input(input: flip_image_input_t): void {
+  const expected = input.format === 'ppm' ? [ppm_w, ppm_h] : [kwz_canvas_w, kwz_canvas_h]
   if (input.width !== expected[0] || input.height !== expected[1]) throw new RangeError('invalid Flipnote image dimensions')
   if (!(input.pixels instanceof Uint8ClampedArray) || input.pixels.length !== input.width * input.height * 4) throw new RangeError('invalid Flipnote image pixels')
   if (!Number.isInteger(input.frames) || input.frames < 1 || input.frames > 16) throw new RangeError('invalid Flipnote image frame count')
 }
 
-export function flip_image_convert(input: FlipImageInput): FlipImageResult {
+export function flip_image_convert(input: flip_image_input_t): flip_image_result_t {
   validate_input(input)
   const prepared = prepare_source(input)
   const setup = input.format === 'ppm' ? ppm_setup(prepared, input.paper) : kwz_setup(prepared, input.paper)
   const palette = palette_linear(setup.palette)
-  const pixelCount = input.width * input.height
-  const base = new Float32Array(pixelCount * 3)
-  for (let pixel = 0; pixel < pixelCount; pixel++) {
+  const pixel_count = input.width * input.height
+  const base = new Float32Array(pixel_count * 3)
+  for (let pixel = 0; pixel < pixel_count; pixel++) {
     const [r, g, b] = blended(prepared, pixel, setup.paper, palette)
     const offset = pixel * 3
     base[offset] = r
     base[offset + 1] = g
     base[offset + 2] = b
   }
-  const temporal = new Float32Array(pixelCount * 3)
-  const spatial = new Float32Array(pixelCount * 3)
+  const dither = input.dither !== 0
+  const temporal = new Float32Array(pixel_count * 3)
+  const spatial = new Float32Array(pixel_count * 3)
   const used = new Uint8Array(setup.palette.length)
   used[setup.paper] = 1
-  const frames: FlipImageFrame[] = []
-  for (let frameIndex = 0; frameIndex < input.frames; frameIndex++) {
+  const frames: flip_image_frame_t[] = []
+  for (let frame_index = 0; frame_index < input.frames; frame_index++) {
     spatial.fill(0)
-    const layerWords = [new Uint32Array(pixelCount), new Uint32Array(pixelCount), new Uint32Array(pixelCount)]
+    const layer_words = [new Uint32Array(pixel_count), new Uint32Array(pixel_count), new Uint32Array(pixel_count)]
     for (let y = 0; y < input.height; y++) {
-      const direction = ((y + frameIndex) & 1) === 0 ? 1 : -1
+      const direction = ((y + frame_index) & 1) === 0 ? 1 : -1
       const start = direction > 0 ? 0 : input.width - 1
       const end = direction > 0 ? input.width : -1
       for (let x = start; x !== end; x += direction) {
         const pixel = y * input.width + x
         const offset = pixel * 3
-        const noise = noise_value(x, y, frameIndex)
+        const noise = dither ? noise_value(x, y, frame_index) : 0
         const r = clamp(base[offset] + temporal[offset] + spatial[offset] * 0.58 + noise, -0.3, 1.3)
         const g = clamp(base[offset + 1] + temporal[offset + 1] + spatial[offset + 1] * 0.58 + noise, -0.3, 1.3)
         const b = clamp(base[offset + 2] + temporal[offset + 2] + spatial[offset + 2] * 0.58 + noise, -0.3, 1.3)
-        let selected = setup.paletteIndices[0]
-        let bestError = Number.POSITIVE_INFINITY
-        for (const candidate of setup.paletteIndices) {
+        let selected = setup.palette_indices[0]
+        let best_error = Number.POSITIVE_INFINITY
+        for (const candidate of setup.palette_indices) {
           const error = color_error(r, g, b, palette, candidate)
-          if (error < bestError) {
-            bestError = error
+          if (error < best_error) {
+            best_error = error
             selected = candidate
           }
         }
         used[selected] = 1
-        const paletteOffset = selected * 3
-        const er = r - palette[paletteOffset]
-        const eg = g - palette[paletteOffset + 1]
-        const eb = b - palette[paletteOffset + 2]
-        temporal[offset] = clamp((temporal[offset] + base[offset] - palette[paletteOffset]) * 0.92, -0.78, 0.78)
-        temporal[offset + 1] = clamp((temporal[offset + 1] + base[offset + 1] - palette[paletteOffset + 1]) * 0.92, -0.78, 0.78)
-        temporal[offset + 2] = clamp((temporal[offset + 2] + base[offset + 2] - palette[paletteOffset + 2]) * 0.92, -0.78, 0.78)
-        add_spatial(spatial, input.width, input.height, x, y, direction, er, eg, eb)
-        const layer = setup.layerOf[selected]
-        if (layer > 0) layerWords[layer - 1][pixel] = setup.wordOf[selected]
+        const palette_offset = selected * 3
+        const er = r - palette[palette_offset]
+        const eg = g - palette[palette_offset + 1]
+        const eb = b - palette[palette_offset + 2]
+        if (dither) {
+          temporal[offset] = clamp((temporal[offset] + base[offset] - palette[palette_offset]) * 0.92, -0.78, 0.78)
+          temporal[offset + 1] = clamp((temporal[offset + 1] + base[offset + 1] - palette[palette_offset + 1]) * 0.92, -0.78, 0.78)
+          temporal[offset + 2] = clamp((temporal[offset + 2] + base[offset + 2] - palette[palette_offset + 2]) * 0.92, -0.78, 0.78)
+          add_spatial(spatial, input.width, input.height, x, y, direction, er, eg, eb)
+        }
+        const layer = setup.layer_of[selected]
+        if (layer > 0) layer_words[layer - 1][pixel] = setup.word_of[selected]
       }
     }
-    const frame: FlipImageFrame = [null, rle_pack(layerWords[0]), rle_pack(layerWords[1]), input.format === 'kwz' ? rle_pack(layerWords[2]) : null]
+    const frame: flip_image_frame_t = [null, rle_pack(layer_words[0]), rle_pack(layer_words[1]), input.format === 'kwz' ? rle_pack(layer_words[2]) : null]
     frames.push(frame)
   }
   const colors: number[] = []
   for (let index = 0; index < used.length; index++) if (used[index]) colors.push(index)
-  return { format: input.format, width: input.width, height: input.height, paper: setup.paper, paperHex: color_hex(setup.palette[setup.paper]), frames, colors, ppmPens: setup.ppmPens }
+  return { format: input.format, width: input.width, height: input.height, paper: setup.paper, paper_hex: color_hex(setup.palette[setup.paper]), frames, colors, ppm_pens: setup.ppm_pens }
 }

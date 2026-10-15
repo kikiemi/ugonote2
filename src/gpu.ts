@@ -1,6 +1,6 @@
-export type GpuField = { grid: { w: number, h: number, cell: number, columns: number, rows: number, stride: number }, dx: Float32Array, dy: Float32Array }
-type Gpu = { canvas: HTMLCanvasElement, gl: WebGL2RenderingContext, program: WebGLProgram, source: WebGLTexture, field: WebGLTexture, size: WebGLUniformLocation, cell: WebGLUniformLocation, sourceImage: CanvasImageSource | null, fieldImage: GpuField | null, limit: number }
-let gpu: Gpu | null = null
+export type gpu_field_t = { grid: { w: number, h: number, cell: number, columns: number, rows: number, stride: number }, dx: Float32Array, dy: Float32Array }
+type gpu_t = { canvas: HTMLCanvasElement, gl: WebGL2RenderingContext, program: WebGLProgram, source: WebGLTexture, field: WebGLTexture, size: WebGLUniformLocation, cell: WebGLUniformLocation, source_image: CanvasImageSource | null, field_image: gpu_field_t | null, limit: number }
+let gpu: gpu_t | null = null
 let unavailable = 0
 
 const vertex = `#version 300 es
@@ -11,8 +11,8 @@ void main() {
 const fragment = `#version 300 es
 precision highp float;
 precision highp int;
-uniform sampler2D sourceTex;
-uniform sampler2D fieldTex;
+uniform sampler2D source_tex;
+uniform sampler2D field_tex;
 uniform vec2 size;
 uniform float cell;
 out vec4 color;
@@ -21,18 +21,18 @@ void main() {
   ivec2 c = ivec2(floor(p / cell));
   vec2 start = vec2(c) * cell;
   vec2 end = min(size, start + cell);
-  vec2 mixValue = clamp((p + 0.5 - start) / max(vec2(1.0), end - start), 0.0, 1.0);
-  mixValue = mixValue * mixValue * (3.0 - 2.0 * mixValue);
-  vec2 top = mix(texelFetch(fieldTex,c,0).rg,texelFetch(fieldTex,c+ivec2(1,0),0).rg,mixValue.x);
-  vec2 bottom = mix(texelFetch(fieldTex,c+ivec2(0,1),0).rg,texelFetch(fieldTex,c+ivec2(1,1),0).rg,mixValue.x);
-  vec2 position = clamp(p-mix(top,bottom,mixValue.y),vec2(0.0),size-1.0);
+  vec2 mix_value = clamp((p + 0.5 - start) / max(vec2(1.0), end - start), 0.0, 1.0);
+  mix_value = mix_value * mix_value * (3.0 - 2.0 * mix_value);
+  vec2 top = mix(texelFetch(field_tex,c,0).rg,texelFetch(field_tex,c+ivec2(1,0),0).rg,mix_value.x);
+  vec2 bottom = mix(texelFetch(field_tex,c+ivec2(0,1),0).rg,texelFetch(field_tex,c+ivec2(1,1),0).rg,mix_value.x);
+  vec2 position = clamp(p-mix(top,bottom,mix_value.y),vec2(0.0),size-1.0);
   ivec2 a = ivec2(floor(position));
   ivec2 b = min(a+1,ivec2(size)-1);
   vec2 f = fract(position);
-  vec4 s00 = texelFetch(sourceTex,a,0);
-  vec4 s10 = texelFetch(sourceTex,ivec2(b.x,a.y),0);
-  vec4 s01 = texelFetch(sourceTex,ivec2(a.x,b.y),0);
-  vec4 s11 = texelFetch(sourceTex,b,0);
+  vec4 s00 = texelFetch(source_tex,a,0);
+  vec4 s10 = texelFetch(source_tex,ivec2(b.x,a.y),0);
+  vec4 s01 = texelFetch(source_tex,ivec2(a.x,b.y),0);
+  vec4 s11 = texelFetch(source_tex,b,0);
   vec4 weights = vec4((1.0-f.x)*(1.0-f.y),f.x*(1.0-f.y),(1.0-f.x)*f.y,f.x*f.y);
   vec4 alpha = vec4(s00.a,s10.a,s01.a,s11.a);
   vec4 premult = weights * alpha;
@@ -63,7 +63,7 @@ function texture_make(gl: WebGL2RenderingContext): WebGLTexture {
   return texture
 }
 
-function gpu_get(): Gpu | null {
+function gpu_get(): gpu_t | null {
   if (unavailable) return null
   if (gpu) return gpu
   const canvas = document.createElement('canvas')
@@ -81,21 +81,21 @@ function gpu_get(): Gpu | null {
     gl.deleteShader(fs)
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('Program linking failed')
     gl.useProgram(program)
-    gl.uniform1i(gl.getUniformLocation(program, 'sourceTex'), 0)
-    gl.uniform1i(gl.getUniformLocation(program, 'fieldTex'), 1)
+    gl.uniform1i(gl.getUniformLocation(program, 'source_tex'), 0)
+    gl.uniform1i(gl.getUniformLocation(program, 'field_tex'), 1)
     const size = gl.getUniformLocation(program, 'size')
     const cell = gl.getUniformLocation(program, 'cell')
     if (!size || !cell) throw new Error('Uniform lookup failed')
     const source = texture_make(gl)
     const field = texture_make(gl)
-    gpu = { canvas, gl, program, source, field, size, cell, sourceImage: null, fieldImage: null, limit: Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)) }
+    gpu = { canvas, gl, program, source, field, size, cell, source_image: null, field_image: null, limit: Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)) }
     canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); gpu = null; unavailable = 1 })
     canvas.addEventListener('webglcontextrestored', () => { gpu = null; unavailable = 0 })
     return gpu
   } catch { unavailable = 1; gl.getExtension('WEBGL_lose_context')?.loseContext(); return null }
 }
 
-export function gpu_wiggle(source: CanvasImageSource, field: GpuField): HTMLCanvasElement | null {
+export function gpu_wiggle(source: CanvasImageSource, field: gpu_field_t): HTMLCanvasElement | null {
   const g = gpu_get()
   if (!g || g.gl.isContextLost()) return null
   const { w, h, cell, columns, rows } = field.grid
@@ -105,27 +105,27 @@ export function gpu_wiggle(source: CanvasImageSource, field: GpuField): HTMLCanv
     if (g.canvas.width !== w || g.canvas.height !== h) {
       g.canvas.width = w
       g.canvas.height = h
-      g.sourceImage = null
-      g.fieldImage = null
+      g.source_image = null
+      g.field_image = null
     }
     gl.viewport(0, 0, w, h)
     gl.useProgram(g.program)
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, g.source)
-    if (g.sourceImage !== source) {
+    if (g.source_image !== source) {
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
       gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source as TexImageSource)
-      g.sourceImage = source
+      g.source_image = source
     }
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, g.field)
-    if (g.fieldImage !== field) {
+    if (g.field_image !== field) {
       const offsets = new Float32Array(field.dx.length * 2)
       for (let i = 0; i < field.dx.length; i++) { offsets[i * 2] = field.dx[i]; offsets[i * 2 + 1] = field.dy[i] }
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, columns + 1, rows + 1, 0, gl.RG, gl.FLOAT, offsets)
-      g.fieldImage = field
+      g.field_image = field
     }
     gl.uniform2f(g.size, w, h)
     gl.uniform1f(g.cell, cell)

@@ -1,31 +1,68 @@
 import { tr_html, tr_line } from './lang'
 
-export function q<T extends HTMLElement = HTMLElement>(id: string): T {
+export function q<t extends HTMLElement = HTMLElement>(id: string): t {
   const n = document.getElementById(id)
   if (!n) throw new Error('q: #' + id + ' not found')
-  return n as T
+  return n as t
 }
 
-export function query<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
+export function query<t extends Element = HTMLElement>(root: ParentNode, selector: string): t {
   const node = root.querySelector(selector)
   if (!node) throw new Error('query: ' + selector + ' not found')
-  return node as T
+  return node as t
 }
 
-export function pointer_capture(node: Element, pointerId: number): number {
+export function focus_list(root: HTMLElement): HTMLElement[] {
+  const nodes = root.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href]')
+  const controls: HTMLElement[] = []
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    if (node.hasAttribute('disabled') || node.closest('[inert]')) continue
+    if (!node.getClientRects().length || getComputedStyle(node).visibility === 'hidden') continue
+    controls.push(node)
+  }
+  return controls
+}
+
+export function focus_cycle(root: HTMLElement, event: KeyboardEvent): void {
+  if (event.key !== 'Tab') return
+  const controls = focus_list(root)
+  if (!controls.length) {
+    event.preventDefault()
+    root.focus({ preventScroll: true })
+    return
+  }
+  const first = controls[0]
+  const last = controls[controls.length - 1]
+  const active = document.activeElement
+  let inside = 0
+  for (let i = 0; i < controls.length; i++) {
+    if (controls[i] === active) {
+      inside = 1
+      break
+    }
+  }
+  if (!inside || event.shiftKey && active === first || !event.shiftKey && active === last) {
+    event.preventDefault()
+    if (event.shiftKey) last.focus({ preventScroll: true })
+    else first.focus({ preventScroll: true })
+  }
+}
+
+export function pointer_capture(node: Element, pointer_id: number): number {
   if (typeof node.setPointerCapture !== 'function') return 0
   try {
-    node.setPointerCapture(pointerId)
+    node.setPointerCapture(pointer_id)
     return 1
   } catch {
     return 0
   }
 }
 
-export function pointer_release(node: Element, pointerId: number): void {
+export function pointer_release(node: Element, pointer_id: number): void {
   if (typeof node.releasePointerCapture !== 'function') return
   try {
-    if (typeof node.hasPointerCapture !== 'function' || node.hasPointerCapture(pointerId)) node.releasePointerCapture(pointerId)
+    if (typeof node.hasPointerCapture !== 'function' || node.hasPointerCapture(pointer_id)) node.releasePointerCapture(pointer_id)
   } catch {}
 }
 
@@ -40,8 +77,12 @@ export function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-const IC: { [k: string]: string } = {
+const icon_paths: { [k: string]: string } = {
   pen: '<path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/><path d="M14 7l3 3"/>',
+  tools: '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V5h8v3M3 13h18M9 13v3h6v-3"/><path d="M6 18h2M16 18h2"/>',
+  paint: '<path d="M10 2h4v10h-4Z"/><path d="M5 12h14v4H5Z"/><path d="M5 16v6h14v-6M9 19v3M12 18v4M15 19v3"/>',
+  paintcustom: '<path fill="currentColor" stroke="none" d="M4 7h15v1h-15zM4 8h7v1h-7zM12 8h7v1h-7zM4 9h15v1h-15zM4 10h15v1h-15zM5 11h5v1h-5zM13 11h5v1h-5zM4 12h1v1h-1zM6 12h3v1h-3zM10 12h3v1h-3zM14 12h3v1h-3zM18 12h1v1h-1zM4 13h1v1h-1zM6 13h3v1h-3zM10 13h3v1h-3zM14 13h3v1h-3zM18 13h1v1h-1zM5 14h7v1h-7zM13 14h6v1h-6zM4 15h7v1h-7zM12 15h7v1h-7zM4 16h15v1h-15zM4 17h7v1h-7zM12 17h7v1h-7zM4 18h15v1h-15zM4 19h15v1h-15zM5 20h5v1h-5zM13 20h5v1h-5zM4 21h1v1h-1zM6 21h3v1h-3zM10 21h3v1h-3zM14 21h3v1h-3zM18 21h1v1h-1z"/>',
+  invert: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" stroke="none"/>',
   fill: '<path d="M8 3l9 9-7 7-7-7 6-6z"/><path d="M5 12h11"/><path d="M19 15c1.2 1.6 2 2.7 2 3.7a2 2 0 0 1-4 0c0-1 .8-2.1 2-3.7z"/>',
   eraser: '<path d="M7 20h10"/><path d="M5 15l9-9 5 5-7 7H8l-3-3z"/><path d="M11 8l5 5"/>',
   eyedrop: '<path d="M4 20l1-3 9-9 2 2-9 9-3 1z"/><path d="M13 5l2-2a2.1 2.1 0 0 1 3 3l-2 2"/><path d="M12 6l4 4"/>',
@@ -91,6 +132,7 @@ const IC: { [k: string]: string } = {
   loop: '<path d="M7 8h9a3 3 0 0 1 3 3v1"/><path d="M17 16H8a3 3 0 0 1-3-3v-1"/><path d="M9.5 5.5L7 8l2.5 2.5"/><path d="M14.5 13.5L17 16l-2.5 2.5"/>',
   zin: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/><path d="M11 8.5v5M8.5 11h5"/>',
   zout: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/><path d="M8.5 11h5"/>',
+  focus: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   fit: '<path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
   rotl: '<path d="M6 8a7 7 0 1 1-1.5 5"/><path d="M6 3v5h5"/>',
   rotr: '<path d="M18 8a7 7 0 1 0 1.5 5"/><path d="M18 3v5h-5"/>',
@@ -148,11 +190,11 @@ const IC: { [k: string]: string } = {
 }
 
 export function ic(name: string): string {
-  const p = IC[name] || IC.warn
+  const p = icon_paths[name] || icon_paths.warn
   return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'
 }
 
-let toastT: ReturnType<typeof setTimeout> | 0 = 0
+let toast_t: ReturnType<typeof setTimeout> | 0 = 0
 
 export function toast(msg: string): void {
   msg = tr_line(msg)
@@ -164,9 +206,9 @@ export function toast(msg: string): void {
   }
   n.textContent = msg
   n.classList.add('on')
-  if (toastT) clearTimeout(toastT)
-  toastT = setTimeout(() => {
+  if (toast_t) clearTimeout(toast_t)
+  toast_t = setTimeout(() => {
     n.classList.remove('on')
-    toastT = 0
+    toast_t = 0
   }, 1800)
 }

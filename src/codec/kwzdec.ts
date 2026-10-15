@@ -1,9 +1,9 @@
-import { KWZ_COMMON_LINES, KWZ_SPEEDS } from './kwzformat'
+import { kwz_common_lines, kwz_speeds } from './kwzformat'
 import { report_warning } from '../diagnostics'
 import { kwz_adpcm_decode } from './adpcm'
 import { bytes_to_hex, unix_from_nintendo_ts } from './fname'
-import type { KwzFrameMeta } from './kwzmeta'
-import { KWZ_H, KWZ_W } from './kwz'
+import type { kwz_frame_meta_t } from './kwzmeta'
+import { kwz_h, kwz_w } from './kwz'
 
 function utf16_str(b: Uint8Array, ptr: number, chars: number): string {
   let s = ''
@@ -25,7 +25,7 @@ function ascii_str(b: Uint8Array, ptr: number, n: number): string {
   return s
 }
 
-export type FlipMeta = {
+export type flip_meta_t = {
   created: number
   modified: number
   app_ver: number
@@ -44,34 +44,34 @@ export type FlipMeta = {
   edits: number
 }
 
-export function flip_meta_zero(): FlipMeta {
+export function flip_meta_zero(): flip_meta_t {
   return { created: 0, modified: 0, app_ver: 0, root_id: '', parent_id: '', cur_id: '', root_name: '', parent_name: '', cur_name: '', root_fn: '', parent_fn: '', cur_fn: '', lock: 0, flags: 0, layer_flags: 0, edits: 0 }
 }
 
-export type KwzDecoded = {
-  meta: FlipMeta
+export type kwz_decoded_t = {
+  meta: flip_meta_t
   w: number
   h: number
-  frameCount: number
+  frame_count: number
   fps: number
   speed: number
   loop: number
   paper: number[]
-  frameColors: number[][]
-  layerDepths: number[][]
-  frameMeta: KwzFrameMeta[]
-  thumbIdx: number
+  frame_colors: number[][]
+  layer_depths: number[][]
+  frame_meta: kwz_frame_meta_t[]
+  thumb_idx: number
   layers: Uint8Array[][]
-  seFlags: number[]
+  se_flags: number[]
   bgm: Int16Array | null
-  bgmRate: number
-  bgmFps: number
+  bgm_rate: number
+  bgm_fps: number
   se: (Int16Array | null)[]
 }
 
-let LINE_LUT: Uint8Array | null = null
+let line_lut_cache: Uint8Array | null = null
 function line_lut(): Uint8Array {
-  if (LINE_LUT) return LINE_LUT
+  if (line_lut_cache) return line_lut_cache
   const lut = new Uint8Array(6561 * 8)
   const tmp = new Uint8Array(8)
   for (let idx = 0; idx < 6561; idx++) {
@@ -101,30 +101,30 @@ function line_lut(): Uint8Array {
     tmp[7] = m7
     lut.set(tmp, idx * 8)
   }
-  LINE_LUT = lut
+  line_lut_cache = lut
   return lut
 }
 
-let LINE_LUT_S: Uint8Array | null = null
+let line_lut_small_cache: Uint8Array | null = null
 function line_lut_s(): Uint8Array {
-  if (LINE_LUT_S) return LINE_LUT_S
+  if (line_lut_small_cache) return line_lut_small_cache
   const base = line_lut()
   const s = new Uint8Array(6561 * 8)
   for (let idx = 0; idx < 6561; idx++) {
     const o = idx * 8
     for (let i = 0; i < 8; i++) s[o + i] = base[o + ((i + 1) & 7)]
   }
-  LINE_LUT_S = s
+  line_lut_small_cache = s
   return s
 }
 
-type Br16 = { bytes: Uint8Array, pos: number, buf: number, cnt: number }
+type br16_t = { bytes: Uint8Array, pos: number, buf: number, cnt: number }
 
-function br_make(bytes: Uint8Array, start: number): Br16 {
+function br_make(bytes: Uint8Array, start: number): br16_t {
   return { bytes, pos: start, buf: 0, cnt: 0 }
 }
 
-function br_read(r: Br16, n: number): number {
+function br_read(r: br16_t, n: number): number {
   while (r.cnt < n) {
     const lo = r.bytes[r.pos] || 0
     const hi = r.bytes[r.pos + 1] || 0
@@ -147,36 +147,36 @@ function dv_u32(b: Uint8Array, o: number): number {
 
 function decode_layer(bytes: Uint8Array, start: number, dst: Uint8Array): void {
   const lut = line_lut()
-  const lutS = line_lut_s()
+  const lut_s = line_lut_s()
   const r = br_make(bytes, start)
   const put = (x: number, y: number, row: number, idx: number, shifted: number) => {
-    const t = shifted ? lutS : lut
-    const base = (y + row) * KWZ_W + x
+    const t = shifted ? lut_s : lut
+    const base = (y + row) * kwz_w + x
     const lo = idx * 8
     for (let i = 0; i < 8; i++) dst[base + i] = t[lo + i]
   }
   let skip = 0
-  for (let ly = 0; ly < KWZ_H; ly += 128) {
-    for (let lx = 0; lx < KWZ_W; lx += 128) {
+  for (let ly = 0; ly < kwz_h; ly += 128) {
+    for (let lx = 0; lx < kwz_w; lx += 128) {
       for (let ty = 0; ty < 128; ty += 8) {
         const y = ly + ty
-        if (y >= KWZ_H) break
+        if (y >= kwz_h) break
         for (let tx = 0; tx < 128; tx += 8) {
           const x = lx + tx
-          if (x >= KWZ_W) break
+          if (x >= kwz_w) break
           if (skip > 0) {
             skip--
             continue
           }
           const tag = br_read(r, 3)
           if (tag === 0) {
-            const idx = KWZ_COMMON_LINES[br_read(r, 5)]
+            const idx = kwz_common_lines[br_read(r, 5)]
             for (let rr = 0; rr < 8; rr++) put(x, y, rr, idx, 0)
           } else if (tag === 1) {
             const idx = br_read(r, 13)
             for (let rr = 0; rr < 8; rr++) put(x, y, rr, idx, 0)
           } else if (tag === 2) {
-            const idx = KWZ_COMMON_LINES[br_read(r, 5)]
+            const idx = kwz_common_lines[br_read(r, 5)]
             for (let rr = 0; rr < 8; rr++) put(x, y, rr, idx, rr & 1)
           } else if (tag === 3) {
             const idx = br_read(r, 13)
@@ -185,31 +185,31 @@ function decode_layer(bytes: Uint8Array, start: number, dst: Uint8Array): void {
             const flags = br_read(r, 8)
             for (let rr = 0; rr < 8; rr++) {
               const common = (flags & (1 << rr)) !== 0
-              const idx = common ? KWZ_COMMON_LINES[br_read(r, 5)] : br_read(r, 13)
+              const idx = common ? kwz_common_lines[br_read(r, 5)] : br_read(r, 13)
               put(x, y, rr, idx, 0)
             }
           } else if (tag === 5) {
             skip = br_read(r, 5)
           } else if (tag === 7) {
             let pattern = br_read(r, 2)
-            const useCommon = br_read(r, 1)
+            const use_common = br_read(r, 1)
             let ia: number
             let ib: number
-            if (useCommon) {
-              ia = KWZ_COMMON_LINES[br_read(r, 5)]
-              ib = KWZ_COMMON_LINES[br_read(r, 5)]
+            if (use_common) {
+              ia = kwz_common_lines[br_read(r, 5)]
+              ib = kwz_common_lines[br_read(r, 5)]
               pattern += 1
             } else {
               ia = br_read(r, 13)
               ib = br_read(r, 13)
             }
-            const P: number[][] = [
+            const p: number[][] = [
               [0, 1, 0, 1, 0, 1, 0, 1],
               [0, 0, 1, 0, 0, 1, 0, 0],
               [0, 1, 0, 0, 1, 0, 0, 1],
               [0, 1, 1, 0, 1, 1, 0, 1],
             ]
-            const pat = P[pattern % 4]
+            const pat = p[pattern % 4]
             for (let rr = 0; rr < 8; rr++) put(x, y, rr, pat[rr] ? ib : ia, 0)
           }
         }
@@ -218,18 +218,18 @@ function decode_layer(bytes: Uint8Array, start: number, dst: Uint8Array): void {
   }
 }
 
-export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
+export function kwz_decode(buf: ArrayBuffer): kwz_decoded_t | null {
   const bytes = new Uint8Array(buf)
-  const fileSize = bytes.length
-  const KNOWN = ['KFH', 'KTN', 'KMC', 'KMI', 'KSN']
+  const file_size = bytes.length
+  const known = ['KFH', 'KTN', 'KMC', 'KMI', 'KSN']
   const sections = new Map<string, { ptr: number, len: number }>()
   let ptr = 0
   let count = 0
-  while (ptr + 8 <= fileSize && count < 12) {
+  while (ptr + 8 <= file_size && count < 12) {
     const magic = String.fromCharCode(bytes[ptr], bytes[ptr + 1], bytes[ptr + 2])
     const len = dv_u32(bytes, ptr + 4)
-    if (len > fileSize - ptr - 8) break
-    if (KNOWN.indexOf(magic) >= 0 && !sections.has(magic)) sections.set(magic, { ptr, len })
+    if (len > file_size - ptr - 8) break
+    if (known.indexOf(magic) >= 0 && !sections.has(magic)) sections.set(magic, { ptr, len })
     ptr += len + 8
     count++
   }
@@ -239,8 +239,8 @@ export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
   if (!kmi || !kmc) return null
 
   const meta = flip_meta_zero()
-  let frameCount = 0xffff
-  let thumbIdx = 0
+  let frame_count = 0xffff
+  let thumb_idx = 0
   let flags = 0
   let speed = 8
   if (kfh && kfh.len >= 204) {
@@ -257,8 +257,8 @@ export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
     meta.root_fn = ascii_str(bytes, kb + 112, 28)
     meta.parent_fn = ascii_str(bytes, kb + 140, 28)
     meta.cur_fn = ascii_str(bytes, kb + 168, 28)
-    frameCount = dv_u16(bytes, kb + 196)
-    thumbIdx = dv_u16(bytes, kb + 198)
+    frame_count = dv_u16(bytes, kb + 196)
+    thumb_idx = dv_u16(bytes, kb + 198)
     flags = dv_u16(bytes, kb + 200)
     speed = bytes[kb + 202]
     meta.flags = flags
@@ -267,37 +267,37 @@ export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
   }
   const loop = flags & 0x2 ? 1 : 0
 
-  const kmiBody = kmi.ptr + 8
-  const nFrames = Math.min(frameCount, (kmi.len / 28) | 0)
-  let fc = nFrames
+  const kmi_body = kmi.ptr + 8
+  const n_frames = Math.min(frame_count, (kmi.len / 28) | 0)
+  let fc = n_frames
 
-  const layerSizes: number[][] = []
+  const layer_sizes: number[][] = []
   const paper: number[] = []
-  const frameColors: number[][] = []
-  const layerDepths: number[][] = []
-  const frameMeta: KwzFrameMeta[] = []
-  const seFlags: number[] = []
+  const frame_colors: number[][] = []
+  const layer_depths: number[][] = []
+  const frame_meta: kwz_frame_meta_t[] = []
+  const se_flags: number[] = []
   for (let f = 0; f < fc; f++) {
-    const o = kmiBody + f * 28
+    const o = kmi_body + f * 28
     const fl = dv_u32(bytes, o)
-    layerSizes.push([dv_u16(bytes, o + 4), dv_u16(bytes, o + 6), dv_u16(bytes, o + 8)])
+    layer_sizes.push([dv_u16(bytes, o + 4), dv_u16(bytes, o + 6), dv_u16(bytes, o + 8)])
     paper.push(fl & 0xf)
-    frameColors.push([(fl >> 8) & 0xf, (fl >> 12) & 0xf, (fl >> 16) & 0xf, (fl >> 20) & 0xf, (fl >> 24) & 0xf, (fl >> 28) & 0xf])
-    layerDepths.push([bytes[o + 0x14], bytes[o + 0x15], bytes[o + 0x16]])
+    frame_colors.push([(fl >> 8) & 0xf, (fl >> 12) & 0xf, (fl >> 16) & 0xf, (fl >> 20) & 0xf, (fl >> 24) & 0xf, (fl >> 28) & 0xf])
+    layer_depths.push([bytes[o + 0x14], bytes[o + 0x15], bytes[o + 0x16]])
     let author = ''
     for (let i = 0; i < 10; i++) author += bytes[o + 0xa + i].toString(16).padStart(2, '0')
-    frameMeta.push({ depth: [...layerDepths[f]], colors: [...frameColors[f]], author, reserved: dv_u16(bytes, o + 0x18), camera: dv_u16(bytes, o + 0x1a) })
-    seFlags.push(bytes[o + 0x17] & 0xf)
+    frame_meta.push({ depth: [...layer_depths[f]], colors: [...frame_colors[f]], author, reserved: dv_u16(bytes, o + 0x18), camera: dv_u16(bytes, o + 0x1a) })
+    se_flags.push(bytes[o + 0x17] & 0xf)
   }
 
   const layers: Uint8Array[][] = []
-  const N = KWZ_W * KWZ_H
-  const cur: Uint8Array[] = [new Uint8Array(N), new Uint8Array(N), new Uint8Array(N)]
+  const n = kwz_w * kwz_h
+  const cur: Uint8Array[] = [new Uint8Array(n), new Uint8Array(n), new Uint8Array(n)]
   let dp = kmc.ptr + 8 + 4
   for (let f = 0; f < fc; f++) {
     try {
       for (let l = 0; l < 3; l++) {
-        const size = layerSizes[f][l]
+        const size = layer_sizes[f][l]
         if (size > 38) decode_layer(bytes, dp, cur[l])
         dp += size
       }
@@ -310,22 +310,22 @@ export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
   if (layers.length < 1) return null
   if (layers.length < fc) {
     fc = layers.length
-    layerSizes.length = fc
+    layer_sizes.length = fc
     paper.length = fc
-    frameColors.length = fc
-    layerDepths.length = fc
-    frameMeta.length = fc
-    seFlags.length = fc
+    frame_colors.length = fc
+    layer_depths.length = fc
+    frame_meta.length = fc
+    se_flags.length = fc
   }
 
   let bgm: Int16Array | null = null
-  const bgmRate = 16364
-  let bgmFps = 0
+  const bgm_rate = 16364
+  let bgm_fps = 0
   const se: (Int16Array | null)[] = [null, null, null, null]
   const ksn = sections.get('KSN')
   if (ksn) {
     const kp = ksn.ptr + 8
-    bgmFps = KWZ_SPEEDS[dv_u32(bytes, kp)] || 0
+    bgm_fps = kwz_speeds[dv_u32(bytes, kp)] || 0
     const sizes = [dv_u32(bytes, kp + 4), dv_u32(bytes, kp + 8), dv_u32(bytes, kp + 12), dv_u32(bytes, kp + 16), dv_u32(bytes, kp + 20)]
     let tp = kp + 28
     if (sizes[0] > 0) bgm = kwz_adpcm_decode(bytes.subarray(tp, tp + sizes[0]))
@@ -337,23 +337,23 @@ export function kwz_decode(buf: ArrayBuffer): KwzDecoded | null {
   }
 
   return {
-    w: KWZ_W,
-    h: KWZ_H,
+    w: kwz_w,
+    h: kwz_h,
     meta,
-    frameCount: fc,
-    fps: KWZ_SPEEDS[speed] !== undefined ? KWZ_SPEEDS[speed] : 6,
+    frame_count: fc,
+    fps: kwz_speeds[speed] !== undefined ? kwz_speeds[speed] : 6,
     speed,
     loop,
     paper,
-    frameColors,
-    layerDepths,
-    frameMeta,
-    thumbIdx: Math.min(thumbIdx, fc > 0 ? fc - 1 : 0),
+    frame_colors,
+    layer_depths,
+    frame_meta,
+    thumb_idx: Math.min(thumb_idx, fc > 0 ? fc - 1 : 0),
     layers,
-    seFlags,
+    se_flags,
     bgm,
-    bgmRate,
-    bgmFps: bgmFps || (KWZ_SPEEDS[speed] || 6),
+    bgm_rate,
+    bgm_fps: bgm_fps || (kwz_speeds[speed] || 6),
     se,
   }
 }

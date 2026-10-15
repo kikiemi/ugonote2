@@ -1,129 +1,129 @@
-import type { KwzFrameMeta } from './codec/kwzmeta'
-import { KWZ_SPEEDS } from './codec/kwzformat'
-export { KWZ_SPEEDS } from './codec/kwzformat'
-export { PPM_SPEEDS } from './codec/ppm'
+import type { kwz_frame_meta_t } from './codec/kwzmeta'
+import { kwz_speeds } from './codec/kwzformat'
+export { kwz_speeds } from './codec/kwzformat'
+export { ppm_speeds } from './codec/ppm'
 
-export const APP_NAME = 'うごくノート2'
+export const app_name = 'うごくノート2'
 
-export const L_P = 0
-export const L_A = 1
-export const L_B = 2
-export const L_C = 3
-export const L_BASE_N = 4
-export const L_DRAW_MIN = 1
-export const L_DRAW_DEFAULT = 3
-export const L_DRAW_MAX = 64
-export const L_N = L_DRAW_MAX + 1
+export const l_p = 0
+export const l_a = 1
+export const l_b = 2
+export const l_c = 3
+export const l_base_n = 4
+export const l_draw_min = 1
+export const l_draw_default = 3
+export const l_draw_max = 64
+export const l_n = l_draw_max + 1
 
-export const T_PEN = 0
-export const T_FILL = 1
-export const T_ERASER = 2
-export const T_EYEDROP = 3
-export const T_PIXEL = 4
-export const T_LINE = 5
-export const T_RECT = 6
-export const T_CIRCLE = 7
-export const T_STAR = 8
-export const T_HEART = 9
-export const T_TEXT = 10
-export const T_SELECT = 11
-export const T_LASSO = 12
-export const T_PASTE = 13
-export const T_HAND = 14
-export const T_N = 15
+export const t_pen = 0
+export const t_fill = 1
+export const t_eraser = 2
+export const t_eyedrop = 3
+export const t_pixel = 4
+export const t_line = 5
+export const t_rect = 6
+export const t_circle = 7
+export const t_star = 8
+export const t_heart = 9
+export const t_text = 10
+export const t_select = 11
+export const t_lasso = 12
+export const t_paste = 13
+export const t_hand = 14
+export const t_n = 15
 
-export const B_PEN = 0
-export const B_MARKER = 1
-export const B_PENCIL = 2
-export const B_BRUSH = 3
-export const B_AIRBRUSH = 4
-export const B_CRAYON = 5
-export const B_CALLIG = 6
-export const B_DOTS = 7
-export const B_WATER = 8
-export const B_NEON = 9
-export const B_CHALK = 10
-export const B_SPAT = 11
-export const B_RIBBON = 12
-export const B_N = 13
+export const b_pen = 0
+export const b_marker = 1
+export const b_pencil = 2
+export const b_brush = 3
+export const b_airbrush = 4
+export const b_crayon = 5
+export const b_callig = 6
+export const b_dots = 7
+export const b_water = 8
+export const b_neon = 9
+export const b_chalk = 10
+export const b_spat = 11
+export const b_ribbon = 12
+export const b_n = 13
 
-export const EF_NONE = 0
-export const EF_BLUR = 1
-export const EF_MOSAIC = 2
-export const EF_GLOW = 3
-export const EF_CHROMA = 4
-export const EF_NOISE = 5
-export const EF_OUTLINE = 6
-export const EF_WAVE = 7
+export const ef_none = 0
+export const ef_blur = 1
+export const ef_mosaic = 2
+export const ef_glow = 3
+export const ef_chroma = 4
+export const ef_noise = 5
+export const ef_outline = 6
+export const ef_wave = 7
 
-export const TR_NONE = 0
-export const TR_FADE = 1
-export const TR_SLIDE_L = 2
-export const TR_SLIDE_R = 3
-export const TR_SLIDE_U = 4
-export const TR_SLIDE_D = 5
-export const TR_ZOOM_IN = 6
-export const TR_ZOOM_OUT = 7
-export const TR_WIPE = 8
+export const tr_none = 0
+export const tr_fade = 1
+export const tr_slide_l = 2
+export const tr_slide_r = 3
+export const tr_slide_u = 4
+export const tr_slide_d = 5
+export const tr_zoom_in = 6
+export const tr_zoom_out = 7
+export const tr_wipe = 8
 
-export const MODE_NORMAL = 0
-export const MODE_DSI = 1
-export const MODE_3D = 2
+export const mode_normal = 0
+export const mode_dsi = 1
+export const mode_3_d = 2
 
-export const MOTION_NONE = 0
-export const MOTION_BREATHE = 1
-export const MOTION_SWAY = 2
-export const MOTION_FLOAT = 3
-export const MOTION_BOUNCE = 4
-export const MOTION_CAMERA = 5
-export const MOTION_N = 6
+export const motion_none = 0
+export const motion_breathe = 1
+export const motion_sway = 2
+export const motion_float = 3
+export const motion_bounce = 4
+export const motion_camera = 5
+export const motion_n = 6
 
-export const K_NONE = 0
-export const K_PASTE = 1
-export const K_PHOTO = 2
-export const K_TEXT = 3
-export const K_SEL = 4
+export const k_none = 0
+export const k_paste = 1
+export const k_photo = 2
+export const k_text = 3
+export const k_sel = 4
 
-export const D_STAGE = 1 << 0
-export const D_THUMB = 1 << 1
-export const D_TIMELINE = 1 << 2
-export const D_FRAMEINFO = 1 << 3
-export const D_TOOLS = 1 << 4
-export const D_PEN = 1 << 5
-export const D_LAYER = 1 << 6
-export const D_PLAY = 1 << 7
-export const D_ZOOM = 1 << 8
-export const D_SOUND = 1 << 9
-export const D_SAVE = 1 << 10
-export const D_PAGE = 1 << 11
-export const D_ONION = 1 << 12
-export const D_SEL = 1 << 13
-export const D_GRID = 1 << 14
-export const D_TRANS = 1 << 15
-export const D_MODE = 1 << 16
-export const D_ANIM = 1 << 17
-export const D_ALL = 0x3ffff
+export const d_stage = 1 << 0
+export const d_thumb = 1 << 1
+export const d_timeline = 1 << 2
+export const d_frameinfo = 1 << 3
+export const d_tools = 1 << 4
+export const d_pen = 1 << 5
+export const d_layer = 1 << 6
+export const d_play = 1 << 7
+export const d_zoom = 1 << 8
+export const d_sound = 1 << 9
+export const d_save = 1 << 10
+export const d_page = 1 << 11
+export const d_onion = 1 << 12
+export const d_sel = 1 << 13
+export const d_grid = 1 << 14
+export const d_trans = 1 << 15
+export const d_mode = 1 << 16
+export const d_anim = 1 << 17
+export const d_all = 0x3ffff
 
-export const OP_PIX = 0
-export const OP_FRAME_INS = 1
-export const OP_FRAME_DEL = 2
-export const OP_FRAME_MOVE = 3
-export const OP_SE = 4
-export const OP_LAYER_ALPHA = 5
-export const OP_FRAME_CURSOR = 6
-export const OP_PAPER = 7
+export const op_pix = 0
+export const op_frame_ins = 1
+export const op_frame_del = 2
+export const op_frame_move = 3
+export const op_se = 4
+export const op_layer_alpha = 5
+export const op_frame_cursor = 6
+export const op_paper = 7
 
-export const PAL_STD = 0
-export const PAL_PPM = 1
-export const PAL_KWZ = 2
+export const pal_std = 0
+export const pal_ppm = 1
+export const pal_kwz = 2
 
-export const ERR_OK = 0
-export const ERR_BAD = -1
-export const ERR_FULL = -2
-export const ERR_IO = -3
-export const ERR_NOOP = -4
+export const err_ok = 0
+export const err_bad = -1
+export const err_full = -2
+export const err_io = -3
+export const err_noop = -4
 
-export type NoteMeta = {
+export type note_meta_t = {
   root_name: string
   parent_name: string
   cur_name: string
@@ -142,36 +142,36 @@ export type NoteMeta = {
   app_ver: number
 }
 
-export function note_meta_zero(): NoteMeta {
+export function note_meta_zero(): note_meta_t {
   return { root_name: '', parent_name: '', cur_name: '', root_id: '', parent_id: '', cur_id: '', root_fn: '', parent_fn: '', cur_fn: '', created: 0, modified: 0, edits: 0, lock: 0, flags: 0, layer_flags: 0, app_ver: 0 }
 }
 
-export const MAX_FRAMES_NORMAL = 9999
-export const MAX_FRAMES_FLIPNOTE = 999
-export const AUTOSAVE_MS = 2500
-export const THUMB_W = 96
-export const THUMB_H = 72
-export const ZOOM_MIN = 0.05
-export const ZOOM_MAX = 32
-export const LONGPRESS_MS = 300
-export const DRAG_SLOP = 8
+export const max_frames_normal = 9999
+export const max_frames_flipnote = 999
+export const autosave_ms = 2500
+export const thumb_w = 96
+export const thumb_h = 72
+export const zoom_min = 0.05
+export const zoom_max = 32
+export const longpress_ms = 300
+export const drag_slop = 8
 
-export const SIZES = [1, 2, 3, 5, 8, 12, 16, 24, 32]
-export const SIZE_MIN = 1
-export const SIZE_MAX = 64
-export const PXN_MIN = 4
-export const PXN_MAX = 128
-export const PIXEL_NS = [8, 16, 32, 48, 64]
-export const FPS_SPEEDS = KWZ_SPEEDS
+export const sizes = [1, 2, 3, 5, 8, 12, 16, 24, 32]
+export const size_min = 1
+export const size_max = 64
+export const pxn_min = 4
+export const pxn_max = 128
+export const pixel_ns = [8, 16, 32, 48, 64]
+export const fps_speeds = kwz_speeds
 
-export const ASPECTS = [
+export const aspects = [
   { name: '4:3', w: 512, h: 384 },
   { name: '16:9', w: 512, h: 288 },
   { name: '1:1', w: 400, h: 400 },
   { name: '3:4', w: 384, h: 512 },
   { name: '9:16', w: 288, h: 512 },
 ]
-export const RESOS = [
+export const resos = [
   { id: 'low', label: '低画質', mul: 1 },
   { id: 'mid', label: '中画質', mul: 1.875 },
   { id: 'hd', label: 'HD', mul: 2.5 },
@@ -180,7 +180,7 @@ export const RESOS = [
   { id: '3ds', label: '3DS実寸', mul: 0.625 },
 ]
 
-export const PAT_TABLE: { id: string, label: string, rows: number[] }[] = [
+export const pat_table: { id: string, label: string, rows: number[] }[] = [
   { id: 'solid', label: 'ベタ', rows: [255, 255, 255, 255, 255, 255, 255, 255] },
   { id: 'dots_sparse', label: 'ドット', rows: [146, 0, 0, 146, 0, 0, 146, 0] },
   { id: 'dots_dense', label: '密ドット', rows: [170, 0, 170, 0, 170, 0, 170, 0] },
@@ -192,93 +192,93 @@ export const PAT_TABLE: { id: string, label: string, rows: number[] }[] = [
   { id: 'inverse_dots', label: '反転ドット', rows: [109, 255, 255, 109, 255, 255, 109, 255] },
 ]
 
-export const INK_STD = ['#111111', '#E02020', '#2060E0', '#20A020', '#F0C000', '#FF6B9D', '#9C27B0', '#FF8C00', '#00BCD4', '#795548', '#607D8B', '#8BC34A', '#CDDC39', '#FF5722', '#E91E63', '#FFFFFF']
-export const PAPER_STD = ['#FFFFFF', '#1A1A1A', '#FFF8E7', '#E8F5E9', '#E3F2FD', '#FCE4EC', '#F3E5F5', '#FFF3E0', '#ECEFF1', '#263238']
-export const INK_PPM = ['#0E0E0E', '#FF2A2A', '#0A39FF', '#FFFFFF']
-export const PAPER_PPM = ['#FFFFFF', '#0E0E0E']
-export const INK_KWZ = ['#101010', '#FF1010', '#FFE700', '#008631', '#0038CE', '#FFFFFF']
-export const PAPER_KWZ = ['#FFFFFF', '#101010', '#FF1010', '#FFE700', '#008631', '#0038CE']
+export const ink_std = ['#111111', '#E02020', '#2060E0', '#20A020', '#F0C000', '#FF6B9D', '#9C27B0', '#FF8C00', '#00BCD4', '#795548', '#607D8B', '#8BC34A', '#CDDC39', '#FF5722', '#E91E63', '#FFFFFF']
+export const paper_std = ['#FFFFFF', '#1A1A1A', '#FFF8E7', '#E8F5E9', '#E3F2FD', '#FCE4EC', '#F3E5F5', '#FFF3E0', '#ECEFF1', '#263238']
+export const ink_ppm = ['#0E0E0E', '#FF2A2A', '#0A39FF', '#FFFFFF']
+export const paper_ppm = ['#FFFFFF', '#0E0E0E']
+export const ink_kwz = ['#101010', '#FF1010', '#FFE700', '#008631', '#0038CE', '#FFFFFF']
+export const paper_kwz = ['#FFFFFF', '#101010', '#FF1010', '#FFE700', '#008631', '#0038CE']
 
-export const BRUSH_DEFS: { id: number, icon: string, label: string }[] = [
-  { id: B_PEN, icon: 'pen', label: 'ペン' },
-  { id: B_MARKER, icon: 'marker', label: 'マーカー' },
-  { id: B_PENCIL, icon: 'pencil', label: 'えんぴつ' },
-  { id: B_BRUSH, icon: 'brush', label: 'ふで' },
-  { id: B_AIRBRUSH, icon: 'airbrush', label: 'エアブラシ' },
-  { id: B_CRAYON, icon: 'crayon', label: 'クレヨン' },
-  { id: B_CALLIG, icon: 'callig', label: 'つけペン' },
-  { id: B_DOTS, icon: 'bdots', label: 'てんてん' },
-  { id: B_WATER, icon: 'water', label: 'すいさい' },
-  { id: B_NEON, icon: 'neon', label: 'ネオン' },
-  { id: B_CHALK, icon: 'chalk', label: 'チョーク' },
-  { id: B_SPAT, icon: 'spat', label: 'しぶき' },
-  { id: B_RIBBON, icon: 'ribbon', label: 'リボン' },
+export const brush_defs: { id: number, icon: string, label: string }[] = [
+  { id: b_pen, icon: 'pen', label: 'ペン' },
+  { id: b_marker, icon: 'marker', label: 'マーカー' },
+  { id: b_pencil, icon: 'pencil', label: 'えんぴつ' },
+  { id: b_brush, icon: 'brush', label: 'ふで' },
+  { id: b_airbrush, icon: 'airbrush', label: 'エアブラシ' },
+  { id: b_crayon, icon: 'crayon', label: 'クレヨン' },
+  { id: b_callig, icon: 'callig', label: 'つけペン' },
+  { id: b_dots, icon: 'bdots', label: 'てんてん' },
+  { id: b_water, icon: 'water', label: 'すいさい' },
+  { id: b_neon, icon: 'neon', label: 'ネオン' },
+  { id: b_chalk, icon: 'chalk', label: 'チョーク' },
+  { id: b_spat, icon: 'spat', label: 'しぶき' },
+  { id: b_ribbon, icon: 'ribbon', label: 'リボン' },
 ]
 
-export const EFFECT_DEFS: { id: number, icon: string, label: string, desc: string }[] = [
-  { id: EF_BLUR, icon: 'blur', label: 'ぼかし', desc: 'やわらかくにじませる' },
-  { id: EF_MOSAIC, icon: 'mosaic', label: 'モザイク', desc: '四角く粗くする' },
-  { id: EF_GLOW, icon: 'glow', label: '発光', desc: 'ふんわり光らせる' },
-  { id: EF_CHROMA, icon: 'chroma', label: '色ずれ', desc: 'RGBをずらす' },
-  { id: EF_NOISE, icon: 'noise', label: 'ノイズ', desc: 'ざらざらを足す' },
-  { id: EF_OUTLINE, icon: 'outline', label: 'フチ抽出', desc: '輪郭線をつくる' },
-  { id: EF_WAVE, icon: 'wave', label: '波', desc: 'ゆらゆら歪ませる' },
+export const effect_defs: { id: number, icon: string, label: string, desc: string }[] = [
+  { id: ef_blur, icon: 'blur', label: 'ぼかし', desc: 'やわらかくにじませる' },
+  { id: ef_mosaic, icon: 'mosaic', label: 'モザイク', desc: '四角く粗くする' },
+  { id: ef_glow, icon: 'glow', label: '発光', desc: 'ふんわり光らせる' },
+  { id: ef_chroma, icon: 'chroma', label: '色ずれ', desc: 'RGBをずらす' },
+  { id: ef_noise, icon: 'noise', label: 'ノイズ', desc: 'ざらざらを足す' },
+  { id: ef_outline, icon: 'outline', label: 'フチ抽出', desc: '輪郭線をつくる' },
+  { id: ef_wave, icon: 'wave', label: '波', desc: 'ゆらゆら歪ませる' },
 ]
 
-export const TRANSITION_DEFS: { id: number, label: string }[] = [
-  { id: TR_FADE, label: 'フェード' },
-  { id: TR_SLIDE_L, label: '左へスライド' },
-  { id: TR_SLIDE_R, label: '右へスライド' },
-  { id: TR_SLIDE_U, label: '上へスライド' },
-  { id: TR_SLIDE_D, label: '下へスライド' },
-  { id: TR_ZOOM_IN, label: 'ズームイン' },
-  { id: TR_ZOOM_OUT, label: 'ズームアウト' },
-  { id: TR_WIPE, label: 'ワイプ' },
+export const transition_defs: { id: number, label: string }[] = [
+  { id: tr_fade, label: 'フェード' },
+  { id: tr_slide_l, label: '左へスライド' },
+  { id: tr_slide_r, label: '右へスライド' },
+  { id: tr_slide_u, label: '上へスライド' },
+  { id: tr_slide_d, label: '下へスライド' },
+  { id: tr_zoom_in, label: 'ズームイン' },
+  { id: tr_zoom_out, label: 'ズームアウト' },
+  { id: tr_wipe, label: 'ワイプ' },
 ]
 
-export const MODE_DEFS: { id: number, label: string, sub: string }[] = [
-  { id: MODE_NORMAL, label: 'ノーマル', sub: '自由に描ける拡張モード' },
-  { id: MODE_DSI, label: 'うごメモ', sub: 'DSi風・2レイヤー・実機準拠' },
-  { id: MODE_3D, label: 'うごメモ3D', sub: '3DS風・3レイヤー・6色' },
+export const mode_defs: { id: number, label: string, sub: string }[] = [
+  { id: mode_normal, label: 'ノーマル', sub: '自由に描ける拡張モード' },
+  { id: mode_dsi, label: 'うごメモ', sub: 'DSi風・2レイヤー・実機準拠' },
+  { id: mode_3_d, label: 'うごメモ3D', sub: '3DS風・3レイヤー・6色' },
 ]
 
-export type MarkDef = { id: string, name: string, w: number, h: number, data: string }
+export type mark_def_t = { id: string, name: string, w: number, h: number, data: string }
 
-export const SE_PRESETS = ['coin', 'jump', 'hit', 'chime', 'blip', 'splash', 'woosh', 'ding', 'buzz', 'zip', 'thud', 'sparkle', 'horn']
-export const SE_LABELS: { [k: string]: string } = { coin: 'コイン', jump: 'ジャンプ', hit: 'ヒット', chime: 'チャイム', blip: 'ピッ', splash: 'スプラッシュ', woosh: 'ヒュッ', ding: 'ディン', buzz: 'ブザー', zip: 'ジップ', thud: 'ドスン', sparkle: 'キラキラ', horn: 'ラッパ' }
+export const se_presets = ['coin', 'jump', 'hit', 'chime', 'blip', 'splash', 'woosh', 'ding', 'buzz', 'zip', 'thud', 'sparkle', 'horn']
+export const se_labels: { [k: string]: string } = { coin: 'コイン', jump: 'ジャンプ', hit: 'ヒット', chime: 'チャイム', blip: 'ピッ', splash: 'スプラッシュ', woosh: 'ヒュッ', ding: 'ディン', buzz: 'ブザー', zip: 'ジップ', thud: 'ドスン', sparkle: 'キラキラ', horn: 'ラッパ' }
 
-export type Rle = Uint32Array
+export type rle_t = Uint32Array
 
-export type Frame = {
+export type frame_t = {
   id: number
   se: number
   hold: number
   paper?: string
-  kwz?: KwzFrameMeta
-  pk: (Rle | null)[]
+  kwz?: kwz_frame_meta_t
+  pk: (rle_t | null)[]
 }
 
-export type AnimFx = {
+export type anim_fx_t = {
   wiggle: number
-  wiggleAmount: number
-  wiggleCell: number
-  wiggleRate: number
-  wigglePhases: number
-  wiggleSeed: number
+  wiggle_amount: number
+  wiggle_cell: number
+  wiggle_rate: number
+  wiggle_phases: number
+  wiggle_seed: number
   motion: number
-  motionAmount: number
-  motionRate: number
-  motionAnchorX: number
-  motionAnchorY: number
-  motionSeed: number
+  motion_amount: number
+  motion_rate: number
+  motion_anchor_x: number
+  motion_anchor_y: number
+  motion_seed: number
 }
 
-export function anim_fx_zero(): AnimFx {
-  return { wiggle: 0, wiggleAmount: 2, wiggleCell: 28, wiggleRate: 8, wigglePhases: 4, wiggleSeed: 1, motion: MOTION_NONE, motionAmount: 2, motionRate: 2, motionAnchorX: 0.5, motionAnchorY: 0.82, motionSeed: 1 }
+export function anim_fx_zero(): anim_fx_t {
+  return { wiggle: 0, wiggle_amount: 2, wiggle_cell: 28, wiggle_rate: 8, wiggle_phases: 4, wiggle_seed: 1, motion: motion_none, motion_amount: 2, motion_rate: 2, motion_anchor_x: 0.5, motion_anchor_y: 0.82, motion_seed: 1 }
 }
 
-export type Doc = {
-  meta: NoteMeta
+export type doc_t = {
+  meta: note_meta_t
   w: number
   h: number
   ratio: string
@@ -287,20 +287,22 @@ export type Doc = {
   fps: number
   loop: number
   name: string
-  frames: Frame[]
+  frames: frame_t[]
   cur: number
-  loopA: number
-  loopB: number
+  loop_a: number
+  loop_b: number
   lvis: Uint8Array
   lalpha: Uint8Array
   lord: number[]
   mode: number
-  anim: AnimFx
+  anim: anim_fx_t
 }
 
-export type Pen = {
+export type paint_tile_t = { w: number, h: number, b: number[], rgba?: number[] }
+
+export type pen_t = {
   tool: number
-  prevTool: number
+  prev_tool: number
   layer: number
   size: number
   color: string
@@ -316,22 +318,25 @@ export type Pen = {
   custom: string[]
   pxn: number
   fill: number
-  palMode: number
+  pal_mode: number
   brush: number
-  markId: string
-  fillAll: number
+  native_tip: number
+  mark_id: string
+  fill_all: number
+  paint_over: number
+  paint_tile: paint_tile_t | null
+  paint_tile_normal: paint_tile_t | null
 }
 
-export type ViewSt = {
+export type view_st_t = {
   z: number
   px: number
   py: number
-  fitZ: number
+  fit_z: number
   onion: number
   ocount: number
   oprev: number
   onext: number
-  oskip: number
   grid: number
   gsize: number
   page: string
@@ -339,14 +344,14 @@ export type ViewSt = {
   tlopen: number
 }
 
-export type PlaySt = {
+export type play_st_t = {
   on: number
   acc: number
   last: number
   raf: number
 }
 
-export type SelSt = {
+export type sel_st_t = {
   has: number
   x: number
   y: number
@@ -355,7 +360,7 @@ export type SelSt = {
   poly: number[] | null
 }
 
-export type FloatSt = {
+export type float_st_t = {
   kind: number
   x: number
   y: number
@@ -363,31 +368,31 @@ export type FloatSt = {
   sx: number
   sy: number
   cont: number
-  srcLayer: number
-  srcPoly: number[] | null
-  srcRect: [number, number, number, number] | null
-  srcBefore: Rle | null
+  src_layer: number
+  src_poly: number[] | null
+  src_rect: [number, number, number, number] | null
+  src_before: rle_t | null
 }
 
-export type Clip = {
+export type clip_t = {
   w: number
   h: number
 }
 
-export type AudioSlot = {
+export type audio_slot_t = {
   bytes: ArrayBuffer | null
   name: string
 }
 
-export type SndSt = {
-  bgm: AudioSlot[]
-  se: AudioSlot[]
-  bgmVol: number
-  bgmFps: number
-  seVol: number
+export type snd_st_t = {
+  bgm: audio_slot_t[]
+  se: audio_slot_t[]
+  bgm_vol: number
+  bgm_fps: number
+  se_vol: number
 }
 
-export type HistEnt = {
+export type hist_ent_t = {
   paper?: { before: string, after: string, frames: (string | undefined)[] }
   op: number
   grp: number
@@ -397,25 +402,20 @@ export type HistEnt = {
   y: number
   w: number
   h: number
-  before: Rle | null
-  after: Rle | null
-  snap: Frame | null
+  before: rle_t | null
+  after: rle_t | null
+  snap: frame_t | null
   a: number
   b: number
   bytes: number
 }
 
-export function fps_speed_tag(fps: number): string {
-  for (let i = 0; i < FPS_SPEEDS.length; i++) if (Math.abs(FPS_SPEEDS[i] - fps) < 0.01) return 'はやさ ' + (i + 1)
-  return 'カスタム'
-}
-
 export function reso_size(ratio: string, res: string): { w: number, h: number } {
   if (ratio === '4:3' && res === '3ds') return { w: 310, h: 230 }
-  let a = ASPECTS[0]
-  for (let i = 0; i < ASPECTS.length; i++) if (ASPECTS[i].name === ratio) a = ASPECTS[i]
+  let a = aspects[0]
+  for (let i = 0; i < aspects.length; i++) if (aspects[i].name === ratio) a = aspects[i]
   let m = 1
-  for (let i = 0; i < RESOS.length; i++) if (RESOS[i].id === res) m = RESOS[i].mul
+  for (let i = 0; i < resos.length; i++) if (resos[i].id === res) m = resos[i].mul
   const ev = (v: number) => {
     const rounded = Math.round(v)
     return (rounded & 1) === 0 ? rounded : rounded + 1
@@ -423,7 +423,7 @@ export function reso_size(ratio: string, res: string): { w: number, h: number } 
   return { w: Math.min(4096, ev(a.w * m)), h: Math.min(4096, ev(a.h * m)) }
 }
 
-export const KWZ_PAL: [number, number, number][] = [
+export const kwz_pal: [number, number, number][] = [
   [0xff, 0xff, 0xff],
   [0x10, 0x10, 0x10],
   [0xff, 0x10, 0x10],
@@ -431,4 +431,4 @@ export const KWZ_PAL: [number, number, number][] = [
   [0x00, 0x86, 0x31],
   [0x00, 0x38, 0xce],
 ]
-export const HOLD_MAX = 8
+export const hold_max = 8

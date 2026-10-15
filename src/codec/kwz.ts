@@ -1,46 +1,46 @@
-import { KWZ_COMMON_LINES, KWZ_SPEEDS } from './kwzformat'
-import { binary_writer, crc32, writer_bytes, writer_finish, writer_u8, writer_u16, writer_u32, type BinaryWriter } from '../binary'
+import { kwz_common_lines, kwz_speeds } from './kwzformat'
+import { binary_writer, crc32, writer_bytes, writer_finish, writer_u8, writer_u16, writer_u32, type binary_writer_t } from '../binary'
 import { clamp } from '../lib'
 import { kwz_adpcm_encode } from './adpcm'
 import { hex_to_bytes, nintendo_ts_from_unix } from './fname'
-import type { KwzFrameMeta } from './kwzmeta'
-import type { FlipMeta } from './kwzdec'
-import { KWZ_FRAME_H, KWZ_FRAME_W } from './kwzgeom'
+import type { kwz_frame_meta_t } from './kwzmeta'
+import type { flip_meta_t } from './kwzdec'
+import { kwz_frame_h, kwz_frame_w } from './kwzgeom'
 import { kwz_sign } from './sig'
 
-export { KWZ_SPEEDS } from './kwzformat'
+export { kwz_speeds } from './kwzformat'
 
-export const KWZ_W = KWZ_FRAME_W
-export const KWZ_H = KWZ_FRAME_H
+export const kwz_w = kwz_frame_w
+export const kwz_h = kwz_frame_h
 
-export type KwzFrame = {
+export type kwz_frame_t = {
   layers: [Uint8Array, Uint8Array, Uint8Array]
   paper: number
   colors: [number, number][]
   se: number
-  meta?: KwzFrameMeta
+  meta?: kwz_frame_meta_t
 }
 
-export type KwzInput = {
-  meta?: FlipMeta
-  thumbIdx?: number
-  frames: KwzFrame[]
+export type kwz_input_t = {
+  meta?: flip_meta_t
+  thumb_idx?: number
+  frames: kwz_frame_t[]
   speed: number
   loop: number
   name: string
-  thumbJpeg: Uint8Array
+  thumb_jpeg: Uint8Array
   bgm: Int16Array | null
   se: (Int16Array | null)[]
 }
 
-let commonMap: Map<number, number> | null = null
+let common_map: Map<number, number> | null = null
 
 function common_of(idx: number): number {
-  if (!commonMap) {
-    commonMap = new Map()
-    for (let i = 0; i < 32; i++) commonMap.set(KWZ_COMMON_LINES[i], i)
+  if (!common_map) {
+    common_map = new Map()
+    for (let i = 0; i < 32; i++) common_map.set(kwz_common_lines[i], i)
   }
-  const v = commonMap.get(idx)
+  const v = common_map.get(idx)
   return v === undefined ? -1 : v
 }
 
@@ -48,9 +48,9 @@ export function kwz_line_index(m: Uint8Array, off: number): number {
   return m[off + 1] * 2187 + m[off] * 729 + m[off + 3] * 243 + m[off + 2] * 81 + m[off + 5] * 27 + m[off + 4] * 9 + m[off + 7] * 3 + m[off + 6]
 }
 
-type BinaryWriter16 = { buf: number, cnt: number, out: number[] }
+type binary_writer16_t = { buf: number, cnt: number, out: number[] }
 
-function b16_push(w: BinaryWriter16, val: number, n: number): void {
+function b16_push(w: binary_writer16_t, val: number, n: number): void {
   w.buf |= val << w.cnt
   w.cnt += n
   while (w.cnt >= 16) {
@@ -60,7 +60,7 @@ function b16_push(w: BinaryWriter16, val: number, n: number): void {
   }
 }
 
-function b16_bytes(w: BinaryWriter16): Uint8Array {
+function b16_bytes(w: binary_writer16_t): Uint8Array {
   if (w.cnt > 0) {
     w.out.push(w.buf & 0xffff)
     w.buf = 0
@@ -75,19 +75,19 @@ function b16_bytes(w: BinaryWriter16): Uint8Array {
 }
 
 export function kwz_encode_layer(map: Uint8Array): Uint8Array {
-  const w: BinaryWriter16 = { buf: 0, cnt: 0, out: [] }
+  const w: binary_writer16_t = { buf: 0, cnt: 0, out: [] }
   const li = new Int32Array(8)
-  for (let ly = 0; ly < KWZ_H; ly += 128) {
-    for (let lx = 0; lx < KWZ_W; lx += 128) {
+  for (let ly = 0; ly < kwz_h; ly += 128) {
+    for (let lx = 0; lx < kwz_w; lx += 128) {
       for (let ty = 0; ty < 128; ty += 8) {
         const y = ly + ty
-        if (y >= KWZ_H) break
+        if (y >= kwz_h) break
         for (let tx = 0; tx < 128; tx += 8) {
           const x = lx + tx
-          if (x >= KWZ_W) break
+          if (x >= kwz_w) break
           let same = 1
           for (let r = 0; r < 8; r++) {
-            li[r] = kwz_line_index(map, (y + r) * KWZ_W + x)
+            li[r] = kwz_line_index(map, (y + r) * kwz_w + x)
             if (r > 0 && li[r] !== li[0]) same = 0
           }
           if (same) {
@@ -138,8 +138,8 @@ function nintendo_ts(): number {
 export function kwz_speed_from_fps(fps: number): number {
   let best = 0
   let err = 1e9
-  for (let i = 0; i < KWZ_SPEEDS.length; i++) {
-    const e = Math.abs(KWZ_SPEEDS[i] - fps)
+  for (let i = 0; i < kwz_speeds.length; i++) {
+    const e = Math.abs(kwz_speeds[i] - fps)
     if (e < err) {
       err = e
       best = i
@@ -148,14 +148,14 @@ export function kwz_speed_from_fps(fps: number): number {
   return best
 }
 
-const SEC_M4: Record<string, number> = { KFH: 0x14, KTN: 0x02, KMC: 0x02, KMI: 0x05, KSN: 0x01 }
+const sec_m4: Record<string, number> = { KFH: 0x14, KTN: 0x02, KMC: 0x02, KMI: 0x05, KSN: 0x01 }
 
-function wid10(w: BinaryWriter, hex: string): void {
+function wid10(w: binary_writer_t, hex: string): void {
   const b = hex_to_bytes(hex)
   for (let i = 0; i < 10; i++) writer_u8(w, b[i] || 0)
 }
 
-function wfn28(w: BinaryWriter, fn: string): void {
+function wfn28(w: binary_writer_t, fn: string): void {
   for (let i = 0; i < 28; i++) writer_u8(w, i < fn.length ? fn.charCodeAt(i) & 0x7f : 0)
 }
 
@@ -163,78 +163,78 @@ function section(magic: string, body: Uint8Array): Uint8Array {
   const pad = (4 - (body.length & 3)) & 3
   const w = binary_writer(body.length + pad + 8)
   for (let i = 0; i < 3; i++) writer_u8(w, magic.charCodeAt(i))
-  writer_u8(w, SEC_M4[magic] !== undefined ? SEC_M4[magic] : 0)
+  writer_u8(w, sec_m4[magic] !== undefined ? sec_m4[magic] : 0)
   writer_u32(w, body.length + pad)
   writer_bytes(w, body)
   for (let i = 0; i < pad; i++) writer_u8(w, 0)
   return writer_finish(w)
 }
 
-export async function kwz_build(inp: KwzInput): Promise<Uint8Array> {
+export async function kwz_build(inp: kwz_input_t): Promise<Uint8Array> {
   const frames = inp.frames
   const n = frames.length
   const meta = inp.meta
-  const nowTs = nintendo_ts()
-  const created = meta && meta.created ? nintendo_ts_from_unix(meta.created) : nowTs
-  const modified = meta && meta.modified ? nintendo_ts_from_unix(meta.modified) : nowTs
-  const defFn = 'cwmfjordvegbalksnthpyxquiz01'
-  const rootFn = meta && meta.root_fn.length === 28 ? meta.root_fn : defFn
-  const parentFn = meta && meta.parent_fn.length === 28 ? meta.parent_fn : rootFn
-  const curFn = meta && meta.cur_fn.length === 28 ? meta.cur_fn : defFn
+  const now_ts = nintendo_ts()
+  const created = meta && meta.created ? nintendo_ts_from_unix(meta.created) : now_ts
+  const modified = meta && meta.modified ? nintendo_ts_from_unix(meta.modified) : now_ts
+  const def_fn = 'cwmfjordvegbalksnthpyxquiz01'
+  const root_fn = meta && meta.root_fn.length === 28 ? meta.root_fn : def_fn
+  const parent_fn = meta && meta.parent_fn.length === 28 ? meta.parent_fn : root_fn
+  const cur_fn = meta && meta.cur_fn.length === 28 ? meta.cur_fn : def_fn
 
-  const kfhB = binary_writer(0xcc)
-  writer_u32(kfhB, 0)
-  writer_u32(kfhB, created)
-  writer_u32(kfhB, modified)
-  writer_u32(kfhB, meta ? meta.app_ver : 0)
-  wid10(kfhB, meta ? meta.root_id : '')
-  wid10(kfhB, meta ? meta.parent_id : '')
-  wid10(kfhB, meta ? meta.cur_id : '')
-  wname(kfhB, meta && meta.root_name ? meta.root_name : inp.name)
-  wname(kfhB, meta && meta.parent_name ? meta.parent_name : inp.name)
-  wname(kfhB, meta && meta.cur_name ? meta.cur_name : inp.name)
-  wfn28(kfhB, rootFn)
-  wfn28(kfhB, parentFn)
-  wfn28(kfhB, curFn)
-  writer_u16(kfhB, n)
-  writer_u16(kfhB, clamp(inp.thumbIdx || 0, 0, n > 0 ? n - 1 : 0))
-  const baseFlags = meta ? meta.flags & ~0x3 : 0
-  writer_u16(kfhB, baseFlags | (meta && meta.lock ? 0x1 : 0) | (inp.loop ? 0x2 : 0))
-  writer_u8(kfhB, clamp(inp.speed, 0, 10))
-  writer_u8(kfhB, 0)
-  const kfhBody = writer_finish(kfhB)
-  const kfhCrc = crc32(kfhBody.subarray(4), 0)
-  kfhBody[0] = kfhCrc & 0xff
-  kfhBody[1] = (kfhCrc >>> 8) & 0xff
-  kfhBody[2] = (kfhCrc >>> 16) & 0xff
-  kfhBody[3] = (kfhCrc >>> 24) & 0xff
+  const kfh_b = binary_writer(0xcc)
+  writer_u32(kfh_b, 0)
+  writer_u32(kfh_b, created)
+  writer_u32(kfh_b, modified)
+  writer_u32(kfh_b, meta ? meta.app_ver : 0)
+  wid10(kfh_b, meta ? meta.root_id : '')
+  wid10(kfh_b, meta ? meta.parent_id : '')
+  wid10(kfh_b, meta ? meta.cur_id : '')
+  wname(kfh_b, meta && meta.root_name ? meta.root_name : inp.name)
+  wname(kfh_b, meta && meta.parent_name ? meta.parent_name : inp.name)
+  wname(kfh_b, meta && meta.cur_name ? meta.cur_name : inp.name)
+  wfn28(kfh_b, root_fn)
+  wfn28(kfh_b, parent_fn)
+  wfn28(kfh_b, cur_fn)
+  writer_u16(kfh_b, n)
+  writer_u16(kfh_b, clamp(inp.thumb_idx || 0, 0, n > 0 ? n - 1 : 0))
+  const base_flags = meta ? meta.flags & ~0x3 : 0
+  writer_u16(kfh_b, base_flags | (meta && meta.lock ? 0x1 : 0) | (inp.loop ? 0x2 : 0))
+  writer_u8(kfh_b, clamp(inp.speed, 0, 10))
+  writer_u8(kfh_b, 0)
+  const kfh_body = writer_finish(kfh_b)
+  const kfh_crc = crc32(kfh_body.subarray(4), 0)
+  kfh_body[0] = kfh_crc & 0xff
+  kfh_body[1] = (kfh_crc >>> 8) & 0xff
+  kfh_body[2] = (kfh_crc >>> 16) & 0xff
+  kfh_body[3] = (kfh_crc >>> 24) & 0xff
 
-  const ktnB = binary_writer(inp.thumbJpeg.length + 4)
-  writer_u32(ktnB, crc32(inp.thumbJpeg, 0))
-  writer_bytes(ktnB, inp.thumbJpeg)
+  const ktn_b = binary_writer(inp.thumb_jpeg.length + 4)
+  writer_u32(ktn_b, crc32(inp.thumb_jpeg, 0))
+  writer_bytes(ktn_b, inp.thumb_jpeg)
 
-  const layerBytes: Uint8Array[][] = []
+  const layer_bytes: Uint8Array[][] = []
   for (let f = 0; f < n; f++) {
-    layerBytes.push([kwz_encode_layer(frames[f].layers[0]), kwz_encode_layer(frames[f].layers[1]), kwz_encode_layer(frames[f].layers[2])])
+    layer_bytes.push([kwz_encode_layer(frames[f].layers[0]), kwz_encode_layer(frames[f].layers[1]), kwz_encode_layer(frames[f].layers[2])])
   }
 
-  let kmcSize = 4
-  for (const lb of layerBytes) kmcSize += lb[0].length + lb[1].length + lb[2].length
-  const kmcB = binary_writer(kmcSize)
-  writer_u32(kmcB, 0)
-  for (const lb of layerBytes) {
-    writer_bytes(kmcB, lb[0])
-    writer_bytes(kmcB, lb[1])
-    writer_bytes(kmcB, lb[2])
+  let kmc_size = 4
+  for (const lb of layer_bytes) kmc_size += lb[0].length + lb[1].length + lb[2].length
+  const kmc_b = binary_writer(kmc_size)
+  writer_u32(kmc_b, 0)
+  for (const lb of layer_bytes) {
+    writer_bytes(kmc_b, lb[0])
+    writer_bytes(kmc_b, lb[1])
+    writer_bytes(kmc_b, lb[2])
   }
-  const kmcBody = writer_finish(kmcB)
-  const kmcCrc = crc32(kmcBody.subarray(4), 0)
-  kmcBody[0] = kmcCrc & 0xff
-  kmcBody[1] = (kmcCrc >>> 8) & 0xff
-  kmcBody[2] = (kmcCrc >>> 16) & 0xff
-  kmcBody[3] = (kmcCrc >>> 24) & 0xff
+  const kmc_body = writer_finish(kmc_b)
+  const kmc_crc = crc32(kmc_body.subarray(4), 0)
+  kmc_body[0] = kmc_crc & 0xff
+  kmc_body[1] = (kmc_crc >>> 8) & 0xff
+  kmc_body[2] = (kmc_crc >>> 16) & 0xff
+  kmc_body[3] = (kmc_crc >>> 24) & 0xff
 
-  const kmiB = binary_writer(28 * n)
+  const kmi_b = binary_writer(28 * n)
   for (let f = 0; f < n; f++) {
     const fr = frames[f]
     const c = fr.colors
@@ -247,35 +247,35 @@ export async function kwz_build(inp: KwzInput): Promise<Uint8Array> {
       ((c[1][1] & 0xf) << 20) |
       ((c[2][0] & 0xf) << 24) |
       ((c[2][1] & 0xf) << 28)
-    writer_u32(kmiB, flags >>> 0)
-    writer_u16(kmiB, layerBytes[f][0].length)
-    writer_u16(kmiB, layerBytes[f][1].length)
-    writer_u16(kmiB, layerBytes[f][2].length)
-    wid10(kmiB, fr.meta ? fr.meta.author : meta ? meta.cur_id : '')
-    for (let i = 0; i < 3; i++) writer_u8(kmiB, fr.meta ? fr.meta.depth[i] : 0)
-    writer_u8(kmiB, fr.se & 0xf)
-    writer_u16(kmiB, fr.meta ? fr.meta.reserved : 0)
-    writer_u16(kmiB, fr.meta ? fr.meta.camera : 0)
+    writer_u32(kmi_b, flags >>> 0)
+    writer_u16(kmi_b, layer_bytes[f][0].length)
+    writer_u16(kmi_b, layer_bytes[f][1].length)
+    writer_u16(kmi_b, layer_bytes[f][2].length)
+    wid10(kmi_b, fr.meta ? fr.meta.author : meta ? meta.cur_id : '')
+    for (let i = 0; i < 3; i++) writer_u8(kmi_b, fr.meta ? fr.meta.depth[i] : 0)
+    writer_u8(kmi_b, fr.se & 0xf)
+    writer_u16(kmi_b, fr.meta ? fr.meta.reserved : 0)
+    writer_u16(kmi_b, fr.meta ? fr.meta.camera : 0)
   }
 
   const tracks: Uint8Array[] = []
   tracks.push(inp.bgm ? kwz_adpcm_encode(inp.bgm) : new Uint8Array(0))
   for (let i = 0; i < 4; i++) tracks.push(inp.se[i] ? kwz_adpcm_encode(inp.se[i] as Int16Array) : new Uint8Array(0))
-  let trackLen = 0
-  for (const t of tracks) trackLen += t.length
-  const cat = new Uint8Array(trackLen)
+  let track_len = 0
+  for (const t of tracks) track_len += t.length
+  const cat = new Uint8Array(track_len)
   let tp = 0
   for (const t of tracks) {
     cat.set(t, tp)
     tp += t.length
   }
-  const ksnB = binary_writer(28 + trackLen)
-  writer_u32(ksnB, clamp(inp.speed, 0, 10))
-  for (const t of tracks) writer_u32(ksnB, t.length)
-  writer_u32(ksnB, crc32(cat, 0))
-  writer_bytes(ksnB, cat)
+  const ksn_b = binary_writer(28 + track_len)
+  writer_u32(ksn_b, clamp(inp.speed, 0, 10))
+  for (const t of tracks) writer_u32(ksn_b, t.length)
+  writer_u32(ksn_b, crc32(cat, 0))
+  writer_bytes(ksn_b, cat)
 
-  const secs = [section('KFH', kfhBody), section('KTN', writer_finish(ktnB)), section('KMC', kmcBody), section('KMI', writer_finish(kmiB)), section('KSN', writer_finish(ksnB))]
+  const secs = [section('KFH', kfh_body), section('KTN', writer_finish(ktn_b)), section('KMC', kmc_body), section('KMI', writer_finish(kmi_b)), section('KSN', writer_finish(ksn_b))]
   let total = 0
   for (const s of secs) total += s.length
   const out = new Uint8Array(total)

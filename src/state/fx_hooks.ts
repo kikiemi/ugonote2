@@ -1,12 +1,12 @@
-type FxHooks = {
+type fx_hooks_t = {
   toast: (msg: string) => void
   sfx: (name: string) => void
   stage_size: () => { w: number, h: number, x?: number, y?: number }
 }
 
-let hooks: FxHooks = { toast: () => {}, sfx: () => {}, stage_size: () => ({ w: 0, h: 0 }) }
+let hooks: fx_hooks_t = { toast: () => {}, sfx: () => {}, stage_size: () => ({ w: 0, h: 0 }) }
 
-export function fx_hooks_set(h: FxHooks): void {
+export function fx_hooks_set(h: fx_hooks_t): void {
   hooks = h
 }
 

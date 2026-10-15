@@ -1,10 +1,11 @@
-import { L_N, type Rle } from './h'
+import { pixel_source_is, pixel_source_peek, pixel_source_prepare } from './pixel_source'
+import { l_n, type rle_t } from './h'
 import { rle_unpack } from './pixel'
 
-const live: (HTMLCanvasElement | null)[] = new Array(L_N).fill(null)
-const lctx: (CanvasRenderingContext2D | null)[] = new Array(L_N).fill(null)
-const refs: (Rle | null)[] = new Array(L_N).fill(null)
-const changed = new Uint8Array(L_N)
+const live: (HTMLCanvasElement | null)[] = new Array(l_n).fill(null)
+const lctx: (CanvasRenderingContext2D | null)[] = new Array(l_n).fill(null)
+const refs: (rle_t | null)[] = new Array(l_n).fill(null)
+const changed = new Uint8Array(l_n)
 let width = 0
 let height = 0
 
@@ -17,14 +18,14 @@ export function live_drop(l: number): void {
 }
 
 export function live_make(w: number, h: number): void {
-  for (let l = 0; l < L_N; l++) live_drop(l)
+  for (let l = 0; l < l_n; l++) live_drop(l)
   refs.fill(null)
   width = w
   height = h
 }
 
-export function live_bind(packed: readonly (Rle | null)[]): void {
-  for (let l = 0; l < L_N; l++) {
+export function live_bind(packed: readonly (rle_t | null)[]): void {
+  for (let l = 0; l < l_n; l++) {
     const next = packed[l] || null
     if (refs[l] !== next || changed[l]) live_drop(l)
     refs[l] = next
@@ -32,7 +33,9 @@ export function live_bind(packed: readonly (Rle | null)[]): void {
 }
 
 export function live_slot(l: number): CanvasRenderingContext2D {
-  if (!Number.isInteger(l) || l < 0 || l >= L_N) throw new RangeError('Invalid live layer')
+  if (!Number.isInteger(l) || l < 0 || l >= l_n) throw new RangeError('Invalid live layer')
+  const source = refs[l]
+  if (source && pixel_source_is(source) && !pixel_source_peek(source)) { void pixel_source_prepare(source).catch(() => {}); throw new Error('動画のコマを準備中です。表示されてから操作してください') }
   const hit = lctx[l]
   if (hit) return hit
   const canvas = document.createElement('canvas')
@@ -60,10 +63,10 @@ export function live_changed(l: number): number {
   return changed[l]
 }
 
-export function live_accept(l: number, packed: Rle | null): void {
+export function live_accept(l: number, packed: rle_t | null): void {
   refs[l] = packed
   changed[l] = 0
-  for (let i = 0; i < L_N; i++) if (i !== l && !changed[i]) live_drop(i)
+  for (let i = 0; i < l_n; i++) if (i !== l && !changed[i]) live_drop(i)
 }
 
 export function live_peek(l: number): HTMLCanvasElement | null {
@@ -75,7 +78,7 @@ export function live_canvas(l: number): HTMLCanvasElement {
 }
 
 export function live_count(): number {
-  return L_N
+  return l_n
 }
 
 export function live_bytes(): number {
@@ -84,31 +87,31 @@ export function live_bytes(): number {
   return bytes
 }
 
-let clipImg: HTMLCanvasElement | null = null
-let floImg: HTMLCanvasElement | null = null
-const sndBufs = new Map<string, AudioBuffer>()
+let clipboard_image: HTMLCanvasElement | null = null
+let floating_image: HTMLCanvasElement | null = null
+const snd_bufs = new Map<string, AudioBuffer>()
 
 export function clip_img(): HTMLCanvasElement | null {
-  return clipImg
+  return clipboard_image
 }
 
 export function clip_img_set(c: HTMLCanvasElement | null): void {
-  clipImg = c
+  clipboard_image = c
 }
 
 export function flo_img(): HTMLCanvasElement | null {
-  return floImg
+  return floating_image
 }
 
 export function flo_img_set(c: HTMLCanvasElement | null): void {
-  floImg = c
+  floating_image = c
 }
 
 export function snd_buf(kind: string): AudioBuffer | null {
-  return sndBufs.get(kind) || null
+  return snd_bufs.get(kind) || null
 }
 
 export function snd_buf_set(kind: string, buf: AudioBuffer | null): void {
-  if (buf) sndBufs.set(kind, buf)
-  else sndBufs.delete(kind)
+  if (buf) snd_bufs.set(kind, buf)
+  else snd_bufs.delete(kind)
 }

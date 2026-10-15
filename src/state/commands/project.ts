@@ -1,26 +1,30 @@
+import { pixel_source_transform, pixel_source_collect } from '../../pixel_source'
+import { canvas_transform_clear, canvas_transform_prepare, canvas_transform_finish } from '../../canvas_transform'
 import { kwz_frame_meta_valid } from '../../codec/kwzmeta'
 import { pixel_valid } from '../../pixel'
 import { animfx_active, animfx_cache_clear } from '../../animfx'
 import { animfx_normalize } from '../../animset'
 import { rand_hex } from '../../codec/fname'
-import { KWZ_BORDER, KWZ_CANVAS_W, KWZ_CANVAS_H, KWZ_FRAME_W, KWZ_FRAME_H } from '../../codec/kwzgeom'
-import { doc_boot_size, doc_cache_clear, doc_crop_frames, doc_frame_new, doc_resize, doc_transform_all, doc_unpack_live, frame_id_next, frame_id_seed } from '../../doc'
-import { snd_buf_set } from '../../engine'
-import type { LoadedProject } from '../../fmt'
-import { canvas_flip, canvas_rot90 } from '../../gfx'
-import { D_ALL, ERR_BAD, ERR_FULL, HOLD_MAX, L_BASE_N, L_DRAW_DEFAULT, L_DRAW_MAX, L_N, MODE_3D, MODE_NORMAL, PAL_STD, anim_fx_zero, note_meta_zero, type Frame, type MarkDef, type NoteMeta } from '../../h'
-import { hist_clear } from '../../hist'
-import { clamp } from '../../lib'
-import { mode_allows_runtime_anim, mode_canvas, mode_frame_limit, mode_ink, mode_name, mode_order, mode_pal, mode_paper_opts } from '../../mode'
+import { kwz_border, kwz_canvas_w, kwz_canvas_h, kwz_frame_w, kwz_frame_h } from '../../codec/kwzgeom'
+import { doc_boot_size, doc_cache_clear, doc_crop_frames, doc_frame_new, doc_resize, doc_transform_all, doc_unpack_live, doc_unpack_to, doc_pack_live, doc_pack_layer, frame_id_next, frame_id_seed } from '../../doc'
+import { live_canvas, live_peek, live_write, snd_buf_set } from '../../engine'
+import type { loaded_project_t } from '../../fmt'
+import { canvas_flip, canvas_affine } from '../../gfx'
+import { d_all, err_bad, err_noop, err_full, hold_max, l_base_n, l_draw_default, l_draw_max, l_n, mode_3_d, mode_normal, pal_std, anim_fx_zero, note_meta_zero, type frame_t, type mark_def_t, type note_meta_t } from '../../h'
+import { hist_clear, hist_grp, hist_pix, rect_grab } from '../../hist'
+import { canvas_affine_matrix, canvas_make, clamp } from '../../lib'
+import { mode_allows_runtime_anim, mode_canvas, mode_frame_limit, mode_ink, mode_name, mode_speeds, mode_speed_index, mode_order, mode_pal, mode_paper_opts } from '../../mode'
+import { paint_active, pat_custom } from '../../paint'
+import { pen_mode_normalize } from '../../penprofile'
 import { flo_cancel, sel_clear } from '../../sel'
 import { snd_apply_vol, snd_load_epoch_bump, snd_restore_slots, snd_stop_all } from '../../snd'
 import { thumb_clear } from '../../thumb'
 import { fx_sfx, fx_toast } from '../fx_hooks'
-import { doc_reset, type Globals } from '../store'
-import { anim_playing, PLAY_COMMANDS } from './play'
-import { VIEW_COMMANDS } from './view'
+import { doc_reset, type globals_t } from '../store'
+import { anim_playing, play_commands } from './play'
+import { view_commands } from './view'
 
-function meta_fresh(): NoteMeta {
+function meta_fresh(): note_meta_t {
   const m = note_meta_zero()
   const now = Math.floor(Date.now() / 1000)
   m.created = now
@@ -34,8 +38,8 @@ function meta_fresh(): NoteMeta {
   return m
 }
 
-export type FlipLoaded = {
-  meta: NoteMeta
+export type flip_loaded_t = {
+  meta: note_meta_t
   mode: number
   w: number
   h: number
@@ -44,44 +48,48 @@ export type FlipLoaded = {
   fps: number
   loop: number
   paper: string
-  frames: Frame[]
+  frames: frame_t[]
   cur: number
   bgm: Int16Array | null
-  bgmRate: number
-  bgmFps: number
+  bgm_rate: number
+  bgm_fps: number
   se: (Int16Array | null)[]
 }
 
-export type Cmds = {
-  'project.boot_prefs': { mobile: number, marks: MarkDef[], custom: string[] }
+export type cmds_t = {
+  'project.boot_prefs': { mobile: number, marks: mark_def_t[], custom: string[] }
   'project.boot_empty': null
   'project.set_booted': null
+  'project.prepare_rebuild': null
   'project.new': { w: number, h: number, ratio: string, res: string, paper: string, name: string }
-  'project.apply_loaded': LoadedProject
-  'project.apply_flip': FlipLoaded
-  'project.resize_canvas': { w: number, h: number, ratio: string, res: string, quiet?: number }
-  'project.transform_all': string
+  'project.apply_loaded': loaded_project_t
+  'project.apply_flip': flip_loaded_t
+  'project.resize_canvas': { w: number, h: number, ratio: string, res: string, quiet?: number, frames?: frame_t[], mode?: number }
+  'project.transform': { kind: 'rotate' | 'scale' | 'fliph' | 'flipv', angle: number, scale?: number, scope: 'current' | 'all' }
   'project.set_mode': number
 }
 
 function visual_cache_clear(): void {
+  canvas_transform_clear()
   doc_cache_clear()
   animfx_cache_clear()
 }
 
-function stop_all(g: Globals): void {
-  if (anim_playing()) PLAY_COMMANDS['play.stop'](g, null)
+function stop_all(g: globals_t): void {
+  if (anim_playing()) play_commands['play.stop'](g, null)
   else snd_stop_all()
   flo_cancel(g)
   sel_clear(g)
 }
 
-function mode_normalize(g: Globals): void {
+function mode_normalize(g: globals_t): void {
   const mode = g.doc.mode
-  g.pen.palMode = mode_pal(mode)
+  g.pen.pal_mode = mode_pal(mode)
+  pen_mode_normalize(g.pen, mode)
+  if (g.pen.pat === pat_custom && !paint_active(mode, g.pen.paint_tile, g.pen.paint_tile_normal)) g.pen.pat = 0
   const inks = mode_ink(mode)
-  const activeLayers = mode_order(mode, g.doc.lord)
-  if (activeLayers.indexOf(g.pen.layer) < 0) g.pen.layer = activeLayers[0] || 1
+  const active_layers = mode_order(mode, g.doc.lord)
+  if (active_layers.indexOf(g.pen.layer) < 0) g.pen.layer = active_layers[0] || 1
   if (!mode_allows_runtime_anim(mode)) {
     g.doc.anim = anim_fx_zero()
     const up = g.pen.color.toUpperCase()
@@ -92,7 +100,7 @@ function mode_normalize(g: Globals): void {
   }
 }
 
-function slot_ref(g: Globals, i: number) {
+function slot_ref(g: globals_t, i: number) {
   return i === 0 ? g.snd.bgm[0] : i === 1 ? g.snd.bgm[1] : g.snd.se[i - 2]
 }
 
@@ -101,15 +109,20 @@ function valid_size(w: number, h: number): boolean {
 }
 
 
-function valid_project(w: number, h: number, frames: readonly Frame[], mode: number): boolean {
+function valid_project(w: number, h: number, frames: readonly frame_t[], mode: number): boolean {
   if (!valid_size(w, h) || !Array.isArray(frames) || frames.length < 1 || frames.length > mode_frame_limit(mode)) return false
-  const pixelCount = w * h
+  const pixel_count = w * h
+  const checked = new Set<Uint32Array>()
   for (const frame of frames) {
-    if (!frame || !Array.isArray(frame.pk) || frame.pk.length < L_BASE_N || frame.pk.length > L_N) return false
+    if (!frame || !Array.isArray(frame.pk) || frame.pk.length < l_base_n || frame.pk.length > l_n) return false
     if (frame.kwz !== undefined && !kwz_frame_meta_valid(frame.kwz)) return false
     if (frame.paper !== undefined && !/^#[0-9a-f]{6}(00)?$/i.test(frame.paper)) return false
-    for (const packed of frame.pk) if (!(packed === null || pixel_valid(packed, pixelCount))) return false
+    for (const packed of frame.pk) if (packed !== null && !checked.has(packed)) {
+      if (!(packed instanceof Uint32Array) || !pixel_valid(packed, pixel_count)) return false
+      checked.add(packed)
+    }
   }
+  try { pixel_source_collect(frames) } catch { return false }
   return true
 }
 
@@ -123,8 +136,8 @@ function finite_index(value: number, length: number, fallback: number): number {
   return Number.isFinite(numeric) ? clamp(Math.trunc(numeric), 0, length - 1) : fallback
 }
 
-function normalized_string(value: unknown, fallback: string, maxLength: number): string {
-  return typeof value === 'string' ? value.slice(0, maxLength) : fallback
+function normalized_string(value: unknown, fallback: string, max_length: number): string {
+  return typeof value === 'string' ? value.slice(0, max_length) : fallback
 }
 
 function normalized_uint(value: unknown, max: number): number {
@@ -132,7 +145,7 @@ function normalized_uint(value: unknown, max: number): number {
   return Number.isFinite(numeric) ? clamp(Math.trunc(numeric), 0, max) : 0
 }
 
-function normalize_meta(source: NoteMeta | null | undefined): NoteMeta {
+function normalize_meta(source: note_meta_t | null | undefined): note_meta_t {
   const meta = note_meta_zero()
   if (!source || typeof source !== 'object') return meta
   meta.root_name = normalized_string(source.root_name, '', 64)
@@ -166,20 +179,20 @@ function normalize_resolution(value: unknown): string {
   return typeof value === 'string' && ['low', 'mid', 'hd', '4k', 'dsi', '3ds', 'free'].includes(value) ? value : 'low'
 }
 
-function normalize_frames(frames: Frame[]): void {
-  let maxId = 0
+function normalize_frames(frames: frame_t[]): void {
+  let max_id = 0
   for (const frame of frames) {
-    if (Number.isSafeInteger(frame.id) && frame.id >= 0 && frame.id < 0x7fffffff) maxId = Math.max(maxId, frame.id)
+    if (Number.isSafeInteger(frame.id) && frame.id >= 0 && frame.id < 0x7fffffff) max_id = Math.max(max_id, frame.id)
   }
-  frame_id_seed(maxId + 1)
+  frame_id_seed(max_id + 1)
   const used = new Set<number>()
   for (const frame of frames) {
     if (!Number.isSafeInteger(frame.id) || frame.id < 0 || frame.id >= 0x7fffffff || used.has(frame.id)) frame.id = frame_id_next()
     used.add(frame.id)
     frame.se = Number.isFinite(frame.se) ? Math.max(0, Math.min(15, Math.trunc(frame.se))) : 0
-    frame.hold = Number.isFinite(frame.hold) ? clamp(Math.round(frame.hold), 1, HOLD_MAX) : 1
-    if (frame.pk.length > L_N) frame.pk.length = L_N
-    while (frame.pk.length < L_N) frame.pk.push(null)
+    frame.hold = Number.isFinite(frame.hold) ? clamp(Math.round(frame.hold), 1, hold_max) : 1
+    if (frame.pk.length > l_n) frame.pk.length = l_n
+    while (frame.pk.length < l_n) frame.pk.push(null)
   }
 }
 
@@ -196,7 +209,7 @@ function normalize_u8(src: ArrayLike<number> | null | undefined, n: number, fall
 }
 
 function normalize_vis(src: ArrayLike<number> | null | undefined): Uint8Array {
-  const out = new Uint8Array(L_N)
+  const out = new Uint8Array(l_n)
   out.fill(1)
   if (!src) return out
   const n = Math.min(out.length, src.length)
@@ -209,15 +222,15 @@ function normalize_order(src: readonly number[] | null | undefined): number[] {
   if (src) {
     for (const value of src) {
       const layer = Math.trunc(Number(value))
-      if (layer < 1 || layer > L_DRAW_MAX || out.indexOf(layer) >= 0) continue
+      if (layer < 1 || layer > l_draw_max || out.indexOf(layer) >= 0) continue
       out.push(layer)
     }
   }
-  for (let layer = 1; layer <= L_DRAW_DEFAULT; layer++) if (out.indexOf(layer) < 0) out.push(layer)
+  for (let layer = 1; layer <= l_draw_default; layer++) if (out.indexOf(layer) < 0) out.push(layer)
   return out
 }
 
-function clear_sound_slots(g: Globals): void {
+function clear_sound_slots(g: globals_t): void {
   for (const slot of g.snd.bgm) {
     slot.bytes = null
     slot.name = ''
@@ -226,50 +239,50 @@ function clear_sound_slots(g: Globals): void {
     slot.bytes = null
     slot.name = ''
   }
-  g.snd.bgmFps = 0
+  g.snd.bgm_fps = 0
   for (const k of ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']) snd_buf_set(k, null)
 }
 
-export const PROJECT_COMMANDS = {
-  'project.boot_prefs': (g: Globals, p: { mobile: number, marks: MarkDef[], custom: string[] }): number => {
+export const project_commands = {
+  'project.boot_prefs': (g: globals_t, p: { mobile: number, marks: mark_def_t[], custom: string[] }): number => {
     g.mobile = p.mobile
     g.marks = p.marks
     g.pen.custom = p.custom
     return 0
   },
 
-  'project.boot_empty': (g: Globals, _p: null): number => {
+  'project.boot_empty': (g: globals_t, _p: null): number => {
     g.doc.frames = [doc_frame_new()]
     g.doc.cur = 0
     return 0
   },
 
-  'project.set_booted': (g: Globals, _p: null): number => {
+  'project.set_booted': (g: globals_t, _p: null): number => {
     g.booted = 1
     return 0
   },
 
-  'project.new': (g: Globals, p: { w: number, h: number, ratio: string, res: string, paper: string, name: string }): number => {
-    if (!valid_size(p.w, p.h)) return ERR_BAD
+  'project.new': (g: globals_t, p: { w: number, h: number, ratio: string, res: string, paper: string, name: string }): number => {
+    if (!valid_size(p.w, p.h)) return err_bad
     snd_load_epoch_bump()
     stop_all(g)
     doc_reset(g, p.w, p.h, p.ratio, p.res, p.paper)
     return project_new_body(g, p.name)
   },
 
-  'project.apply_loaded': (g: Globals, d: LoadedProject): number => {
-    const mode = Number.isInteger(d.mode) && d.mode >= 0 && d.mode <= 2 ? d.mode : MODE_NORMAL
-    if (!valid_project(d.w, d.h, d.frames, mode)) return ERR_BAD
+  'project.apply_loaded': (g: globals_t, d: loaded_project_t): number => {
+    const mode = Number.isInteger(d.mode) && d.mode >= 0 && d.mode <= 2 ? d.mode : mode_normal
+    if (!valid_project(d.w, d.h, d.frames, mode)) return err_bad
     snd_load_epoch_bump()
     stop_all(g)
     let w = d.w
     let h = d.h
     let ratio = normalize_ratio(d.ratio)
     let res = normalize_resolution(d.res)
-    if (mode === MODE_3D && w === KWZ_FRAME_W && h === KWZ_FRAME_H) {
-      doc_crop_frames(d.frames, w, h, KWZ_BORDER, KWZ_BORDER, KWZ_CANVAS_W, KWZ_CANVAS_H)
-      w = KWZ_CANVAS_W
-      h = KWZ_CANVAS_H
+    if (mode === mode_3_d && w === kwz_frame_w && h === kwz_frame_h) {
+      doc_crop_frames(d.frames, w, h, kwz_border, kwz_border, kwz_canvas_w, kwz_canvas_h)
+      w = kwz_canvas_w
+      h = kwz_canvas_h
       ratio = '4:3'
       res = '3ds'
     }
@@ -277,37 +290,37 @@ export const PROJECT_COMMANDS = {
     g.doc.h = h
     g.doc.fps = finite_clamp(d.fps, 0.2, 30, 12)
     g.doc.loop = d.loop ? 1 : 0
-    g.pen.palMode = Number.isInteger(d.palMode) && d.palMode >= 0 && d.palMode <= 2 ? d.palMode : PAL_STD
+    g.pen.pal_mode = Number.isInteger(d.pal_mode) && d.pal_mode >= 0 && d.pal_mode <= 2 ? d.pal_mode : pal_std
     g.doc.name = normalized_string(d.name, 'むだいのノート', 40) || 'むだいのノート'
     g.doc.ratio = ratio
     g.doc.res = res
     g.doc.paper = normalize_hex(d.paper, '#FFFFFF')
     g.doc.lvis = normalize_vis(d.lvis)
-    g.doc.lalpha = normalize_u8(d.lalpha, L_N, 255)
+    g.doc.lalpha = normalize_u8(d.lalpha, l_n, 255)
     g.doc.lord = normalize_order(d.lord)
     g.doc.mode = mode
     g.doc.anim = animfx_normalize(d.anim)
     mode_normalize(g)
-    g.snd.bgmVol = finite_clamp(d.bgmVol, 0, 1, 1)
-    g.snd.seVol = finite_clamp(d.seVol, 0, 1, 1)
+    g.snd.bgm_vol = finite_clamp(d.bgm_vol, 0, 1, 1)
+    g.snd.se_vol = finite_clamp(d.se_vol, 0, 1, 1)
     g.doc.meta = normalize_meta(d.meta)
     normalize_frames(d.frames)
     g.doc.frames = d.frames
     g.doc.cur = finite_index(d.cur, d.frames.length, 0)
-    g.doc.loopA = Number.isInteger(d.loopA) && d.loopA >= 0 && d.loopA < d.frames.length ? d.loopA : -1
-    g.doc.loopB = Number.isInteger(d.loopB) && d.loopB >= 0 && d.loopB < d.frames.length ? d.loopB : -1
-    if (g.doc.loopA >= 0 && g.doc.loopB >= 0 && g.doc.loopA > g.doc.loopB) {
-      g.doc.loopA = -1
-      g.doc.loopB = -1
+    g.doc.loop_a = Number.isInteger(d.loop_a) && d.loop_a >= 0 && d.loop_a < d.frames.length ? d.loop_a : -1
+    g.doc.loop_b = Number.isInteger(d.loop_b) && d.loop_b >= 0 && d.loop_b < d.frames.length ? d.loop_b : -1
+    if (g.doc.loop_a >= 0 && g.doc.loop_b >= 0 && g.doc.loop_a > g.doc.loop_b) {
+      g.doc.loop_a = -1
+      g.doc.loop_b = -1
     }
-    const loadedSlots = Array.isArray(d.slots) ? d.slots : []
+    const loaded_slots = Array.isArray(d.slots) ? d.slots : []
     for (let i = 0; i < 6; i++) {
       const slot = slot_ref(g, i)
-      const source = loadedSlots[i]
+      const source = loaded_slots[i]
       slot.bytes = source && source.bytes instanceof ArrayBuffer ? source.bytes : null
       slot.name = source ? normalized_string(source.name, '', 64) : ''
     }
-    g.snd.bgmFps = (g.snd.bgm[0].bytes || g.snd.bgm[1].bytes) && Number.isFinite(d.bgmFps) && d.bgmFps > 0 ? d.bgmFps : 0
+    g.snd.bgm_fps = (g.snd.bgm[0].bytes || g.snd.bgm[1].bytes) && Number.isFinite(d.bgm_fps) && d.bgm_fps > 0 ? d.bgm_fps : 0
     doc_boot_size(g)
     visual_cache_clear()
     doc_unpack_live(g)
@@ -319,8 +332,8 @@ export const PROJECT_COMMANDS = {
     return 0
   },
 
-  'project.apply_flip': (g: Globals, d: FlipLoaded): number => {
-    if (!Number.isInteger(d.mode) || d.mode < 0 || d.mode > 2 || !valid_project(d.w, d.h, d.frames, d.mode)) return ERR_BAD
+  'project.apply_flip': (g: globals_t, d: flip_loaded_t): number => {
+    if (!Number.isInteger(d.mode) || d.mode < 0 || d.mode > 2 || !valid_project(d.w, d.h, d.frames, d.mode)) return err_bad
     snd_load_epoch_bump()
     stop_all(g)
     hist_clear()
@@ -331,12 +344,12 @@ export const PROJECT_COMMANDS = {
     g.doc.fps = finite_clamp(d.fps, 0.2, 30, 12)
     g.doc.loop = d.loop ? 1 : 0
     g.doc.paper = normalize_hex(d.paper, '#FFFFFF')
-    g.doc.lvis = new Uint8Array(L_N)
+    g.doc.lvis = new Uint8Array(l_n)
     g.doc.lvis[0] = 1
     g.doc.lvis[1] = 1
     g.doc.lvis[2] = 1
     g.doc.lvis[3] = 1
-    g.doc.lalpha = new Uint8Array(L_N)
+    g.doc.lalpha = new Uint8Array(l_n)
     g.doc.lalpha.fill(255)
     g.doc.lord = [1, 2, 3]
     g.doc.anim = anim_fx_zero()
@@ -345,10 +358,10 @@ export const PROJECT_COMMANDS = {
     normalize_frames(d.frames)
     g.doc.frames = d.frames
     g.doc.cur = finite_index(d.cur, d.frames.length, 0)
-    g.doc.loopA = -1
-    g.doc.loopB = -1
+    g.doc.loop_a = -1
+    g.doc.loop_b = -1
     clear_sound_slots(g)
-    g.snd.bgmFps = d.bgm && d.bgm.length && Number.isFinite(d.bgmFps) && d.bgmFps > 0 ? d.bgmFps : 0
+    g.snd.bgm_fps = d.bgm && d.bgm.length && Number.isFinite(d.bgm_fps) && d.bgm_fps > 0 ? d.bgm_fps : 0
     doc_resize_raw(g, d.w, d.h)
     visual_cache_clear()
     doc_unpack_live(g)
@@ -356,62 +369,99 @@ export const PROJECT_COMMANDS = {
     return 0
   },
 
-  'project.resize_canvas': (g: Globals, p: { w: number, h: number, ratio: string, res: string, quiet?: number }): number => {
-    if (!valid_size(p.w, p.h)) return ERR_BAD
+  'project.prepare_rebuild': (g: globals_t, _p: null): number => { stop_all(g); doc_pack_live(g); return 0 },
+
+  'project.resize_canvas': (g: globals_t, p: cmds_t['project.resize_canvas']): number => {
+    if (!valid_size(p.w, p.h)) return err_bad
+    const mode = p.mode === undefined ? g.doc.mode : p.mode
+    if (!Number.isInteger(mode) || mode < 0 || mode > 2 || (p.frames || g.doc.frames).length > mode_frame_limit(mode)) return err_bad
+    if (p.frames && !valid_project(p.w, p.h, p.frames, mode)) return err_bad
     stop_all(g)
-    doc_resize(g, p.w, p.h, p.ratio, p.res)
+    canvas_transform_clear()
+    if (p.frames) {
+      g.doc.frames = p.frames
+      g.doc.w = p.w; g.doc.h = p.h; g.doc.ratio = p.ratio; g.doc.res = p.res
+      g.doc.cur = Math.min(g.doc.cur, p.frames.length - 1)
+      doc_boot_size(g)
+      doc_unpack_live(g)
+    } else doc_resize(g, p.w, p.h, p.ratio, p.res)
+    if (p.mode !== undefined) {
+      g.doc.mode = mode
+      if (mode !== mode_normal) g.doc.fps = mode_speeds(mode)[mode_speed_index(mode, g.doc.fps)]
+      mode_normalize(g)
+    }
     animfx_cache_clear()
     hist_clear()
     thumb_clear()
     view_fit_after(g)
-    if (!p.quiet) {
-      fx_toast('サイズを変えました')
-      fx_sfx('paper')
-    }
+    if (!p.quiet) { fx_toast('サイズを変えました'); fx_sfx('paper') }
     return 0
   },
 
-  'project.transform_all': (g: Globals, kind: string): number => {
-    const label = kind === 'rotl' ? '左回転' : kind === 'rotr' ? '右回転' : kind === 'fliph' ? '左右反転' : '上下反転'
+  'project.transform': (g: globals_t, p: cmds_t['project.transform']): number => {
+    if (!p || !['rotate', 'scale', 'fliph', 'flipv'].includes(p.kind) || !['current', 'all'].includes(p.scope)) return err_bad
+    if (!Number.isFinite(p.angle) || Math.abs(p.angle) > 360) return err_bad
+    if (p.kind === 'scale' && (!Number.isFinite(p.scale) || p.scale! < 0.01 || p.scale! > 8)) return err_bad
+    if (p.kind === 'rotate' && p.angle % 360 === 0 || p.kind === 'scale' && p.scale === 1) return err_noop
     stop_all(g)
-    if (kind === 'rotl') doc_transform_all(g, c => canvas_rot90(c, -1), 1)
-    else if (kind === 'rotr') doc_transform_all(g, c => canvas_rot90(c, 1), 1)
-    else if (kind === 'fliph') doc_transform_all(g, c => canvas_flip(c, 1), 0)
-    else if (kind === 'flipv') doc_transform_all(g, c => canvas_flip(c, 0), 0)
-    else return ERR_BAD
+    doc_pack_live(g)
+    const affine = p.kind === 'rotate' || p.kind === 'scale'
+    if (!affine) canvas_transform_clear()
+    const transform = affine ? canvas_transform_prepare(g, p.kind === 'scale' ? p.scale! : p.angle, p.scope === 'all' ? 1 : 0, p.kind as 'rotate' | 'scale') : null
+    const op = (c: HTMLCanvasElement): HTMLCanvasElement => transform ? canvas_affine(c, transform.angle, transform.smooth, transform.scale, transform.dx, transform.dy) : canvas_flip(c, p.kind === 'fliph' ? 1 : 0)
+    if (p.scope === 'all') {
+      const matrix: [number, number, number, number, number, number] = transform ? canvas_affine_matrix(g.doc.w, g.doc.h, transform.angle, transform.scale, transform.dx, transform.dy) : p.kind === 'fliph' ? [-1, 0, 0, 1, g.doc.w, 0] : [1, 0, 0, -1, 0, g.doc.h]
+      doc_transform_all(g, op, transform?.source, packed => pixel_source_transform(packed, g.doc.w, g.doc.h, ...matrix))
+      hist_clear()
+    } else {
+      const grp = hist_grp()
+      const [source, context] = canvas_make(g.doc.w, g.doc.h, 1)
+      for (let l = 0; l < g.doc.frames[g.doc.cur].pk.length; l++) {
+        if (!g.doc.frames[g.doc.cur].pk[l] && !live_peek(l) && !transform?.source[0][l]) continue
+        const before = rect_grab(l, 0, 0, g.doc.w, g.doc.h)
+        if (transform) doc_unpack_to(transform.source[0][l], context, g.doc.w, g.doc.h)
+        const out = op(transform ? source : live_canvas(l))
+        const x = live_write(l)
+        x.clearRect(0, 0, g.doc.w, g.doc.h)
+        x.drawImage(out, 0, 0)
+        out.width = 0
+        if (hist_pix(g, grp, g.doc.cur, l, 0, 0, g.doc.w, g.doc.h, before)) doc_pack_layer(g, l)
+      }
+    }
+    if (transform) canvas_transform_finish(g, p.scope === 'all' ? 1 : 0)
     animfx_cache_clear()
-    hist_clear()
     thumb_clear()
-    view_fit_after(g)
-    fx_toast(label + 'しました')
+    fx_toast('絵をうごかしました')
     fx_sfx('paper')
     return 0
   },
 
-  'project.set_mode': (g: Globals, mode: number): number => {
-    if (!Number.isInteger(mode) || mode < 0 || mode > 2) return ERR_BAD
+  'project.set_mode': (g: globals_t, mode: number): number => {
+    if (!Number.isInteger(mode) || mode < 0 || mode > 2) return err_bad
     const limit = mode_frame_limit(mode)
     if (g.doc.frames.length > limit) {
       fx_toast(mode_name(mode) + 'は最大' + limit + 'コマです。先にコマを減らしてください')
-      return ERR_FULL
+      return err_full
     }
-    const droppedAnim = !mode_allows_runtime_anim(mode) && animfx_active(g.doc.anim)
+    const dropped_anim = !mode_allows_runtime_anim(mode) && animfx_active(g.doc.anim)
     stop_all(g)
+    canvas_transform_clear()
     const mc = mode_canvas(mode)
     doc_resize(g, mc.w, mc.h, mc.ratio, mc.res)
     g.doc.mode = mode
+    if (mode !== mode_normal) g.doc.fps = mode_speeds(mode)[mode_speed_index(mode, g.doc.fps)]
     mode_normalize(g)
     animfx_cache_clear()
     hist_clear()
     thumb_clear()
     view_fit_after(g)
-    fx_toast(mode_name(mode) + 'モードになりました' + (droppedAnim ? '。再生時だけの動きは解除しました' : ''))
+    fx_toast(mode_name(mode) + 'モードになりました' + (dropped_anim ? '。再生時だけの動きは解除しました' : ''))
     fx_sfx('paper')
     return 0
   },
 }
 
-function project_new_body(g: Globals, name: string): number {
+function project_new_body(g: globals_t, name: string): number {
   g.doc.name = name || 'むだいのノート'
   g.doc.meta = meta_fresh()
   g.doc.frames = [doc_frame_new()]
@@ -429,26 +479,27 @@ function project_new_body(g: Globals, name: string): number {
   return 0
 }
 
-function doc_resize_raw(g: Globals, w: number, h: number): void {
+function doc_resize_raw(g: globals_t, w: number, h: number): void {
   g.doc.w = w
   g.doc.h = h
   doc_boot_size(g)
 }
 
-function view_fit_after(g: Globals): void {
-  VIEW_COMMANDS['view.fit'](g, null)
+function view_fit_after(g: globals_t): void {
+  view_commands['view.fit'](g, null)
 }
 
-export const PROJECT_EFFECTS: Partial<Record<keyof Cmds, number>> = {
-  'project.boot_prefs': D_ALL,
-  'project.boot_empty': D_ALL,
+export const project_effects: Partial<Record<keyof cmds_t, number>> = {
+  'project.boot_prefs': d_all,
+  'project.boot_empty': d_all,
   'project.set_booted': 0,
-  'project.new': D_ALL,
-  'project.apply_loaded': D_ALL,
-  'project.apply_flip': D_ALL,
-  'project.resize_canvas': D_ALL,
-  'project.transform_all': D_ALL,
-  'project.set_mode': D_ALL,
+  'project.new': d_all,
+  'project.apply_loaded': d_all,
+  'project.apply_flip': d_all,
+  'project.prepare_rebuild': d_all,
+  'project.resize_canvas': d_all,
+  'project.transform': d_all,
+  'project.set_mode': d_all,
 }
 
-export const PROJECT_TOUCH = new Set<keyof Cmds>(['project.new', 'project.apply_loaded', 'project.apply_flip', 'project.resize_canvas', 'project.transform_all', 'project.set_mode'])
+export const project_touch = new Set<keyof cmds_t>(['project.new', 'project.apply_loaded', 'project.apply_flip', 'project.resize_canvas', 'project.transform', 'project.set_mode'])

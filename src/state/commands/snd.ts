@@ -1,18 +1,18 @@
-import { D_SOUND, ERR_BAD } from '../../h'
+import { d_sound, err_bad } from '../../h'
 import { clamp } from '../../lib'
-import type { Globals } from '../store'
+import type { globals_t } from '../store'
 
-export type SndSlotPayload = { kind: string, bytes: ArrayBuffer | null, name: string }
+export type snd_slot_payload_t = { kind: string, bytes: ArrayBuffer | null, name: string }
 
-export type Cmds = {
+export type cmds_t = {
   'snd.set_bgm_vol': number
   'snd.set_se_vol': number
-  'snd.slot_apply': SndSlotPayload
+  'snd.slot_apply': snd_slot_payload_t
   'snd.slot_clear': string
   'snd.set_bgm_fps': number
 }
 
-function slot_of(g: Globals, kind: string) {
+function slot_of(g: globals_t, kind: string) {
   if (kind === 'bgm0') return g.snd.bgm[0]
   if (kind === 'bgm1') return g.snd.bgm[1]
   if (kind === 'se0') return g.snd.se[0]
@@ -22,49 +22,49 @@ function slot_of(g: Globals, kind: string) {
   return null
 }
 
-export const SOUND_COMMANDS = {
-  'snd.set_bgm_vol': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.snd.bgmVol = clamp(v, 0, 1)
+export const sound_commands = {
+  'snd.set_bgm_vol': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    g.snd.bgm_vol = clamp(v, 0, 1)
     return 0
   },
 
-  'snd.set_se_vol': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.snd.seVol = clamp(v, 0, 1)
+  'snd.set_se_vol': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    g.snd.se_vol = clamp(v, 0, 1)
     return 0
   },
 
-  'snd.slot_apply': (g: Globals, p: SndSlotPayload): number => {
+  'snd.slot_apply': (g: globals_t, p: snd_slot_payload_t): number => {
     const s = slot_of(g, p.kind)
-    if (!s) return ERR_BAD
+    if (!s) return err_bad
     s.bytes = p.bytes
     s.name = p.name
-    if (p.kind.startsWith('bgm') && !g.snd.bgmFps) g.snd.bgmFps = g.doc.fps
+    if (p.kind.startsWith('bgm') && !g.snd.bgm_fps) g.snd.bgm_fps = g.doc.fps
     return 0
   },
 
-  'snd.slot_clear': (g: Globals, kind: string): number => {
+  'snd.slot_clear': (g: globals_t, kind: string): number => {
     const s = slot_of(g, kind)
-    if (!s) return ERR_BAD
+    if (!s) return err_bad
     s.bytes = null
     s.name = ''
-    if (kind.startsWith('bgm') && !g.snd.bgm[0].bytes && !g.snd.bgm[1].bytes) g.snd.bgmFps = 0
+    if (kind.startsWith('bgm') && !g.snd.bgm[0].bytes && !g.snd.bgm[1].bytes) g.snd.bgm_fps = 0
     return 0
   },
 
-  'snd.set_bgm_fps': (g: Globals, v: number): number => {
-    g.snd.bgmFps = Number.isFinite(v) && v > 0 ? v : 0
+  'snd.set_bgm_fps': (g: globals_t, v: number): number => {
+    g.snd.bgm_fps = Number.isFinite(v) && v > 0 ? v : 0
     return 0
   },
 }
 
-export const SOUND_EFFECTS: Partial<Record<keyof Cmds, number>> = {
-  'snd.set_bgm_vol': D_SOUND,
-  'snd.set_se_vol': D_SOUND,
-  'snd.slot_apply': D_SOUND,
-  'snd.slot_clear': D_SOUND,
-  'snd.set_bgm_fps': D_SOUND,
+export const sound_effects: Partial<Record<keyof cmds_t, number>> = {
+  'snd.set_bgm_vol': d_sound,
+  'snd.set_se_vol': d_sound,
+  'snd.slot_apply': d_sound,
+  'snd.slot_clear': d_sound,
+  'snd.set_bgm_fps': d_sound,
 }
 
-export const SOUND_TOUCH = new Set<keyof Cmds>(['snd.set_bgm_vol', 'snd.set_se_vol', 'snd.slot_apply', 'snd.slot_clear', 'snd.set_bgm_fps'])
+export const sound_touch = new Set<keyof cmds_t>(['snd.set_bgm_vol', 'snd.set_se_vol', 'snd.slot_apply', 'snd.slot_clear', 'snd.set_bgm_fps'])

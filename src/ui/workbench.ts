@@ -1,26 +1,41 @@
+import { paint_active, pat_custom } from '../paint'
+import { st } from '../state/store'
 import { tr_line } from '../lang'
 import { brush_spacing, tip_get } from '../brush'
 import { q } from '../dom'
 import { pat_canvas } from '../gfx'
-import { B_MARKER, B_PEN, B_PENCIL, B_WATER, BRUSH_DEFS, T_ERASER, T_PEN, type Pen } from '../h'
+import { native_pen_begin, native_pen_paint, native_pen_point } from '../nativepen'
+import { native_pen_tip } from '../penprofile'
+import { b_marker, b_pen, b_pencil, b_water, brush_defs, mode_normal, t_eraser, t_pen, type pen_t } from '../h'
 
-type SamplePen = Pick<Pen, 'tool' | 'brush' | 'size' | 'color' | 'alpha' | 'pat'>
-export function workbench_render(p: SamplePen): void {
-  const eraser = p.tool === T_ERASER
-  const hasSample = p.tool === T_PEN || eraser
-  q('strokePreview').parentElement!.hidden = !hasSample
-  q('popTool').dataset.sample = hasSample ? 'on' : 'off'
-  q('strokeName').textContent = tr_line(eraser ? 'けしごむの見本' : BRUSH_DEFS.find(b => b.id === p.brush)?.label || 'ペン')
-  q('strokeSize').textContent = `${p.size} px`
-  q('colorPreview').style.background = p.color
-  q('colorPreviewLabel').textContent = p.color.toUpperCase()
-  const cv = q<HTMLCanvasElement>('strokePreview')
-  const signature = [p.tool, p.brush, p.size, p.color, p.alpha, p.pat].join(':')
-  if (cv.dataset.sample === signature) return
+let sample_tile: ReturnType<typeof st>['pen']['paint_tile'] = null
+
+type sample_pen_t = Pick<pen_t, 'tool' | 'brush' | 'size' | 'color' | 'alpha' | 'pat'>
+export function workbench_render(p: sample_pen_t): void {
+  const eraser = p.tool === t_eraser
+  const has_sample = p.tool === t_pen || eraser
+  q('stroke_preview').parentElement!.hidden = !has_sample
+  q('pop_tool').dataset.sample = has_sample ? 'on' : 'off'
+  const g = st()
+  const native = g.doc.mode !== mode_normal && !eraser
+  const tip = native_pen_tip(g.pen.native_tip)
+  q('stroke_name').textContent = tr_line(eraser ? 'けしごむの見本' : native ? tip.label : brush_defs.find(b => b.id === p.brush)?.label || 'ペン')
+  q('stroke_size').textContent = `${p.size} px`
+  q('color_preview').style.background = p.color
+  q('color_preview_label').textContent = p.color.toUpperCase()
+  const cv = q<HTMLCanvasElement>('stroke_preview')
+  const tile = paint_active(g.doc.mode, g.pen.paint_tile, g.pen.paint_tile_normal)
+  const signature = [p.tool, p.brush, p.size, p.color, p.alpha, p.pat, g.doc.mode, native ? tip.id : -1, g.pen.outline, g.pen.owidth, g.pen.ocolor].join(':')
+  if (cv.dataset.sample === signature && (p.pat !== pat_custom || sample_tile === tile)) return
+  sample_tile = tile
   const ctx = cv.getContext('2d')!
   ctx.clearRect(0, 0, cv.width, cv.height)
-  const yAt = (x: number) => 50 + Math.sin((x - 40) / 560 * Math.PI * 3) * 15
-  if (eraser || p.brush === B_PEN) {
+  const y_at = (x: number) => 50 + Math.sin((x - 40) / 560 * Math.PI * 3) * 15
+  if (native) {
+    const stroke = native_pen_begin(cv.width, cv.height, null)
+    for (let x = 40; x < 600; x += 2) native_pen_point(stroke, tip, x, y_at(x), x + 2, y_at(x + 2))
+    native_pen_paint(ctx, stroke.mask, g.pen)
+  } else if (eraser || p.brush === b_pen) {
     if (eraser) {
       ctx.fillStyle = '#858b98'
       ctx.fillRect(24, 10, 592, 80)
@@ -33,20 +48,20 @@ export function workbench_render(p: SamplePen): void {
     ctx.lineJoin = 'round'
     ctx.beginPath()
     for (let x = 40; x <= 600; x += 2) {
-      if (x === 40) ctx.moveTo(x, yAt(x))
-      else ctx.lineTo(x, yAt(x))
+      if (x === 40) ctx.moveTo(x, y_at(x))
+      else ctx.lineTo(x, y_at(x))
     }
     ctx.stroke()
   } else {
-    const buffered = p.brush === B_MARKER || p.brush === B_WATER
-    ctx.globalAlpha = buffered ? 1 : p.alpha * (p.brush === B_PENCIL ? 0.9 : 1)
+    const buffered = p.brush === b_marker || p.brush === b_water
+    ctx.globalAlpha = buffered ? 1 : p.alpha * (p.brush === b_pencil ? 0.9 : 1)
     const tip = tip_get(p.brush, p.size, p.color, 0)
     for (let x = 40; x < 600; x += brush_spacing(p.brush, p.size)) {
-      ctx.drawImage(tip, x - tip.width / 2, yAt(x) - tip.height / 2)
+      ctx.drawImage(tip, x - tip.width / 2, y_at(x) - tip.height / 2)
     }
     if (buffered) {
       ctx.globalCompositeOperation = 'destination-in'
-      ctx.globalAlpha = p.alpha * (p.brush === B_MARKER ? 0.5 : 0.85)
+      ctx.globalAlpha = p.alpha * (p.brush === b_marker ? 0.5 : 0.85)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, cv.width, cv.height)
     }
@@ -54,10 +69,4 @@ export function workbench_render(p: SamplePen): void {
   ctx.globalAlpha = 1
   ctx.globalCompositeOperation = 'source-over'
   cv.dataset.sample = signature
-}
-export function layer_stack_layout(): void {
-  const stack = q('layerStack')
-  const horizontal = getComputedStyle(stack).flexDirection === 'row'
-  const overflow = horizontal ? stack.scrollWidth > stack.clientWidth + 1 : stack.scrollHeight > stack.clientHeight + 1
-  stack.dataset.scroll = overflow ? horizontal ? 'x' : 'y' : ''
 }

@@ -1,6 +1,6 @@
 import { getStrokePoints } from 'perfect-freehand'
 import { live_slot } from './engine'
-import { B_PEN, B_MARKER, B_PENCIL, B_BRUSH, B_AIRBRUSH, B_CRAYON, B_CALLIG, B_DOTS, B_WATER, B_NEON, B_CHALK, B_SPAT, B_RIBBON } from './h'
+import { b_pen, b_marker, b_pencil, b_brush, b_airbrush, b_crayon, b_callig, b_dots, b_water, b_neon, b_chalk, b_spat, b_ribbon } from './h'
 import { clamp, canvas_make, hex_rgb } from './lib'
 import { st } from './state/store'
 
@@ -23,16 +23,16 @@ function hash2(x: number, y: number): number {
 }
 
 export function brush_is_direct(brush: number): number {
-  return brush === B_PEN ? 0 : 1
+  return brush === b_pen ? 0 : 1
 }
 
 function buffered(brush: number): number {
-  return brush === B_MARKER || brush === B_WATER ? 1 : 0
+  return brush === b_marker || brush === b_water ? 1 : 0
 }
 
-let grainC: HTMLCanvasElement | null = null
+let grain_c: HTMLCanvasElement | null = null
 function grain(): HTMLCanvasElement {
-  if (grainC) return grainC
+  if (grain_c) return grain_c
   const [c, x] = canvas_make(96, 96)
   const img = x.createImageData(96, 96)
   for (let y = 0; y < 96; y++)
@@ -45,13 +45,13 @@ function grain(): HTMLCanvasElement {
       img.data[(y * 96 + px) * 4 + 2] = 255
     }
   x.putImageData(img, 0, 0)
-  grainC = c
+  grain_c = c
   return c
 }
 
-let streakC: HTMLCanvasElement | null = null
+let streak_c: HTMLCanvasElement | null = null
 function streaks(): HTMLCanvasElement {
-  if (streakC) return streakC
+  if (streak_c) return streak_c
   const [c, x] = canvas_make(96, 96)
   const img = x.createImageData(96, 96)
   for (let y = 0; y < 96; y++)
@@ -65,7 +65,7 @@ function streaks(): HTMLCanvasElement {
       img.data[(y * 96 + px) * 4 + 2] = 255
     }
   x.putImageData(img, 0, 0)
-  streakC = c
+  streak_c = c
   return c
 }
 
@@ -82,7 +82,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
   const [cr, cg, cb] = hex_rgb(color)
   const rgba = (a: number) => `rgba(${cr},${cg},${cb},${a})`
   let c: HTMLCanvasElement
-  if (brush === B_MARKER) {
+  if (brush === b_marker) {
     const w = Math.ceil(size * 1.9)
     const [cv, x] = canvas_make(w, w)
     x.translate(w / 2, w / 2)
@@ -95,7 +95,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.roundRect(-bw / 2, -bh / 2, bw, bh, rr)
     x.fill()
     c = cv
-  } else if (brush === B_WATER) {
+  } else if (brush === b_water) {
     const d = Math.ceil(size * 2.6)
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -106,7 +106,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.fillStyle = g
     x.fillRect(0, 0, d, d)
     c = cv
-  } else if (brush === B_PENCIL) {
+  } else if (brush === b_pencil) {
     const d = Math.ceil(size * 1.35) + 2
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -118,7 +118,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.globalCompositeOperation = 'destination-in'
     x.drawImage(streaks(), 0, 0, d, d)
     c = cv
-  } else if (brush === B_CRAYON) {
+  } else if (brush === b_crayon) {
     const d = Math.ceil(size * 1.5) + 2
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -130,7 +130,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.globalCompositeOperation = 'destination-in'
     x.drawImage(grain(), 0, 0, d, d)
     c = cv
-  } else if (brush === B_BRUSH) {
+  } else if (brush === b_brush) {
     const d = Math.ceil(size * 1.6) + 2
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -142,7 +142,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.globalCompositeOperation = 'destination-out'
     x.drawImage(streaks(), 0, 0, d * 1.4, d * 1.4)
     c = cv
-  } else if (brush === B_AIRBRUSH) {
+  } else if (brush === b_airbrush) {
     const d = Math.ceil(size * 2.4)
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -151,7 +151,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.fillStyle = g
     x.fillRect(0, 0, d, d)
     c = cv
-  } else if (brush === B_CALLIG) {
+  } else if (brush === b_callig) {
     const w = Math.ceil(size * 1.7)
     const [cv, x] = canvas_make(w, w)
     x.translate(w / 2, w / 2)
@@ -161,7 +161,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.ellipse(0, 0, size * 0.75, Math.max(0.9, size * 0.2), 0, 0, Math.PI * 2)
     x.fill()
     c = cv
-  } else if (brush === B_NEON) {
+  } else if (brush === b_neon) {
     const d = Math.ceil(size * 3.2)
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -177,7 +177,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.fillStyle = core
     x.fillRect(0, 0, d, d)
     c = cv
-  } else if (brush === B_CHALK) {
+  } else if (brush === b_chalk) {
     const d = Math.ceil(size * 1.6) + 2
     const [cv, x] = canvas_make(d, d)
     const g = x.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2)
@@ -189,7 +189,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
     x.globalCompositeOperation = 'destination-in'
     x.drawImage(grain(), -d * 0.2, -d * 0.2, d * 1.8, d * 1.8)
     c = cv
-  } else if (brush === B_SPAT) {
+  } else if (brush === b_spat) {
     const d = Math.ceil(size * 3)
     const [cv, x] = canvas_make(d, d)
     x.fillStyle = rgba(1)
@@ -200,8 +200,8 @@ export function tip_get(brush: number, size: number, color: string, variant: num
       sd ^= sd << 5
       return ((sd >>> 0) % 100000) / 100000
     }
-    const nDrop = 5 + ((variant * 3) % 4)
-    for (let k = 0; k < nDrop; k++) {
+    const n_drop = 5 + ((variant * 3) % 4)
+    for (let k = 0; k < n_drop; k++) {
       const a = vr() * Math.PI * 2
       const rr2 = vr() * d * 0.42
       const dr = Math.max(0.8, (vr() * vr()) * size * 0.45)
@@ -210,7 +210,7 @@ export function tip_get(brush: number, size: number, color: string, variant: num
       x.fill()
     }
     c = cv
-  } else if (brush === B_RIBBON) {
+  } else if (brush === b_ribbon) {
     const w = Math.ceil(size * 2)
     const [cv, x] = canvas_make(w, w)
     x.fillStyle = rgba(1)
@@ -239,36 +239,36 @@ export function tip_get(brush: number, size: number, color: string, variant: num
 
 export function brush_spacing(brush: number, size: number): number {
   const r = Math.max(1, size / 2)
-  if (brush === B_AIRBRUSH) return Math.max(1, r * 0.35)
-  if (brush === B_DOTS) return Math.max(5, size * 1.4)
-  if (brush === B_WATER) return Math.max(1, r * 0.45)
-  if (brush === B_MARKER) return Math.max(0.8, r * 0.3)
-  if (brush === B_PENCIL) return Math.max(0.8, r * 0.4)
-  if (brush === B_CRAYON) return Math.max(0.9, r * 0.42)
-  if (brush === B_NEON) return Math.max(0.8, r * 0.3)
-  if (brush === B_CHALK) return Math.max(0.9, r * 0.45)
-  if (brush === B_SPAT) return Math.max(6, size * 1.1)
-  if (brush === B_RIBBON) return Math.max(0.8, r * 0.3)
+  if (brush === b_airbrush) return Math.max(1, r * 0.35)
+  if (brush === b_dots) return Math.max(5, size * 1.4)
+  if (brush === b_water) return Math.max(1, r * 0.45)
+  if (brush === b_marker) return Math.max(0.8, r * 0.3)
+  if (brush === b_pencil) return Math.max(0.8, r * 0.4)
+  if (brush === b_crayon) return Math.max(0.9, r * 0.42)
+  if (brush === b_neon) return Math.max(0.8, r * 0.3)
+  if (brush === b_chalk) return Math.max(0.9, r * 0.45)
+  if (brush === b_spat) return Math.max(6, size * 1.1)
+  if (brush === b_ribbon) return Math.max(0.8, r * 0.3)
   return Math.max(0.8, r * 0.35)
 }
 
 let raw: number[][] = []
-let consumedLen = 0
+let consumed_len = 0
 let carry = 0
-let bufC: HTMLCanvasElement | null = null
-let bufX: CanvasRenderingContext2D | null = null
-let rawDirty = 0
-const RAW_LIMIT = 512
-const RAW_TAIL = 192
+let buf_c: HTMLCanvasElement | null = null
+let buf_x: CanvasRenderingContext2D | null = null
+let raw_dirty = 0
+const raw_limit = 512
+const raw_tail = 192
 
 function buf(): CanvasRenderingContext2D {
   const g = st()
-  if (!bufC || bufC.width !== g.doc.w || bufC.height !== g.doc.h) {
+  if (!buf_c || buf_c.width !== g.doc.w || buf_c.height !== g.doc.h) {
     const [c, x] = canvas_make(g.doc.w, g.doc.h)
-    bufC = c
-    bufX = x
+    buf_c = c
+    buf_x = x
   }
-  return bufX as CanvasRenderingContext2D
+  return buf_x as CanvasRenderingContext2D
 }
 
 function centerline(): number[][] {
@@ -282,10 +282,10 @@ function centerline(): number[][] {
   return out
 }
 
-function stamp_at(ctx: CanvasRenderingContext2D, tip: HTMLCanvasElement, x: number, y: number, jitterRot: number, box: number[]): void {
+function stamp_at(ctx: CanvasRenderingContext2D, tip: HTMLCanvasElement, x: number, y: number, jitter_rot: number, box: number[]): void {
   const tw = tip.width
   const th = tip.height
-  if (jitterRot) {
+  if (jitter_rot) {
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(rnd() * Math.PI * 2)
@@ -313,9 +313,9 @@ function mirror_pts(x: number, y: number): number[][] {
 export function brush_begin(x: number, y: number, p: number): void {
   const g = st()
   raw = [[x, y, p || 0.5]]
-  consumedLen = 0
+  consumed_len = 0
   carry = 0
-  rawDirty = 0
+  raw_dirty = 0
   if (buffered(g.pen.brush)) {
     const bx = buf()
     bx.clearRect(0, 0, g.doc.w, g.doc.h)
@@ -325,18 +325,18 @@ export function brush_begin(x: number, y: number, p: number): void {
 
 export function brush_point(x: number, y: number, p: number): void {
   const last = raw[raw.length - 1]
-  const minDist = Math.max(0.2, 0.55 / st().view.z)
+  const min_dist = Math.max(0.2, 0.55 / st().view.z)
   const dx = x - last[0]
   const dy = y - last[1]
-  if (dx * dx + dy * dy < minDist * minDist) {
+  if (dx * dx + dy * dy < min_dist * min_dist) {
     last[2] = p || last[2]
     return
   }
   raw.push([x, y, p || 0.5])
-  rawDirty = 1
+  raw_dirty = 1
 }
 
-let lastEmit: number[] = [0, 0, 0, 0]
+let last_emit: number[] = [0, 0, 0, 0]
 
 function brush_step(first: number): void {
   const g = st()
@@ -344,14 +344,14 @@ function brush_step(first: number): void {
   const cl = centerline()
   if (!cl.length) return
   const sp = brush_spacing(brush, g.pen.size)
-  const tipVar = brush === B_SPAT ? (rnd() * 4) | 0 : 0
-  const tip = tip_get(brush, g.pen.size, g.pen.color, tipVar)
+  const tip_var = brush === b_spat ? (rnd() * 4) | 0 : 0
+  const tip = tip_get(brush, g.pen.size, g.pen.color, tip_var)
   const target: CanvasRenderingContext2D = buffered(brush) ? buf() : live_slot(g.pen.layer)
-  const jitter = brush === B_CRAYON || brush === B_PENCIL || brush === B_CHALK || brush === B_SPAT ? 1 : 0
+  const jitter = brush === b_crayon || brush === b_pencil || brush === b_chalk || brush === b_spat ? 1 : 0
   const box: number[] = [g.doc.w, g.doc.h, -1, -1]
   target.save()
-  if (!buffered(brush)) target.globalAlpha = clamp(g.pen.alpha, 0, 1) * (brush === B_AIRBRUSH ? 1 : brush === B_PENCIL ? 0.9 : 1)
-  let i = Math.max(1, consumedLen)
+  if (!buffered(brush)) target.globalAlpha = clamp(g.pen.alpha, 0, 1) * (brush === b_airbrush ? 1 : brush === b_pencil ? 0.9 : 1)
+  let i = Math.max(1, consumed_len)
   if (first) {
     for (const mp of mirror_pts(cl[0][0], cl[0][1])) stamp_at(target, tip, mp[0], mp[1], jitter, box)
   }
@@ -368,44 +368,44 @@ function brush_step(first: number): void {
     while (d <= len) {
       const px = ax + (dx * d) / len
       const py = ay + (dy * d) / len
-      const tp = brush === B_SPAT ? tip_get(brush, g.pen.size, g.pen.color, (rnd() * 4) | 0) : tip
+      const tp = brush === b_spat ? tip_get(brush, g.pen.size, g.pen.color, (rnd() * 4) | 0) : tip
       for (const mp of mirror_pts(px, py)) stamp_at(target, tp, mp[0], mp[1], jitter, box)
       d += sp
     }
     carry = d - len
   }
-  consumedLen = cl.length
-  if (raw.length > RAW_LIMIT) {
-    raw = raw.slice(-RAW_TAIL)
-    consumedLen = centerline().length
+  consumed_len = cl.length
+  if (raw.length > raw_limit) {
+    raw = raw.slice(-raw_tail)
+    consumed_len = centerline().length
   }
   target.restore()
   if (box[2] >= box[0]) {
-    lastEmit = box
+    last_emit = box
   } else {
-    lastEmit = [0, 0, -1, -1]
+    last_emit = [0, 0, -1, -1]
   }
 }
 
 export function brush_compose(ctx: CanvasRenderingContext2D, snap: HTMLCanvasElement): number[] | null {
   const g = st()
-  if (rawDirty) {
-    rawDirty = 0
+  if (raw_dirty) {
+    raw_dirty = 0
     brush_step(0)
   }
-  if (!buffered(g.pen.brush)) return lastEmit[2] >= lastEmit[0] ? lastEmit.slice() : null
-  const x0 = Math.max(0, Math.floor(lastEmit[0]))
-  const y0 = Math.max(0, Math.floor(lastEmit[1]))
-  const x1 = Math.min(g.doc.w - 1, Math.ceil(lastEmit[2]))
-  const y1 = Math.min(g.doc.h - 1, Math.ceil(lastEmit[3]))
+  if (!buffered(g.pen.brush)) return last_emit[2] >= last_emit[0] ? last_emit.slice() : null
+  const x0 = Math.max(0, Math.floor(last_emit[0]))
+  const y0 = Math.max(0, Math.floor(last_emit[1]))
+  const x1 = Math.min(g.doc.w - 1, Math.ceil(last_emit[2]))
+  const y1 = Math.min(g.doc.h - 1, Math.ceil(last_emit[3]))
   if (x1 < x0 || y1 < y0) return null
   const w = x1 - x0 + 1
   const h = y1 - y0 + 1
   ctx.clearRect(x0, y0, w, h)
   ctx.drawImage(snap, x0, y0, w, h, x0, y0, w, h)
   ctx.save()
-  ctx.globalAlpha = (g.pen.brush === B_MARKER ? 0.5 : 0.85) * clamp(g.pen.alpha, 0, 1)
-  ctx.drawImage(bufC as HTMLCanvasElement, x0, y0, w, h, x0, y0, w, h)
+  ctx.globalAlpha = (g.pen.brush === b_marker ? 0.5 : 0.85) * clamp(g.pen.alpha, 0, 1)
+  ctx.drawImage(buf_c as HTMLCanvasElement, x0, y0, w, h, x0, y0, w, h)
   ctx.restore()
   return [x0, y0, x1, y1]
 }

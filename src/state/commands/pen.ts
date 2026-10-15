@@ -1,17 +1,24 @@
-import { D_TOOLS, D_PEN, D_STAGE, D_SEL, D_LAYER, T_PASTE, T_EYEDROP, SIZE_MIN, SIZE_MAX, PXN_MIN, PXN_MAX, T_PIXEL, ERR_BAD, ERR_NOOP, L_N } from '../../h'
+import { d_tools, d_pen, mode_normal, t_pen, d_stage, d_sel, d_layer, t_paste, t_eyedrop, size_min, size_max, pxn_min, pxn_max, t_pixel, err_bad, err_noop, l_n } from '../../h'
 import { clamp } from '../../lib'
-import { mode_layers } from '../../mode'
+import { pat_custom, paint_active, paint_tile_valid } from '../../paint'
+import { mode_color, mode_layers } from '../../mode'
+import { native_pen_tips, n_solid, native_pen_valid, pen_brush_allowed, pen_mode_normalize, pen_native_select } from '../../penprofile'
 import { storage_write_json } from '../../storage'
 import { fx_toast, fx_sfx } from '../fx_hooks'
-import type { Globals } from '../store'
+import type { globals_t } from '../store'
 
-export type Cmds = {
+export type cmds_t = {
   'pen.set_tool': number
   'pen.eyedrop_pick': { r: number, g: number, b: number }
   'pen.set_color': string
   'pen.set_size': number
   'pen.set_brush': number
+  'pen.set_native_tip': number
+  'pen.toggle_native_expand': null
   'pen.set_pat': number
+  'pen.set_paint_over': number
+  'pen.load_paint': unknown
+  'pen.load_paint_normal': unknown
   'pen.set_alpha_pct': number
   'pen.set_smooth': number
   'pen.set_layer': number
@@ -31,141 +38,182 @@ export type Cmds = {
   'pen.custom_set': string[]
 }
 
-function custom_save(g: Globals): void {
+function custom_save(g: globals_t): void {
   storage_write_json('ug2_pal', g.pen.custom)
 }
 
-export const PEN_COMMANDS = {
-  'pen.set_tool': (g: Globals, t: number): number => {
-    if (!Number.isInteger(t)) return ERR_BAD
-    if (t === T_PASTE && !g.clip) {
+export const pen_commands = {
+  'pen.set_tool': (g: globals_t, t: number): number => {
+    if (!Number.isInteger(t)) return err_bad
+    if (t === t_paste && !g.clip) {
       fx_toast('先に選択ツールでコピーしてね')
-      return ERR_NOOP
+      return err_noop
     }
-    if (g.pen.tool !== T_EYEDROP && g.pen.tool !== t) g.pen.prevTool = g.pen.tool
+    if (g.pen.tool !== t_eyedrop && g.pen.tool !== t) g.pen.prev_tool = g.pen.tool
     g.pen.tool = t
+    pen_mode_normalize(g.pen, g.doc.mode)
     fx_sfx('tap')
     return 0
   },
 
-  'pen.eyedrop_pick': (g: Globals, p: { r: number, g: number, b: number }): number => {
-    if (![p.r, p.g, p.b].every(Number.isFinite)) return ERR_BAD
+  'pen.eyedrop_pick': (g: globals_t, p: { r: number, g: number, b: number }): number => {
+    if (![p.r, p.g, p.b].every(Number.isFinite)) return err_bad
     const r = clamp(Math.round(p.r), 0, 255)
     const gg = clamp(Math.round(p.g), 0, 255)
     const b = clamp(Math.round(p.b), 0, 255)
-    g.pen.color = '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1).toUpperCase()
-    g.pen.tool = g.pen.prevTool
+    g.pen.color = mode_color(g.doc.mode, '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1).toUpperCase())
+    g.pen.tool = g.pen.prev_tool
+    pen_mode_normalize(g.pen, g.doc.mode)
     fx_toast('色をスポイトしました ' + g.pen.color)
     fx_sfx('tap')
     return 0
   },
 
-  'pen.set_color': (g: Globals, c: string): number => {
-    g.pen.color = c.toUpperCase()
+  'pen.set_color': (g: globals_t, c: string): number => {
+    if (!/^#[0-9a-f]{6}$/i.test(c)) return err_bad
+    g.pen.color = mode_color(g.doc.mode, c)
     return 0
   },
 
-  'pen.set_size': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.pen.size = clamp(Math.round(v), SIZE_MIN, SIZE_MAX)
+  'pen.set_size': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    if (g.doc.mode !== mode_normal && g.pen.tool === t_pen) {
+      const tip = native_pen_tips.find(t => t.shape === n_solid && t.size === v)
+      if (!tip) return err_bad
+      pen_native_select(g.pen, tip.id)
+      return 0
+    }
+    g.pen.size = clamp(Math.round(v), size_min, size_max)
     return 0
   },
 
-  'pen.set_brush': (g: Globals, b: number): number => {
-    if (!Number.isInteger(b)) return ERR_BAD
+  'pen.set_brush': (g: globals_t, b: number): number => {
+    if (!pen_brush_allowed(g.doc.mode, b)) return err_bad
     g.pen.brush = b
-    g.pen.markId = ''
+    g.pen.mark_id = ''
     return 0
   },
 
-  'pen.set_pat': (g: Globals, p: number): number => {
-    if (!Number.isInteger(p)) return ERR_BAD
+  'pen.set_native_tip': (g: globals_t, id: number): number => {
+    if (g.doc.mode === mode_normal || !native_pen_valid(id)) return err_bad
+    pen_native_select(g.pen, id)
+    return 0
+  },
+
+  'pen.toggle_native_expand': (g: globals_t, _p: null): number => {
+    if (g.doc.mode === mode_normal || !native_pen_valid(g.pen.native_tip)) return err_bad
+    pen_native_select(g.pen, g.pen.native_tip ^ 8)
+    return 0
+  },
+
+  'pen.set_pat': (g: globals_t, p: number): number => {
+    if (!Number.isInteger(p) || p < 0 || p > pat_custom) return err_bad
+    if (p === pat_custom && !paint_active(g.doc.mode, g.pen.paint_tile, g.pen.paint_tile_normal)) return err_noop
     g.pen.pat = p
     return 0
   },
 
-  'pen.set_alpha_pct': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.pen.alpha = clamp(v / 100, 0.1, 1)
+  'pen.set_paint_over': (g: globals_t, v: number): number => {
+    if (v !== 0 && v !== 1) return err_bad
+    g.pen.paint_over = v
     return 0
   },
 
-  'pen.set_smooth': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.pen.smooth = clamp(Math.round(v), 0, 4)
+  'pen.load_paint': (g: globals_t, v: unknown): number => {
+    if (!paint_tile_valid(v)) return err_bad
+    g.pen.paint_tile = { w: v.w, h: v.h, b: v.b.slice() }
     return 0
   },
 
-  'pen.set_layer': (g: Globals, l: number): number => {
-    if (!Number.isInteger(l) || l < 1 || l > mode_layers(g.doc.mode) || l >= L_N || g.doc.lord.indexOf(l) < 0) return ERR_BAD
+  'pen.load_paint_normal': (g: globals_t, v: unknown): number => {
+    if (!paint_tile_valid(v)) return err_bad
+    g.pen.paint_tile_normal = { w: v.w, h: v.h, b: v.b.slice(), rgba: v.rgba?.slice() }
+    return 0
+  },
+
+  'pen.set_alpha_pct': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    g.pen.alpha = g.doc.mode === mode_normal ? clamp(v / 100, 0.1, 1) : 1
+    return 0
+  },
+
+  'pen.set_smooth': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    g.pen.smooth = g.doc.mode === mode_normal ? clamp(Math.round(v), 0, 4) : 0
+    return 0
+  },
+
+  'pen.set_layer': (g: globals_t, l: number): number => {
+    if (!Number.isInteger(l) || l < 1 || l > mode_layers(g.doc.mode) || l >= l_n || g.doc.lord.indexOf(l) < 0) return err_bad
     g.pen.layer = l
     return 0
   },
 
-  'pen.toggle_pressure': (g: Globals, _p: null): number => {
-    g.pen.pressure = g.pen.pressure ? 0 : 1
+  'pen.toggle_pressure': (g: globals_t, _p: null): number => {
+    g.pen.pressure = g.doc.mode === mode_normal && !g.pen.pressure ? 1 : 0
     return 0
   },
 
-  'pen.toggle_sym': (g: Globals, _p: null): number => {
+  'pen.toggle_sym': (g: globals_t, _p: null): number => {
     g.pen.sym = g.pen.sym ? 0 : 1
     return 0
   },
 
-  'pen.toggle_symy': (g: Globals, _p: null): number => {
+  'pen.toggle_symy': (g: globals_t, _p: null): number => {
     g.pen.symy = g.pen.symy ? 0 : 1
     return 0
   },
 
-  'pen.toggle_outline': (g: Globals, _p: null): number => {
+  'pen.toggle_outline': (g: globals_t, _p: null): number => {
     g.pen.outline = g.pen.outline ? 0 : 1
     return 0
   },
 
-  'pen.set_owidth': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
+  'pen.set_owidth': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
     g.pen.owidth = clamp(Math.round(v), 1, 12)
     return 0
   },
 
-  'pen.set_ocolor': (g: Globals, c: string): number => {
-    g.pen.ocolor = c
+  'pen.set_ocolor': (g: globals_t, c: string): number => {
+    if (!/^#[0-9a-f]{6}$/i.test(c)) return err_bad
+    g.pen.ocolor = mode_color(g.doc.mode, c)
     return 0
   },
 
-  'pen.toggle_fill': (g: Globals, _p: null): number => {
+  'pen.toggle_fill': (g: globals_t, _p: null): number => {
     g.pen.fill = g.pen.fill ? 0 : 1
     return 0
   },
 
-  'pen.toggle_fill_all': (g: Globals, _p: null): number => {
-    g.pen.fillAll = g.pen.fillAll ? 0 : 1
+  'pen.toggle_fill_all': (g: globals_t, _p: null): number => {
+    g.pen.fill_all = g.pen.fill_all ? 0 : 1
     return 0
   },
 
-  'pen.set_pxn': (g: Globals, v: number): number => {
-    if (!Number.isFinite(v)) return ERR_BAD
-    g.pen.pxn = clamp(Math.round(v), PXN_MIN, Math.min(PXN_MAX, g.doc.w))
-    if (g.pen.tool === T_PIXEL) g.view.grid = 1
+  'pen.set_pxn': (g: globals_t, v: number): number => {
+    if (!Number.isFinite(v)) return err_bad
+    g.pen.pxn = clamp(Math.round(v), pxn_min, Math.min(pxn_max, g.doc.w))
+    if (g.pen.tool === t_pixel) g.view.grid = 1
     return 0
   },
 
-  'pen.set_pal_mode': (g: Globals, t: number): number => {
-    if (!Number.isInteger(t)) return ERR_BAD
-    g.pen.palMode = t
+  'pen.set_pal_mode': (g: globals_t, t: number): number => {
+    if (!Number.isInteger(t)) return err_bad
+    g.pen.pal_mode = g.doc.mode === mode_normal ? t : g.doc.mode
     return 0
   },
 
-  'pen.set_mark': (g: Globals, id: string): number => {
-    g.pen.markId = id
+  'pen.set_mark': (g: globals_t, id: string): number => {
+    g.pen.mark_id = id
     return 0
   },
 
-  'pen.custom_add': (g: Globals, c: string): number => {
+  'pen.custom_add': (g: globals_t, c: string): number => {
     const up = c.toUpperCase()
     if (g.pen.custom.indexOf(up) >= 0) {
       fx_toast('もう登録されてるよ')
-      return ERR_NOOP
+      return err_noop
     }
     if (g.pen.custom.length >= 16) g.pen.custom.shift()
     g.pen.custom.push(up)
@@ -175,8 +223,8 @@ export const PEN_COMMANDS = {
     return 0
   },
 
-  'pen.custom_remove': (g: Globals, i: number): number => {
-    if (!Number.isInteger(i) || i < 0 || i >= g.pen.custom.length) return ERR_BAD
+  'pen.custom_remove': (g: globals_t, i: number): number => {
+    if (!Number.isInteger(i) || i < 0 || i >= g.pen.custom.length) return err_bad
     g.pen.custom.splice(i, 1)
     custom_save(g)
     fx_toast('消しました')
@@ -184,36 +232,41 @@ export const PEN_COMMANDS = {
     return 0
   },
 
-  'pen.custom_set': (g: Globals, arr: string[]): number => {
+  'pen.custom_set': (g: globals_t, arr: string[]): number => {
     g.pen.custom = arr.slice(0, 16)
     return 0
   },
 }
 
-export const PEN_EFFECTS: Partial<Record<keyof Cmds, number>> = {
-  'pen.set_tool': D_TOOLS | D_PEN | D_SEL,
-  'pen.eyedrop_pick': D_PEN | D_TOOLS,
-  'pen.set_color': D_PEN,
-  'pen.set_size': D_PEN,
-  'pen.set_brush': D_PEN,
-  'pen.set_pat': D_PEN,
-  'pen.set_alpha_pct': D_PEN,
-  'pen.set_smooth': D_PEN,
-  'pen.set_layer': D_LAYER | D_PEN | D_TOOLS,
-  'pen.toggle_pressure': D_PEN,
-  'pen.toggle_sym': D_PEN,
-  'pen.toggle_symy': D_PEN,
-  'pen.toggle_outline': D_PEN,
-  'pen.set_owidth': D_PEN,
-  'pen.set_ocolor': D_PEN,
-  'pen.toggle_fill': D_PEN,
-  'pen.toggle_fill_all': D_PEN,
-  'pen.set_pxn': D_PEN | D_STAGE,
-  'pen.set_pal_mode': D_PEN,
-  'pen.set_mark': D_PEN,
-  'pen.custom_add': D_PEN,
-  'pen.custom_remove': D_PEN,
-  'pen.custom_set': D_PEN,
+export const pen_effects: Partial<Record<keyof cmds_t, number>> = {
+  'pen.set_tool': d_tools | d_pen | d_sel,
+  'pen.eyedrop_pick': d_pen | d_tools,
+  'pen.set_color': d_pen,
+  'pen.set_size': d_pen,
+  'pen.set_brush': d_pen,
+  'pen.set_native_tip': d_pen,
+  'pen.toggle_native_expand': d_pen,
+  'pen.set_paint_over': d_pen | d_sel,
+  'pen.load_paint': d_pen,
+  'pen.load_paint_normal': d_pen,
+  'pen.set_pat': d_pen,
+  'pen.set_alpha_pct': d_pen,
+  'pen.set_smooth': d_pen,
+  'pen.set_layer': d_layer | d_pen | d_tools,
+  'pen.toggle_pressure': d_pen,
+  'pen.toggle_sym': d_pen,
+  'pen.toggle_symy': d_pen,
+  'pen.toggle_outline': d_pen,
+  'pen.set_owidth': d_pen,
+  'pen.set_ocolor': d_pen,
+  'pen.toggle_fill': d_pen,
+  'pen.toggle_fill_all': d_pen,
+  'pen.set_pxn': d_pen | d_stage,
+  'pen.set_pal_mode': d_pen,
+  'pen.set_mark': d_pen,
+  'pen.custom_add': d_pen,
+  'pen.custom_remove': d_pen,
+  'pen.custom_set': d_pen,
 }
 
-export const PEN_TOUCH = new Set<keyof Cmds>([])
+export const pen_touch = new Set<keyof cmds_t>([])

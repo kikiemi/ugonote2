@@ -1,13 +1,13 @@
 import { report_warning } from '../diagnostics'
 
-export type ImageFileSource = {
+export type image_file_source_t = {
   width: number
   height: number
   draw: (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => void
   close: () => void
 }
 
-function image_element_source(file: File, done: (source: ImageFileSource | null) => void): void {
+function image_element_source(file: File, done: (source: image_file_source_t | null) => void): void {
   let url: string
   try {
     url = URL.createObjectURL(file)
@@ -53,7 +53,7 @@ function image_element_source(file: File, done: (source: ImageFileSource | null)
   }
 }
 
-export function image_file_decode(file: File, done: (source: ImageFileSource | null) => void): void {
+export function image_file_decode(file: File, done: (source: image_file_source_t | null) => void): void {
   const decode = globalThis.createImageBitmap
   if (!decode) {
     image_element_source(file, done)

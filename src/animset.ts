@@ -1,4 +1,4 @@
-import { MOTION_N, anim_fx_zero, type AnimFx } from './h'
+import { motion_n, anim_fx_zero, type anim_fx_t } from './h'
 import { clamp } from './lib'
 
 function finite_value(value: unknown, lo: number, hi: number, fallback: number): number {
@@ -32,36 +32,36 @@ export function anim_seed_random(): number {
   return anim_seed_mix(Math.floor(Math.random() * 0xffffffff))
 }
 
-export function animfx_normalize(source: Partial<AnimFx> | null | undefined): AnimFx {
+export function animfx_normalize(source: Partial<anim_fx_t> | null | undefined): anim_fx_t {
   const out = anim_fx_zero()
   if (!source || typeof source !== 'object') return out
   out.wiggle = source.wiggle ? 1 : 0
-  out.wiggleAmount = finite_value(source.wiggleAmount, 0, 8, out.wiggleAmount)
-  out.wiggleCell = finite_value(source.wiggleCell, 8, 96, out.wiggleCell)
-  out.wiggleRate = finite_value(source.wiggleRate, 1, 24, out.wiggleRate)
-  out.wigglePhases = Math.round(finite_value(source.wigglePhases, 2, 8, out.wigglePhases))
-  out.wiggleSeed = uint_value(source.wiggleSeed, out.wiggleSeed)
+  out.wiggle_amount = finite_value(source.wiggle_amount, 0, 8, out.wiggle_amount)
+  out.wiggle_cell = finite_value(source.wiggle_cell, 8, 96, out.wiggle_cell)
+  out.wiggle_rate = finite_value(source.wiggle_rate, 1, 24, out.wiggle_rate)
+  out.wiggle_phases = Math.round(finite_value(source.wiggle_phases, 2, 8, out.wiggle_phases))
+  out.wiggle_seed = uint_value(source.wiggle_seed, out.wiggle_seed)
   const motion = Number(source.motion)
-  out.motion = Number.isInteger(motion) && motion >= 0 && motion < MOTION_N ? motion : out.motion
-  out.motionAmount = finite_value(source.motionAmount, 0, 12, out.motionAmount)
-  out.motionRate = finite_value(source.motionRate, 0.25, 6, out.motionRate)
-  out.motionAnchorX = finite_value(source.motionAnchorX, 0, 1, out.motionAnchorX)
-  out.motionAnchorY = finite_value(source.motionAnchorY, 0, 1, out.motionAnchorY)
-  out.motionSeed = uint_value(source.motionSeed, out.motionSeed)
+  out.motion = Number.isInteger(motion) && motion >= 0 && motion < motion_n ? motion : out.motion
+  out.motion_amount = finite_value(source.motion_amount, 0, 12, out.motion_amount)
+  out.motion_rate = finite_value(source.motion_rate, 0.25, 6, out.motion_rate)
+  out.motion_anchor_x = finite_value(source.motion_anchor_x, 0, 1, out.motion_anchor_x)
+  out.motion_anchor_y = finite_value(source.motion_anchor_y, 0, 1, out.motion_anchor_y)
+  out.motion_seed = uint_value(source.motion_seed, out.motion_seed)
   return out
 }
 
-export function animfx_same(a: Readonly<AnimFx>, b: Readonly<AnimFx>): number {
+export function animfx_same(a: Readonly<anim_fx_t>, b: Readonly<anim_fx_t>): number {
   return a.wiggle === b.wiggle &&
-    a.wiggleAmount === b.wiggleAmount &&
-    a.wiggleCell === b.wiggleCell &&
-    a.wiggleRate === b.wiggleRate &&
-    a.wigglePhases === b.wigglePhases &&
-    a.wiggleSeed === b.wiggleSeed &&
+    a.wiggle_amount === b.wiggle_amount &&
+    a.wiggle_cell === b.wiggle_cell &&
+    a.wiggle_rate === b.wiggle_rate &&
+    a.wiggle_phases === b.wiggle_phases &&
+    a.wiggle_seed === b.wiggle_seed &&
     a.motion === b.motion &&
-    a.motionAmount === b.motionAmount &&
-    a.motionRate === b.motionRate &&
-    a.motionAnchorX === b.motionAnchorX &&
-    a.motionAnchorY === b.motionAnchorY &&
-    a.motionSeed === b.motionSeed ? 1 : 0
+    a.motion_amount === b.motion_amount &&
+    a.motion_rate === b.motion_rate &&
+    a.motion_anchor_x === b.motion_anchor_x &&
+    a.motion_anchor_y === b.motion_anchor_y &&
+    a.motion_seed === b.motion_seed ? 1 : 0
 }

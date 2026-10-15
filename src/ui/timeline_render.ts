@@ -1,23 +1,23 @@
 import { tr_line } from '../lang'
 import { el, q, query } from '../dom'
-import { THUMB_H, THUMB_W } from '../h'
+import { thumb_h, thumb_w } from '../h'
 import { clamp } from '../lib'
 import { anim_hold_of, anim_playhead } from '../state/commands/play'
 import { st } from '../state/store'
 import { thumb_get, thumb_rev } from '../thumb'
 
-const TL_BUF = 5
+const tl_buf = 5
 
-let tlPool: HTMLElement[] = []
-let tlStep = 93
-let tlHead = -1
+let tl_pool: HTMLElement[] = []
+let timeline_cell_step = 93
+let tl_head = -1
 
 function fs_track(): HTMLElement {
   const fs = q('fs')
-  let t = document.getElementById('fsTrack')
+  let t = document.getElementById('fs_track')
   if (!t) {
     t = el('div', '', '')
-    t.id = 'fsTrack'
+    t.id = 'fs_track'
     fs.appendChild(t)
     fs.addEventListener('scroll', () => tl_window(0), { passive: true })
   }
@@ -27,8 +27,8 @@ function fs_track(): HTMLElement {
 function fs_cell(): HTMLElement {
   const d = el('div', 'fcell', '')
   const c = document.createElement('canvas')
-  c.width = THUMB_W
-  c.height = THUMB_H
+  c.width = thumb_w
+  c.height = thumb_h
   d.appendChild(c)
   d.appendChild(el('span', 'fno', ''))
   d.appendChild(el('span', 'fhold', ''))
@@ -56,31 +56,31 @@ function fs_assign(cell: HTMLElement, i: number, head: number): void {
   const moved = cell.dataset.i !== String(i)
   if (moved) {
     cell.dataset.i = String(i)
-    cell.style.left = i * tlStep + 'px'
+    cell.style.left = i * timeline_cell_step + 'px'
     cell.style.display = ''
     const num = cell.querySelector('.fno') as HTMLElement
     num.textContent = String(i + 1)
     cell.dataset.tk = ''
   }
   const rev = thumb_rev(i)
-  const wantTk = rev + '|' + (i === g.doc.cur ? 'c' : '')
-  if (cell.dataset.tk !== wantTk || i === g.doc.cur) {
+  const want_tk = rev + '|' + (i === g.doc.cur ? 'c' : '')
+  if (cell.dataset.tk !== want_tk || i === g.doc.cur) {
     const c = cell.querySelector('canvas') as HTMLCanvasElement
     const x = c.getContext('2d') as CanvasRenderingContext2D
-    x.clearRect(0, 0, THUMB_W, THUMB_H)
+    x.clearRect(0, 0, thumb_w, thumb_h)
     const th = thumb_get(i, 1)
     if (th) x.drawImage(th, 0, 0)
     cell.dataset.tk = thumb_rev(i) + '|' + (i === g.doc.cur ? 'c' : '')
   }
   const fh = cell.querySelector('.fhold') as HTMLElement
-  const wantH = f.hold > 1 ? '×' + f.hold : ''
-  if (fh.textContent !== wantH) fh.textContent = wantH
+  const want_h = f.hold > 1 ? '×' + f.hold : ''
+  if (fh.textContent !== want_h) fh.textContent = want_h
   let dots = ''
   if (f.se) for (let k = 0; k < 4; k++) if (f.se & (1 << k)) dots += '<i class="d' + k + '"></i>'
   const fse = cell.querySelector('.fse') as HTMLElement
   if (fse.innerHTML !== dots) fse.innerHTML = dots
-  const a = g.doc.loopA
-  const b = g.doc.loopB
+  const a = g.doc.loop_a
+  const b = g.doc.loop_b
   cell.classList.toggle('on', i === head)
   cell.classList.toggle('inab', a >= 0 && b >= 0 && i >= a && i <= b)
   query(cell, '.abm.a').classList.toggle('show', i === a)
@@ -93,16 +93,16 @@ function tl_window(force: number): void {
   const track = fs_track()
   const n = g.doc.frames.length
   const head = anim_playhead()
-  const first = Math.max(0, Math.floor(fs.scrollLeft / tlStep) - TL_BUF)
-  const last = Math.min(n - 1, Math.ceil((fs.scrollLeft + fs.clientWidth) / tlStep) + TL_BUF)
+  const first = Math.max(0, Math.floor(fs.scrollLeft / timeline_cell_step) - tl_buf)
+  const last = Math.min(n - 1, Math.ceil((fs.scrollLeft + fs.clientWidth) / timeline_cell_step) + tl_buf)
   const need = Math.max(0, last - first + 1)
-  while (tlPool.length < need) {
+  while (tl_pool.length < need) {
     const c = fs_cell()
-    tlPool.push(c)
+    tl_pool.push(c)
     track.appendChild(c)
   }
-  for (let k = 0; k < tlPool.length; k++) {
-    const cell = tlPool[k]
+  for (let k = 0; k < tl_pool.length; k++) {
+    const cell = tl_pool[k]
     const i = first + k
     if (k >= need) {
       cell.style.display = 'none'
@@ -112,21 +112,21 @@ function tl_window(force: number): void {
     if (force) cell.dataset.tk = ''
     fs_assign(cell, i, head)
   }
-  tlHead = head
+  tl_head = head
 }
 
-export function tl_index_at(clientX: number): number {
+export function tl_index_at(client_x: number): number {
   const fs = q('fs')
   const r = fs.getBoundingClientRect()
-  const x = clientX - r.left + fs.scrollLeft
+  const x = client_x - r.left + fs.scrollLeft
   const n = st().doc.frames.length
-  return clamp(Math.round(x / tlStep - 0.5), 0, Math.max(0, n - 1))
+  return clamp(Math.round(x / timeline_cell_step - 0.5), 0, Math.max(0, n - 1))
 }
 
 function tl_scroll_to_head(): void {
   const fs = q('fs')
   const head = anim_playhead()
-  const want = head * tlStep - fs.clientWidth / 2 + tlStep / 2
+  const want = head * timeline_cell_step - fs.clientWidth / 2 + timeline_cell_step / 2
   const max = fs.scrollWidth - fs.clientWidth
   const to = clamp(want, 0, Math.max(0, max))
   if (Math.abs(fs.scrollLeft - to) > 1) fs.scrollLeft = to
@@ -135,8 +135,8 @@ function tl_scroll_to_head(): void {
 export function r_timeline(): void {
   const g = st()
   const n = g.doc.frames.length
-  tlStep = tl_step()
-  fs_track().style.width = Math.max(0, n * tlStep - 7) + 'px'
+  timeline_cell_step = tl_step()
+  fs_track().style.width = Math.max(0, n * timeline_cell_step - 7) + 'px'
   tl_window(1)
   tl_scroll_to_head()
 }
@@ -148,7 +148,7 @@ export function r_thumbs(): void {
 export function r_frameinfo(): void {
   const g = st()
   const head = anim_playhead()
-  const frame_no = q('frameNo')
+  const frame_no = q('frame_no')
   const frame_count = g.doc.frames.length
   const frame_current = head + 1
   const frame_long = frame_current > 99 || frame_count > 99
@@ -158,28 +158,28 @@ export function r_frameinfo(): void {
   frame_no.classList.toggle('xlong', frame_xlong)
   frame_no.title = tr_line(frame_current + ' / ' + frame_count + '。番号を指定して移動')
   frame_no.setAttribute('aria-label', frame_no.title)
-  const canDelete = frame_count > 1
-  const firstButton = q<HTMLButtonElement>('homeBtn')
-  const lastButton = q<HTMLButtonElement>('lastBtn')
-  firstButton.classList.toggle('off', frame_current === 1)
-  firstButton.disabled = frame_current === 1
-  firstButton.setAttribute('aria-disabled', frame_current === 1 ? 'true' : 'false')
-  lastButton.classList.toggle('off', frame_current === frame_count)
-  lastButton.disabled = frame_current === frame_count
-  lastButton.setAttribute('aria-disabled', frame_current === frame_count ? 'true' : 'false')
-  const deleteButton = q<HTMLButtonElement>('delBtn')
-  deleteButton.classList.toggle('off', !canDelete)
-  deleteButton.disabled = !canDelete
-  deleteButton.setAttribute('aria-disabled', canDelete ? 'false' : 'true')
+  const can_delete = frame_count > 1
+  const first_button = q<HTMLButtonElement>('home_btn')
+  const last_button = q<HTMLButtonElement>('last_btn')
+  first_button.classList.toggle('off', frame_current === 1)
+  first_button.disabled = frame_current === 1
+  first_button.setAttribute('aria-disabled', frame_current === 1 ? 'true' : 'false')
+  last_button.classList.toggle('off', frame_current === frame_count)
+  last_button.disabled = frame_current === frame_count
+  last_button.setAttribute('aria-disabled', frame_current === frame_count ? 'true' : 'false')
+  const delete_button = q<HTMLButtonElement>('del_btn')
+  delete_button.classList.toggle('off', !can_delete)
+  delete_button.disabled = !can_delete
+  delete_button.setAttribute('aria-disabled', can_delete ? 'false' : 'true')
   const hold = anim_hold_of(g.doc.cur)
-  q('holdLabel').textContent = '×' + hold
-  const hr = q<HTMLInputElement>('holdRange')
+  q('hold_label').textContent = '×' + hold
+  const hr = q<HTMLInputElement>('hold_range')
   if (document.activeElement !== hr) hr.value = String(hold)
-  q('holdVal').textContent = '×' + hold
-  const a = g.doc.loopA
-  const b = g.doc.loopB
-  q('abBtn').classList.toggle('on', a >= 0 || b >= 0)
-  if (head !== tlHead) {
+  q('hold_val').textContent = '×' + hold
+  const a = g.doc.loop_a
+  const b = g.doc.loop_b
+  q('ab_btn').classList.toggle('on', a >= 0 || b >= 0)
+  if (head !== tl_head) {
     tl_scroll_to_head()
     tl_window(0)
   }

@@ -1,27 +1,27 @@
-import { D_PEN, type MarkDef } from '../../h'
-import type { Globals } from '../store'
+import { d_pen, type mark_def_t } from '../../h'
+import type { globals_t } from '../store'
 
-export type Cmds = {
-  'marks.set_list': MarkDef[]
+export type cmds_t = {
+  'marks.set_list': mark_def_t[]
   'marks.remove': string
 }
 
-export const MARK_COMMANDS = {
-  'marks.set_list': (g: Globals, arr: MarkDef[]): number => {
+export const mark_commands = {
+  'marks.set_list': (g: globals_t, arr: mark_def_t[]): number => {
     g.marks = arr
     return 0
   },
 
-  'marks.remove': (g: Globals, id: string): number => {
+  'marks.remove': (g: globals_t, id: string): number => {
     g.marks = g.marks.filter(m => m.id !== id)
-    if (g.pen.markId === id) g.pen.markId = ''
+    if (g.pen.mark_id === id) g.pen.mark_id = ''
     return 0
   },
 }
 
-export const MARK_EFFECTS: Partial<Record<keyof Cmds, number>> = {
-  'marks.set_list': D_PEN,
-  'marks.remove': D_PEN,
+export const mark_effects: Partial<Record<keyof cmds_t, number>> = {
+  'marks.set_list': d_pen,
+  'marks.remove': d_pen,
 }
 
-export const MARK_TOUCH = new Set<keyof Cmds>([])
+export const mark_touch = new Set<keyof cmds_t>([])

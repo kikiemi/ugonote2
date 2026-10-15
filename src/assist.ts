@@ -1,24 +1,24 @@
 import { anim_seed_mix } from './animset'
 import { doc_compose } from './doc'
-import { MOTION_BOUNCE, MOTION_BREATHE, MOTION_CAMERA, MOTION_FLOAT, MOTION_NONE, MOTION_SWAY, type AnimFx } from './h'
+import { motion_bounce, motion_breathe, motion_camera, motion_float, motion_none, motion_sway, type anim_fx_t } from './h'
 import { canvas_make, clamp } from './lib'
 import { st } from './state/store'
 
-export type AssistAnalysis = {
-  fx: AnimFx
+export type assist_analysis_t = {
+  fx: anim_fx_t
   label: string
   detail: string
   occupancy: number
   edge: number
 }
 
-export type AssistShift = {
+export type assist_shift_t = {
   dx: number
   dy: number
   score: number
 }
 
-type FrameSignal = {
+type frame_signal_t = {
   data: Float32Array
   w: number
   h: number
@@ -48,22 +48,22 @@ function rgba_signal(data: Uint8ClampedArray, w: number, h: number): Float32Arra
   return out
 }
 
-function frame_signal(frameIndex: number, w: number, h: number): FrameSignal {
+function frame_signal(frame_index: number, w: number, h: number): frame_signal_t {
   const [, context] = canvas_make(w, h, 1)
-  doc_compose(frameIndex, context, w, h, 0)
+  doc_compose(frame_index, context, w, h, 0)
   const image = context.getImageData(0, 0, w, h)
   return { data: rgba_signal(image.data, w, h), w, h }
 }
 
-function frame_metrics(frameIndex: number): { occupancy: number, edge: number, cx: number, cy: number, bx0: number, by0: number, bx1: number, by1: number } {
+function frame_metrics(frame_index: number): { occupancy: number, edge: number, cx: number, cy: number, bx0: number, by0: number, bx1: number, by1: number } {
   const w = 96
   const h = 72
   const [, context] = canvas_make(w, h, 1)
-  doc_compose(frameIndex, context, w, h, 0)
+  doc_compose(frame_index, context, w, h, 0)
   const data = context.getImageData(0, 0, w, h).data
   let mass = 0
-  let sumX = 0
-  let sumY = 0
+  let sum_x = 0
+  let sum_y = 0
   let edge = 0
   let bx0 = w
   let by0 = h
@@ -81,8 +81,8 @@ function frame_metrics(frameIndex: number): { occupancy: number, edge: number, c
       luma[index] = value * a
       if (a <= 0.04) continue
       mass += a
-      sumX += x * a
-      sumY += y * a
+      sum_x += x * a
+      sum_y += y * a
       if (x < bx0) bx0 = x
       if (y < by0) by0 = y
       if (x > bx1) bx1 = x
@@ -99,8 +99,8 @@ function frame_metrics(frameIndex: number): { occupancy: number, edge: number, c
   return {
     occupancy: mass / (w * h),
     edge: clamp(edge / (w * h * 0.8), 0, 1),
-    cx: sumX / mass / (w - 1),
-    cy: sumY / mass / (h - 1),
+    cx: sum_x / mass / (w - 1),
+    cy: sum_y / mass / (h - 1),
     bx0: bx0 / w,
     by0: by0 / h,
     bx1: (bx1 + 1) / w,
@@ -108,11 +108,11 @@ function frame_metrics(frameIndex: number): { occupancy: number, edge: number, c
   }
 }
 
-export function assist_analyze_frame(frameIndex: number, base: Readonly<AnimFx>): AssistAnalysis {
-  const metrics = frame_metrics(frameIndex)
+export function assist_analyze_frame(frame_index: number, base: Readonly<anim_fx_t>): assist_analysis_t {
+  const metrics = frame_metrics(frame_index)
   if (metrics.occupancy < 0.002) {
     return {
-      fx: { ...base, wiggle: 1, motion: MOTION_NONE },
+      fx: { ...base, wiggle: 1, motion: motion_none },
       label: '絵が見つかりません',
       detail: '線や塗りを描いてから使うと、動きと支点を提案できます',
       occupancy: 0,
@@ -122,47 +122,47 @@ export function assist_analyze_frame(frameIndex: number, base: Readonly<AnimFx>)
   const width = Math.max(0.05, metrics.bx1 - metrics.bx0)
   const height = Math.max(0.05, metrics.by1 - metrics.by0)
   const aspect = width / height
-  let motion = MOTION_BREATHE
+  let motion = motion_breathe
   let label = '呼吸'
   let detail = '中心を保ったまま、やわらかくふくらませます'
   if (metrics.occupancy > 0.78) {
-    motion = MOTION_CAMERA
+    motion = motion_camera
     label = '手持ちカメラ'
     detail = '画面全体の絵なので、ごく小さなカメラ揺れにします'
   } else if (aspect < 0.78 && metrics.by1 > 0.68) {
-    motion = MOTION_SWAY
+    motion = motion_sway
     label = 'ゆらゆら'
     detail = '縦長で足元がある形なので、下を支点に揺らします'
   } else if (metrics.by1 > 0.84 && metrics.occupancy < 0.58) {
-    motion = MOTION_BOUNCE
+    motion = motion_bounce
     label = 'ぴょこぴょこ'
     detail = '下側に接地した形なので、つぶれを含む跳ね方にします'
   } else if (aspect > 1.35 || metrics.cy < 0.42) {
-    motion = MOTION_FLOAT
+    motion = motion_float
     label = 'ふわふわ'
     detail = '横長または上寄りの形なので、漂う動きにします'
   }
   const amount = clamp(2.2 + (1 - metrics.occupancy) * 3.2 + metrics.edge * 1.4, 2, 7)
-  const wiggleAmount = clamp(1.2 + metrics.edge * 2.4, 1, 3.5)
-  const wiggleCell = clamp(42 - metrics.edge * 22, 16, 42)
+  const wiggle_amount = clamp(1.2 + metrics.edge * 2.4, 1, 3.5)
+  const wiggle_cell = clamp(42 - metrics.edge * 22, 16, 42)
   const rate = clamp(1.4 + metrics.edge * 1.3, 1.2, 3.2)
-  const frameId = st().doc.frames[frameIndex] ? st().doc.frames[frameIndex].id : frameIndex + 1
-  const seed = anim_seed_mix(frameId ^ Math.round(metrics.cx * 65535) ^ Math.round(metrics.cy * 0x7fffffff) ^ Math.round(metrics.edge * 0x3fffffff))
+  const frame_id = st().doc.frames[frame_index] ? st().doc.frames[frame_index].id : frame_index + 1
+  const seed = anim_seed_mix(frame_id ^ Math.round(metrics.cx * 65535) ^ Math.round(metrics.cy * 0x7fffffff) ^ Math.round(metrics.edge * 0x3fffffff))
   return {
     fx: {
       ...base,
       wiggle: 1,
-      wiggleAmount,
-      wiggleCell,
-      wiggleRate: clamp(5 + metrics.edge * 7, 5, 12),
-      wigglePhases: metrics.edge > 0.5 ? 4 : 3,
-      wiggleSeed: seed,
+      wiggle_amount,
+      wiggle_cell,
+      wiggle_rate: clamp(5 + metrics.edge * 7, 5, 12),
+      wiggle_phases: metrics.edge > 0.5 ? 4 : 3,
+      wiggle_seed: seed,
       motion,
-      motionAmount: amount,
-      motionRate: rate,
-      motionAnchorX: clamp(metrics.cx, 0.15, 0.85),
-      motionAnchorY: clamp(metrics.by1, 0.45, 0.96),
-      motionSeed: seed ^ 0x9e3779b9,
+      motion_amount: amount,
+      motion_rate: rate,
+      motion_anchor_x: clamp(metrics.cx, 0.15, 0.85),
+      motion_anchor_y: clamp(metrics.by1, 0.45, 0.96),
+      motion_seed: seed ^ 0x9e3779b9,
     },
     label,
     detail,
@@ -171,7 +171,7 @@ export function assist_analyze_frame(frameIndex: number, base: Readonly<AnimFx>)
   }
 }
 
-function shift_cost(a: FrameSignal, b: FrameSignal, dx: number, dy: number): number {
+function shift_cost(a: frame_signal_t, b: frame_signal_t, dx: number, dy: number): number {
   const x0 = Math.max(0, -dx)
   const y0 = Math.max(0, -dy)
   const x1 = Math.min(a.w, b.w - dx)
@@ -191,25 +191,25 @@ function shift_cost(a: FrameSignal, b: FrameSignal, dx: number, dy: number): num
   return sum / Math.max(1, count) + (1 - overlap) * 0.15
 }
 
-export function assist_estimate_shift(frameA: number, frameB: number): AssistShift {
+export function assist_estimate_shift(frame_a: number, frame_b: number): assist_shift_t {
   const g = st()
   const w = 72
   const h = Math.max(36, Math.round(w * g.doc.h / g.doc.w))
-  const a = frame_signal(frameA, w, h)
-  const b = frame_signal(frameB, w, h)
-  const maxX = 9
-  const maxY = 7
-  let bestX = 0
-  let bestY = 0
+  const a = frame_signal(frame_a, w, h)
+  const b = frame_signal(frame_b, w, h)
+  const max_x = 9
+  const max_y = 7
+  let best_x = 0
+  let best_y = 0
   let best = shift_cost(a, b, 0, 0)
-  for (let dy = -maxY; dy <= maxY; dy++) {
-    for (let dx = -maxX; dx <= maxX; dx++) {
+  for (let dy = -max_y; dy <= max_y; dy++) {
+    for (let dx = -max_x; dx <= max_x; dx++) {
       const cost = shift_cost(a, b, dx, dy)
       if (cost >= best) continue
       best = cost
-      bestX = dx
-      bestY = dy
+      best_x = dx
+      best_y = dy
     }
   }
-  return { dx: bestX * g.doc.w / w, dy: bestY * g.doc.h / h, score: best }
+  return { dx: best_x * g.doc.w / w, dy: best_y * g.doc.h / h, score: best }
 }

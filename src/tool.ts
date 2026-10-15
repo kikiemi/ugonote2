@@ -1,9 +1,11 @@
 import { brush_begin, brush_point, brush_compose, brush_is_direct, brush_seed } from './brush'
+import { native_pen_tip } from './penprofile'
+import { native_pen_begin, native_pen_draw, native_pen_point, type native_pen_stroke_t } from './nativepen'
 import { doc_frame_order, doc_frame_paper, doc_compose, doc_layer_pixel, pack_canvas } from './doc'
 import { toast } from './dom'
 import { live_slot, live_write, live_canvas } from './engine'
-import { mask_make, mask_rect, mask_seg, mask_polyline, mask_poly_fill, mask_outline_ring, blend_mask, erase_mask, flood_mask, shape_pts, path_smooth, type Mask } from './gfx'
-import { T_PEN, T_FILL, T_ERASER, T_EYEDROP, T_PIXEL, T_LINE, T_RECT, T_CIRCLE, T_STAR, T_HEART, D_STAGE, PAT_TABLE } from './h'
+import { pat_canvas, mask_make, mask_rect, mask_seg, mask_polyline, mask_poly_fill, mask_outline_ring, blend_mask, paint_mask, erase_mask, flood_mask, shape_pts, path_smooth, type mask_t } from './gfx'
+import { t_pen, t_fill, t_eraser, t_eyedrop, t_pixel, t_line, t_rect, t_circle, t_star, t_heart, d_stage, mode_normal } from './h'
 import { hist_grp, rect_grab } from './hist'
 import { canvas_make, clamp, hex_rgb, rle_pack } from './lib'
 import { mode_order } from './mode'
@@ -14,25 +16,25 @@ import { st, dirty } from './state/store'
 
 let pv: CanvasRenderingContext2D | null = null
 let stroking = 0
-let liveMode = 0
+let live_mode = 0
 let pts: number[] = []
 let anchor = [0, 0]
 let ema = [0, 0]
-let shiftHeld = 0
-let snapCanvas: HTMLCanvasElement | null = null
-let unionBox = [0, 0, -1, -1]
-let workMask: Mask | null = null
-let brushMode = 0
-let penMode = 0
-let strokeRaf = 0
-const patCache = new Map<string, HTMLCanvasElement>()
+let shift_held = 0
+let snap_canvas: HTMLCanvasElement | null = null
+let union_box = [0, 0, -1, -1]
+let work_mask: mask_t | null = null
+let brush_mode = 0
+let pen_mode = 0
+let stroke_raf = 0
+let native_stroke: native_pen_stroke_t | null = null
 
 export function tool_bind_preview(ctx: CanvasRenderingContext2D): void {
   pv = ctx
 }
 
 export function tool_mod_shift(v: number): void {
-  shiftHeld = v
+  shift_held = v
 }
 
 export function tool_is_stroking(): number {
@@ -40,55 +42,23 @@ export function tool_is_stroking(): number {
 }
 
 function shape_kind(t: number): number {
-  if (t === T_LINE) return 0
-  if (t === T_RECT) return 1
-  if (t === T_CIRCLE) return 2
-  if (t === T_STAR) return 3
+  if (t === t_line) return 0
+  if (t === t_rect) return 1
+  if (t === t_circle) return 2
+  if (t === t_star) return 3
   return 4
 }
 
 function is_shape(t: number): number {
-  return t === T_LINE || t === T_RECT || t === T_CIRCLE || t === T_STAR || t === T_HEART ? 1 : 0
+  return t === t_line || t === t_rect || t === t_circle || t === t_star || t === t_heart ? 1 : 0
 }
 
 function box_union(x0: number, y0: number, x1: number, y1: number): void {
   const g = st()
-  if (x0 < unionBox[0]) unionBox[0] = Math.max(0, x0)
-  if (y0 < unionBox[1]) unionBox[1] = Math.max(0, y0)
-  if (x1 > unionBox[2]) unionBox[2] = Math.min(g.doc.w - 1, x1)
-  if (y1 > unionBox[3]) unionBox[3] = Math.min(g.doc.h - 1, y1)
-}
-
-function pat_canvas(pat: number, color: string): HTMLCanvasElement {
-  const key = pat + ':' + color
-  const cached = patCache.get(key)
-  if (cached) {
-    patCache.delete(key)
-    patCache.set(key, cached)
-    return cached
-  }
-  const [c, x] = canvas_make(8, 8)
-  const rows = PAT_TABLE[pat].rows
-  const [r, g, b] = hex_rgb(color)
-  const img = x.createImageData(8, 8)
-  for (let y = 0; y < 8; y++) {
-    for (let px = 0; px < 8; px++) {
-      if ((rows[y] >> (7 - px)) & 1) {
-        const i = (y * 8 + px) * 4
-        img.data[i] = r
-        img.data[i + 1] = g
-        img.data[i + 2] = b
-        img.data[i + 3] = 255
-      }
-    }
-  }
-  x.putImageData(img, 0, 0)
-  patCache.set(key, c)
-  if (patCache.size > 32) {
-    const oldest = patCache.keys().next().value as string | undefined
-    if (oldest !== undefined) patCache.delete(oldest)
-  }
-  return c
+  if (x0 < union_box[0]) union_box[0] = Math.max(0, x0)
+  if (y0 < union_box[1]) union_box[1] = Math.max(0, y0)
+  if (x1 > union_box[2]) union_box[2] = Math.min(g.doc.w - 1, x1)
+  if (y1 > union_box[3]) union_box[3] = Math.min(g.doc.h - 1, y1)
 }
 
 function pv_clear(): void {
@@ -132,9 +102,9 @@ function pv_path(list: number[], width: number, style: string | null): void {
 }
 
 function shape_constrain(x: number, y: number): [number, number] {
-  if (!shiftHeld) return [x, y]
+  if (!shift_held) return [x, y]
   const t = st().pen.tool
-  if (t === T_LINE) {
+  if (t === t_line) {
     const dx = x - anchor[0]
     const dy = y - anchor[1]
     const a = Math.atan2(dy, dx)
@@ -149,8 +119,12 @@ function shape_constrain(x: number, y: number): [number, number] {
 function stamp_live(x0: number, y0: number, x1: number, y1: number, r: number): void {
   const g = st()
   const l = g.pen.layer
-  const m = workMask as Mask
-  const stampOnce = (ax: number, ay: number, bx: number, by: number) => {
+  const m = work_mask as mask_t
+  const stamp_once = (ax: number, ay: number, bx: number, by: number) => {
+    if (g.pen.tool === t_pen && native_stroke) {
+      native_pen_point(native_stroke, native_pen_tip(g.pen.native_tip), ax, ay, bx, by)
+      return
+    }
     m.x0 = m.w
     m.y0 = m.h
     m.x1 = -1
@@ -163,14 +137,15 @@ function stamp_live(x0: number, y0: number, x1: number, y1: number, r: number): 
     for (let y = cy0; y <= cy1; y++) m.b.fill(0, y * m.w + cx0, y * m.w + cx1 + 1)
     mask_seg(m, ax, ay, bx, by, r)
     if (m.x1 < m.x0) return
-    if (g.pen.tool === T_ERASER) erase_mask(live_write(l), m, g.pen.pat)
-    else blend_mask(live_write(l), m, g.pen.color, 1, g.pen.pat)
+    if (g.pen.tool === t_eraser) erase_mask(live_write(l), m, g.pen.pat)
+    else blend_mask(live_write(l), m, g.pen.color, 1, g.pen.pat, g.pen.paint_over)
     box_union(m.x0, m.y0, m.x1, m.y1)
   }
-  stampOnce(x0, y0, x1, y1)
-  if (g.pen.sym) stampOnce(g.doc.w - x0, y0, g.doc.w - x1, y1)
-  if (g.pen.symy) stampOnce(x0, g.doc.h - y0, x1, g.doc.h - y1)
-  if (g.pen.sym && g.pen.symy) stampOnce(g.doc.w - x0, g.doc.h - y0, g.doc.w - x1, g.doc.h - y1)
+  stamp_once(x0, y0, x1, y1)
+  if (g.pen.sym) stamp_once(g.doc.w - x0, y0, g.doc.w - x1, y1)
+  if (g.pen.symy) stamp_once(x0, g.doc.h - y0, x1, g.doc.h - y1)
+  if (g.pen.sym && g.pen.symy) stamp_once(g.doc.w - x0, g.doc.h - y0, g.doc.w - x1, g.doc.h - y1)
+  if (g.pen.tool === t_pen && native_stroke) stroke_flush()
 }
 
 function stamp_cell(bx: number, by: number): void {
@@ -179,7 +154,7 @@ function stamp_cell(bx: number, by: number): void {
   const cell = g.doc.w / n
   const gx = Math.floor(bx / cell)
   const gy = Math.floor(by / cell)
-  const m = workMask as Mask
+  const m = work_mask as mask_t
   const put = (cgx: number, cgy: number) => {
     const x0 = Math.round(cgx * cell)
     const y0 = Math.round(cgy * cell)
@@ -230,11 +205,11 @@ export function tool_down(bx: number, by: number, pressure: number): number {
   stroke_flush_cancel()
   const g = st()
   const t = g.pen.tool
-  if (t === T_EYEDROP) {
+  if (t === t_eyedrop) {
     tool_eyedrop(bx, by)
     return 0
   }
-  if (t === T_FILL) {
+  if (t === t_fill) {
     tool_fill(bx, by)
     return 0
   }
@@ -242,37 +217,48 @@ export function tool_down(bx: number, by: number, pressure: number): number {
   anchor = [bx, by]
   ema = [bx, by]
   pts = [bx, by]
-  unionBox = [g.doc.w, g.doc.h, -1, -1]
-  if (!workMask || workMask.w !== g.doc.w || workMask.h !== g.doc.h) workMask = mask_make(g.doc.w, g.doc.h)
-  liveMode = 0
-  if (t === T_PIXEL) {
-    liveMode = 1
+  union_box = [g.doc.w, g.doc.h, -1, -1]
+  if (!work_mask || work_mask.w !== g.doc.w || work_mask.h !== g.doc.h) work_mask = mask_make(g.doc.w, g.doc.h)
+  live_mode = 0
+  if (t === t_pixel) {
+    live_mode = 1
     snap_take()
     stamp_cell(bx, by)
-    dirty(D_STAGE)
+    dirty(d_stage)
     return 1
   }
-  if (t === T_PEN && brush_is_direct(g.pen.brush)) {
-    liveMode = 1
-    brushMode = 1
-    penMode = 0
+  if (g.doc.mode !== mode_normal && (t === t_pen || t === t_eraser)) {
+    live_mode = 1
+    brush_mode = 0
+    pen_mode = 0
+    snap_take()
+    if (t === t_pen) native_stroke = native_pen_begin(g.doc.w, g.doc.h, native_stroke)
+    stamp_live(Math.floor(bx) + 0.5, Math.floor(by) + 0.5, Math.floor(bx) + 0.5, Math.floor(by) + 0.5, Math.max(0.5, g.pen.size / 2))
+    if (t === t_pen) stroke_flush_pending()
+    dirty(d_stage)
+    return 1
+  }
+  if (t === t_pen && brush_is_direct(g.pen.brush)) {
+    live_mode = 1
+    brush_mode = 1
+    pen_mode = 0
     brush_seed((Math.floor(bx * 131 + by * 977) | 1) >>> 0)
     snap_take()
     brush_begin(ema[0], ema[1], pressure)
-    const bb = brush_compose(live_write(g.pen.layer), snapCanvas as HTMLCanvasElement)
+    const bb = brush_compose(live_write(g.pen.layer), snap_canvas as HTMLCanvasElement)
     if (bb) box_union(bb[0], bb[1], bb[2], bb[3])
-    dirty(D_STAGE)
+    dirty(d_stage)
     return 1
   }
-  if (t === T_PEN || t === T_ERASER) {
-    liveMode = 1
-    brushMode = 0
-    penMode = 1
+  if (t === t_pen || t === t_eraser) {
+    live_mode = 1
+    brush_mode = 0
+    pen_mode = 1
     snap_take()
     pen_begin(ema[0], ema[1], pressure)
-    const b0 = pen_draw(live_write(g.pen.layer), snapCanvas as HTMLCanvasElement, t === T_ERASER ? 1 : 0, 0)
+    const b0 = pen_draw(live_write(g.pen.layer), snap_canvas as HTMLCanvasElement, t === t_eraser ? 1 : 0, 0)
     if (b0) box_union(b0[0], b0[1], b0[2], b0[3])
-    dirty(D_STAGE)
+    dirty(d_stage)
     return 1
   }
   pv_clear()
@@ -282,11 +268,11 @@ export function tool_down(bx: number, by: number, pressure: number): number {
 
 function snap_take(): void {
   const g = st()
-  if (!snapCanvas || snapCanvas.width !== g.doc.w || snapCanvas.height !== g.doc.h) {
+  if (!snap_canvas || snap_canvas.width !== g.doc.w || snap_canvas.height !== g.doc.h) {
     const [c] = canvas_make(g.doc.w, g.doc.h, 1)
-    snapCanvas = c
+    snap_canvas = c
   }
-  const x = snapCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
+  const x = snap_canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
   x.clearRect(0, 0, g.doc.w, g.doc.h)
   x.drawImage(live_canvas(g.pen.layer), 0, 0)
 }
@@ -295,26 +281,26 @@ export function tool_move(bx: number, by: number, pressure: number): void {
   const g = st()
   if (!stroking) return
   const t = g.pen.tool
-  if (liveMode) {
-    if (t === T_PIXEL) {
+  if (live_mode) {
+    if (t === t_pixel) {
       stamp_cell(bx, by)
-      dirty(D_STAGE)
+      dirty(d_stage)
       return
     }
     const k = clamp(1 - g.pen.smooth * 0.08, 0.15, 1)
     const nx = ema[0] + (bx - ema[0]) * k
     const ny = ema[1] + (by - ema[1]) * k
-    if (penMode) {
+    if (pen_mode) {
       pen_point(bx, by, pressure)
       stroke_flush()
-    } else if (brushMode) {
+    } else if (brush_mode) {
       brush_point(bx, by, pressure)
       stroke_flush()
     } else {
       stamp_live(ema[0], ema[1], nx, ny, radius_now(pressure))
     }
     ema = [nx, ny]
-    dirty(D_STAGE)
+    dirty(d_stage)
     return
   }
   if (is_shape(t)) {
@@ -322,7 +308,7 @@ export function tool_move(bx: number, by: number, pressure: number): void {
     pv_clear()
     pv_style(0)
     const sp = shape_pts(shape_kind(t), anchor[0], anchor[1], cx, cy)
-    if (g.pen.fill && t !== T_LINE) {
+    if (g.pen.fill && t !== t_line) {
       if (!pv) return
       pv.beginPath()
       pv.moveTo(sp[0], sp[1])
@@ -330,17 +316,17 @@ export function tool_move(bx: number, by: number, pressure: number): void {
       pv.closePath()
       pv.fill()
     }
-    if (g.pen.outline) pv_path(t === T_LINE ? sp : sp.concat(sp[0], sp[1]), g.pen.size + g.pen.owidth * 2, g.pen.ocolor)
+    if (g.pen.outline) pv_path(t === t_line ? sp : sp.concat(sp[0], sp[1]), g.pen.size + g.pen.owidth * 2, g.pen.ocolor)
     pv_style(0)
-    pv_path(t === T_LINE ? sp : sp.concat(sp[0], sp[1]), g.pen.size, null)
+    pv_path(t === t_line ? sp : sp.concat(sp[0], sp[1]), g.pen.size, null)
     pts = [anchor[0], anchor[1], cx, cy]
     return
   }
   const n = pts.length
   const dx = bx - pts[n - 2]
   const dy = by - pts[n - 1]
-  const minDist = Math.max(0.2, 0.55 / g.view.z)
-  if (dx * dx + dy * dy < minDist * minDist) {
+  const min_dist = Math.max(0.2, 0.55 / g.view.z)
+  if (dx * dx + dy * dy < min_dist * min_dist) {
     pts[n - 2] = bx
     pts[n - 1] = by
   } else {
@@ -360,15 +346,15 @@ export function tool_move(bx: number, by: number, pressure: number): void {
 }
 
 export function tool_move_pt(bx: number, by: number, pressure: number): void {
-  if (!stroking || !liveMode) {
+  if (!stroking || !live_mode) {
     tool_move(bx, by, pressure)
     return
   }
-  if (penMode) {
+  if (pen_mode) {
     pen_point(bx, by, pressure)
     return
   }
-  if (brushMode) {
+  if (brush_mode) {
     brush_point(bx, by, pressure)
     return
   }
@@ -377,24 +363,30 @@ export function tool_move_pt(bx: number, by: number, pressure: number): void {
 
 function stroke_flush_now(): void {
   const g = st()
-  if (!stroking || !liveMode) return
-  if (penMode) {
-    const bb = pen_draw(live_write(g.pen.layer), snapCanvas as HTMLCanvasElement, g.pen.tool === T_ERASER ? 1 : 0, 0)
+  if (!stroking || !live_mode) return
+  if (g.doc.mode !== mode_normal && g.pen.tool === t_pen && native_stroke) {
+    const bb = native_pen_draw(live_write(g.pen.layer), snap_canvas as HTMLCanvasElement, native_stroke, g.pen)
     if (bb) box_union(bb[0], bb[1], bb[2], bb[3])
-    dirty(D_STAGE)
+    dirty(d_stage)
     return
   }
-  if (brushMode) {
-    const bb = brush_compose(live_write(g.pen.layer), snapCanvas as HTMLCanvasElement)
+  if (pen_mode) {
+    const bb = pen_draw(live_write(g.pen.layer), snap_canvas as HTMLCanvasElement, g.pen.tool === t_eraser ? 1 : 0, 0)
     if (bb) box_union(bb[0], bb[1], bb[2], bb[3])
-    dirty(D_STAGE)
+    dirty(d_stage)
+    return
+  }
+  if (brush_mode) {
+    const bb = brush_compose(live_write(g.pen.layer), snap_canvas as HTMLCanvasElement)
+    if (bb) box_union(bb[0], bb[1], bb[2], bb[3])
+    dirty(d_stage)
   }
 }
 
 function stroke_flush_cancel(): void {
-  if (!strokeRaf) return
-  cancelAnimationFrame(strokeRaf)
-  strokeRaf = 0
+  if (!stroke_raf) return
+  cancelAnimationFrame(stroke_raf)
+  stroke_raf = 0
 }
 
 function stroke_flush_pending(): void {
@@ -403,54 +395,55 @@ function stroke_flush_pending(): void {
 }
 
 export function stroke_flush(): void {
-  if (strokeRaf || !stroking || !liveMode) return
-  strokeRaf = requestAnimationFrame(() => {
-    strokeRaf = 0
+  if (stroke_raf || !stroking || !live_mode) return
+  stroke_raf = requestAnimationFrame(() => {
+    stroke_raf = 0
     stroke_flush_now()
   })
 }
 
 export function tool_up(bx: number, by: number): void {
   if (!stroking) return
-  if (brushMode) brush_point(bx, by, 0)
-  stroke_flush_pending()
+  if (brush_mode) brush_point(bx, by, 0)
   const g = st()
+  if (live_mode && g.doc.mode !== mode_normal && g.pen.tool === t_pen && Math.hypot(bx - ema[0], by - ema[1]) > 0.001) stamp_live(ema[0], ema[1], bx, by, radius_now(1))
+  stroke_flush_pending()
   stroking = 0
   const t = g.pen.tool
   const l = g.pen.layer
   const grp = hist_grp()
-  if (liveMode) {
-    if (penMode) {
-      penMode = 0
+  if (live_mode) {
+    if (pen_mode) {
+      pen_mode = 0
       pen_point(bx, by, 0)
-      const bb = pen_draw(live_write(l), snapCanvas as HTMLCanvasElement, t === T_ERASER ? 1 : 0, 1)
+      const bb = pen_draw(live_write(l), snap_canvas as HTMLCanvasElement, t === t_eraser ? 1 : 0, 1)
       if (bb) box_union(bb[0], bb[1], bb[2], bb[3])
     }
-    if (unionBox[2] < unionBox[0]) {
-      liveMode = 0
-      brushMode = 0
-      penMode = 0
+    if (union_box[2] < union_box[0]) {
+      live_mode = 0
+      brush_mode = 0
+      pen_mode = 0
       return
     }
-    const x = unionBox[0]
-    const y = unionBox[1]
-    const w = unionBox[2] - unionBox[0] + 1
-    const h = unionBox[3] - unionBox[1] + 1
-    const sx = (snapCanvas as HTMLCanvasElement).getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
-    const beforeImg = sx.getImageData(x, y, w, h)
-    const before = pack_words(beforeImg)
+    const x = union_box[0]
+    const y = union_box[1]
+    const w = union_box[2] - union_box[0] + 1
+    const h = union_box[3] - union_box[1] + 1
+    const sx = (snap_canvas as HTMLCanvasElement).getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
+    const before_img = sx.getImageData(x, y, w, h)
+    const before = pack_words(before_img)
     dispatch('frame.commit_pixels', {
       grp,
       frame: g.doc.cur,
       changes: [{ layer: l, x, y, w, h, before }],
     })
-    liveMode = 0
-    brushMode = 0
-    penMode = 0
+    live_mode = 0
+    brush_mode = 0
+    pen_mode = 0
     return
   }
   pv_clear()
-  const m = workMask as Mask
+  const m = work_mask as mask_t
   m.b.fill(0)
   m.x0 = m.w
   m.y0 = m.h
@@ -460,11 +453,11 @@ export function tool_up(bx: number, by: number): void {
   if (is_shape(t)) {
     const [cx, cy] = shape_constrain(bx, by)
     const sp = shape_pts(shape_kind(t), anchor[0], anchor[1], cx, cy)
-    if (g.pen.fill && t !== T_LINE) mask_poly_fill(m, sp)
-    mask_polyline(m, sp, r, t === T_LINE ? 0 : 1)
+    if (g.pen.fill && t !== t_line) mask_poly_fill(m, sp)
+    mask_polyline(m, sp, r, t === t_line ? 0 : 1)
     sym_variants(sp, mir => {
-      if (g.pen.fill && t !== T_LINE) mask_poly_fill(m, mir)
-      mask_polyline(m, mir, r, t === T_LINE ? 0 : 1)
+      if (g.pen.fill && t !== t_line) mask_poly_fill(m, mir)
+      mask_polyline(m, mir, r, t === t_line ? 0 : 1)
     })
   } else {
     const sm = path_smooth(pts, g.pen.smooth)
@@ -479,7 +472,7 @@ function pack_words(img: ImageData): Uint32Array {
   return rle_pack(new Uint32Array(img.data.buffer))
 }
 
-function apply_mask_with_outline(m: Mask, grp: number): void {
+function apply_mask_with_outline(m: mask_t, grp: number): void {
   const g = st()
   if (m.x1 < m.x0 || m.y1 < m.y0) return
   const l = g.pen.layer
@@ -509,15 +502,15 @@ export function tool_cancel(): void {
   const g = st()
   stroking = 0
   pv_clear()
-  if (liveMode && snapCanvas) {
+  if (live_mode && snap_canvas) {
     live_write(g.pen.layer).clearRect(0, 0, g.doc.w, g.doc.h)
-    live_write(g.pen.layer).drawImage(snapCanvas, 0, 0)
+    live_write(g.pen.layer).drawImage(snap_canvas, 0, 0)
     dispatch('frame.sync_layer', g.pen.layer)
-    dirty(D_STAGE)
+    dirty(d_stage)
   }
-  liveMode = 0
-  brushMode = 0
-  penMode = 0
+  live_mode = 0
+  brush_mode = 0
+  pen_mode = 0
 }
 
 function fill_all_same(bx: number, by: number): void {
@@ -528,9 +521,7 @@ function fill_all_same(bx: number, by: number): void {
   const [, rx] = canvas_make(w, h, 1)
   doc_compose(g.doc.cur, rx, w, h, 1)
   const ref = rx.getImageData(0, 0, w, h)
-  const out = live_slot(l).getImageData(0, 0, w, h)
   const d = ref.data
-  const o = out.data
   const px = clamp(bx | 0, 0, w - 1)
   const py = clamp(by | 0, 0, h - 1)
   const ti = (py * w + px) * 4
@@ -538,9 +529,8 @@ function fill_all_same(bx: number, by: number): void {
   const tg = d[ti + 1]
   const tb = d[ti + 2]
   const ta = d[ti + 3]
-  const [nr, ng, nb] = hex_rgb(g.pen.color)
-  const na = Math.round(clamp(g.pen.alpha, 0, 1) * 255)
-  const tol = 60
+  const m = mask_make(w, h)
+  const tol = g.doc.mode === mode_normal ? 60 : 0
   let x0 = w
   let y0 = h
   let x1 = -1
@@ -555,13 +545,10 @@ function fill_all_same(bx: number, by: number): void {
         const dr = d[i] - tr
         const dg = d[i + 1] - tg
         const db = d[i + 2] - tb
-        if (dr * dr + dg * dg + db * db < tol * tol && Math.abs(a - ta) < 90) hit = 1
+        if (dr * dr + dg * dg + db * db <= tol * tol && Math.abs(a - ta) < 90) hit = 1
       }
       if (!hit) continue
-      o[i] = nr
-      o[i + 1] = ng
-      o[i + 2] = nb
-      o[i + 3] = na
+      m.b[y * w + x] = 255
       if (x < x0) x0 = x
       if (y < y0) y0 = y
       if (x > x1) x1 = x
@@ -571,7 +558,8 @@ function fill_all_same(bx: number, by: number): void {
   if (x1 < x0) return
   const grp = hist_grp()
   const before = rect_grab(l, x0, y0, x1 - x0 + 1, y1 - y0 + 1)
-  live_write(l).putImageData(out, 0, 0)
+  Object.assign(m, { x0, y0, x1, y1 })
+  paint_mask(live_write(l), m)
   dispatch('frame.commit_pixels', {
     grp,
     frame: g.doc.cur,
@@ -584,7 +572,7 @@ function fill_all_same(bx: number, by: number): void {
 export function tool_fill(bx: number, by: number): void {
   const g = st()
   if (!Number.isFinite(bx) || !Number.isFinite(by) || bx < 0 || by < 0 || bx >= g.doc.w || by >= g.doc.h) return
-  if (g.pen.fillAll) {
+  if (g.pen.fill_all) {
     fill_all_same(bx, by)
     return
   }
@@ -592,7 +580,7 @@ export function tool_fill(bx: number, by: number): void {
   const [, rx] = canvas_make(g.doc.w, g.doc.h, 1)
   doc_compose(g.doc.cur, rx, g.doc.w, g.doc.h, 1)
   const ref = rx.getImageData(0, 0, g.doc.w, g.doc.h)
-  const m = flood_mask(ref, bx, by, 30)
+  const m = flood_mask(ref, bx, by, g.doc.mode === mode_normal ? 30 : 0)
   if (!m || m.x1 < m.x0) return
   const grp = hist_grp()
   const x = m.x0
@@ -600,7 +588,7 @@ export function tool_fill(bx: number, by: number): void {
   const w = m.x1 - m.x0 + 1
   const h = m.y1 - m.y0 + 1
   const before = rect_grab(l, x, y, w, h)
-  blend_mask(live_write(l), m, g.pen.color, g.pen.alpha, g.pen.pat)
+  paint_mask(live_write(l), m)
   dispatch('frame.commit_pixels', {
     grp,
     frame: g.doc.cur,
@@ -627,9 +615,9 @@ export function tool_eyedrop(bx: number, by: number): [number, number, number] {
   return hex_rgb(doc_frame_paper(g.doc.cur).slice(0, 7))
 }
 
-type TfSnap = { l: number, c: HTMLCanvasElement, x: CanvasRenderingContext2D }
+type tf_snap_t = { l: number, c: HTMLCanvasElement, x: CanvasRenderingContext2D }
 
-let tfSnaps: TfSnap[] = []
+let tf_snaps: tf_snap_t[] = []
 
 export function tf_begin(layer: number): void {
   tf_cancel()
@@ -640,19 +628,19 @@ export function tf_begin(layer: number): void {
     if (!g.doc.frames[g.doc.cur].pk[l]) continue
     const [c, x] = canvas_make(g.doc.w, g.doc.h)
     x.drawImage(live_slot(l).canvas, 0, 0)
-    tfSnaps.push({ l, c, x })
+    tf_snaps.push({ l, c, x })
   }
 }
 
 export function tf_active(): number {
-  return tfSnaps.length ? 1 : 0
+  return tf_snaps.length ? 1 : 0
 }
 
 export function tf_preview(factor: number, dx: number, dy: number, deg: number): void {
   const g = st()
   const w = g.doc.w
   const h = g.doc.h
-  for (const s of tfSnaps) {
+  for (const s of tf_snaps) {
     const dst = live_write(s.l)
     dst.clearRect(0, 0, w, h)
     dst.imageSmoothingEnabled = false
@@ -663,14 +651,14 @@ export function tf_preview(factor: number, dx: number, dy: number, deg: number):
     dst.drawImage(s.c, -w / 2, -h / 2)
     dst.restore()
   }
-  dirty(D_STAGE)
+  dirty(d_stage)
 }
 
 export function tf_commit(): void {
-  if (!tfSnaps.length) return
+  if (!tf_snaps.length) return
   const g = st()
   const grp = hist_grp()
-  const changes = tfSnaps.map(s => ({
+  const changes = tf_snaps.map(s => ({
     layer: s.l,
     x: 0,
     y: 0,
@@ -679,17 +667,17 @@ export function tf_commit(): void {
     before: pack_canvas(s.c, s.x) || rle_pack(new Uint32Array(g.doc.w * g.doc.h)),
   }))
   dispatch('frame.commit_pixels', { grp, frame: g.doc.cur, changes })
-  tfSnaps = []
+  tf_snaps = []
 }
 
 export function tf_cancel(): void {
-  if (!tfSnaps.length) return
+  if (!tf_snaps.length) return
   const g = st()
-  for (const s of tfSnaps) {
+  for (const s of tf_snaps) {
     const dst = live_write(s.l)
     dst.clearRect(0, 0, g.doc.w, g.doc.h)
     dst.drawImage(s.c, 0, 0)
   }
-  tfSnaps = []
-  dirty(D_STAGE)
+  tf_snaps = []
+  dirty(d_stage)
 }

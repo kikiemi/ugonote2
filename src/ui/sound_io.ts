@@ -2,21 +2,21 @@ import { snd_buf_set } from '../engine'
 import { snd_apply_vol, snd_decode, snd_load_epoch, snd_preset_buffer, snd_preset_bytes, snd_record_stop } from '../snd'
 import { dispatch } from '../state/commands/index'
 
-export type SndLoadTicket = Readonly<{ kind: string, epoch: number, seq: number }>
+export type snd_load_ticket_t = Readonly<{ kind: string, epoch: number, seq: number }>
 
-const loadSeq = new Map<string, number>()
+const load_seq = new Map<string, number>()
 
 function seq_next(kind: string): number {
-  const seq = (loadSeq.get(kind) || 0) + 1
-  loadSeq.set(kind, seq)
+  const seq = (load_seq.get(kind) || 0) + 1
+  load_seq.set(kind, seq)
   return seq
 }
 
-function ticket_current(ticket: SndLoadTicket): boolean {
-  return ticket.epoch === snd_load_epoch() && ticket.seq === loadSeq.get(ticket.kind)
+function ticket_current(ticket: snd_load_ticket_t): boolean {
+  return ticket.epoch === snd_load_epoch() && ticket.seq === load_seq.get(ticket.kind)
 }
 
-export function snd_load_begin(kind: string): SndLoadTicket {
+export function snd_load_begin(kind: string): snd_load_ticket_t {
   return { kind, epoch: snd_load_epoch(), seq: seq_next(kind) }
 }
 
@@ -45,8 +45,8 @@ export function snd_clear(kind: string): void {
   snd_buf_set(kind, null)
 }
 
-export function snd_assign_preset(seIdx: number, name: string): void {
-  const kind = 'se' + seIdx
+export function snd_assign_preset(se_idx: number, name: string): void {
+  const kind = 'se' + se_idx
   seq_next(kind)
   const buf = snd_preset_buffer(name)
   if (!buf) return

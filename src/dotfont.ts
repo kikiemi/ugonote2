@@ -1,10 +1,10 @@
-export const DOT_FONT_FAMILY = '__dot__'
-export const MEMO_FONT_FAMILY = 'UgoMemo'
+export const dot_font_family = '__dot__'
+export const memo_font_family = 'UgoMemo'
 
 export function dot_text_canvas(text: string, scale: number, color: string, outline: number, ocolor: string, vert: number, bold = 0, owidth = 1): HTMLCanvasElement {
   const sc = Math.max(1, Math.round(scale))
   const lines = text.normalize('NFC').replace(/\r/g, '').split('\n')
-  const font = '16px "' + DOT_FONT_FAMILY + '"'
+  const font = '16px "' + dot_font_family + '"'
   const measure = document.createElement('canvas').getContext('2d')!
   measure.font = font
   let columns = 1

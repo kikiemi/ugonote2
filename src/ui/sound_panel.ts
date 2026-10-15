@@ -1,7 +1,7 @@
 import { tr_line, tr_dom } from '../lang'
 import { doc_compose } from '../doc'
 import { esc, ic, query } from '../dom'
-import { SE_LABELS } from '../h'
+import { se_labels } from '../h'
 import { clamp } from '../lib'
 import { dispatch } from '../state/commands/index'
 import { anim_playing } from '../state/commands/play'
@@ -26,23 +26,23 @@ export function modal_mixer(track = -1): void {
   let page = Math.floor(g.doc.cur / page_size)
   let head = '<div class="mixhead"><span class="mixno">コマ</span>'
   for (let k = 0; k < 4; k++) {
-    head += '<span class="mixse' + (track === k ? ' selected' : '') + '">音 ' + (k + 1) + '<em>' + esc(g.snd.se[k].name ? (SE_LABELS[g.snd.se[k].name] || g.snd.se[k].name) : '未登録') + '</em></span>'
+    head += '<span class="mixse' + (track === k ? ' selected' : '') + '">音 ' + (k + 1) + '<em>' + esc(g.snd.se[k].name ? (se_labels[g.snd.se[k].name] || g.snd.se[k].name) : '未登録') + '</em></span>'
   }
   head += '</div>'
   const box = modal_open(
     '<div class="mhead">' + ic('sound') + '<span>音を鳴らすコマ</span></div>' +
     '<p class="mbody dim">「追加」を押したコマで効果音が鳴ります。もう一度押すと外せます。</p>' +
-    '<div class="mixToolbar"><div class="mixJump"><label for="mixGoto">コマへ</label><input type="number" id="mixGoto" min="1" max="' + n + '" value="' + (g.doc.cur + 1) + '"><span>/ ' + n + '</span><button class="mbtn" id="mixGo">移動</button></div>' +
-    (page_count > 1 ? '<div class="mixPages"><button class="mbtn" id="mixPrev">前へ</button><span class="dim" id="mixPage"></span><button class="mbtn" id="mixNext">次へ</button></div>' : '') +
-    '</div><div class="mixbody" id="mixRows"></div>' +
-    '<div class="mrow end"><button class="mbtn primary" id="mOk">とじる</button></div>',
+    '<div class="mix_toolbar"><div class="mix_jump"><label for="mix_goto">コマへ</label><input type="number" id="mix_goto" min="1" max="' + n + '" value="' + (g.doc.cur + 1) + '"><span>/ ' + n + '</span><button class="mbtn" id="mix_go">移動</button></div>' +
+    (page_count > 1 ? '<div class="mix_pages"><button class="mbtn" id="mix_prev">前へ</button><span class="dim" id="mix_page"></span><button class="mbtn" id="mix_next">次へ</button></div>' : '') +
+    '</div><div class="mixbody" id="mix_rows"></div>' +
+    '<div class="mrow end"><button class="mbtn primary" id="m_ok">とじる</button></div>',
     1
   )
-  box.classList.add('soundAssignment')
-  const rows = query(box, '#mixRows')
+  box.classList.add('sound_assignment')
+  const rows = query(box, '#mix_rows')
   const frame_focus = (): void => {
     for (const row of rows.querySelectorAll<HTMLElement>('.mixrow')) row.classList.toggle('cur', Number(row.dataset.frame) === g.doc.cur)
-    query<HTMLInputElement>(box, '#mixGoto').value = String(g.doc.cur + 1)
+    query<HTMLInputElement>(box, '#mix_goto').value = String(g.doc.cur + 1)
     const current = rows.querySelector<HTMLElement>('.mixrow.cur')
     if (current) {
       const top = current.getBoundingClientRect().top - rows.getBoundingClientRect().top
@@ -54,14 +54,14 @@ export function modal_mixer(track = -1): void {
     const end = Math.min(n, start + page_size)
     let html = head
     for (let i = start; i < end; i++) {
-      html += '<div class="mixrow" data-frame="' + i + '"><button class="mixFrame" data-mix-frame="' + i + '" aria-label="' + (i + 1) + 'コマ目を見る"><canvas width="60" height="40"></canvas><span>' + (i + 1) + '</span></button>'
+      html += '<div class="mixrow" data-frame="' + i + '"><button class="mix_frame" data-mix-frame="' + i + '" aria-label="' + (i + 1) + 'コマ目を見る"><canvas width="60" height="40"></canvas><span>' + (i + 1) + '</span></button>'
       for (let k = 0; k < 4; k++) html += '<button class="mixc' + (track === k ? ' selected' : '') + '" data-i="' + i + '" data-k="' + k + '"></button>'
       html += '</div>'
     }
     rows.innerHTML = html
     tr_dom(rows)
     for (const button of rows.querySelectorAll<HTMLElement>('.mixc')) mixer_cell_update(button, Number(button.dataset.i), Number(button.dataset.k))
-    for (const button of rows.querySelectorAll<HTMLElement>('.mixFrame')) {
+    for (const button of rows.querySelectorAll<HTMLElement>('.mix_frame')) {
       const cv = button.querySelector('canvas')!
       cv.height = Math.max(1, Math.round(cv.width * g.doc.h / g.doc.w))
       doc_compose(Number(button.dataset.mixFrame), cv.getContext('2d')!, cv.width, cv.height, 1)
@@ -69,12 +69,12 @@ export function modal_mixer(track = -1): void {
     rows.scrollTop = 0
     frame_focus()
     if (page_count <= 1) return
-    query(box, '#mixPage').textContent = start + 1 + '〜' + end + ' / ' + n
-    query<HTMLButtonElement>(box, '#mixPrev').disabled = page <= 0
-    query<HTMLButtonElement>(box, '#mixNext').disabled = page >= page_count - 1
+    query(box, '#mix_page').textContent = start + 1 + '〜' + end + ' / ' + n
+    query<HTMLButtonElement>(box, '#mix_prev').disabled = page <= 0
+    query<HTMLButtonElement>(box, '#mix_next').disabled = page >= page_count - 1
   }
   const jump = (): void => {
-    const value = Number(query<HTMLInputElement>(box, '#mixGoto').value)
+    const value = Number(query<HTMLInputElement>(box, '#mix_goto').value)
     if (!Number.isFinite(value)) return
     const frame = clamp(Math.round(value) - 1, 0, n - 1)
     dispatch('frame.goto', frame)
@@ -82,18 +82,18 @@ export function modal_mixer(track = -1): void {
     render_page()
   }
   render_page()
-  query(box, '#mOk').addEventListener('click', () => modal_close())
-  query(box, '#mixGo').addEventListener('click', jump)
-  query(box, '#mixGoto').addEventListener('keydown', event => {
+  query(box, '#m_ok').addEventListener('click', () => modal_close())
+  query(box, '#mix_go').addEventListener('click', jump)
+  query(box, '#mix_goto').addEventListener('keydown', event => {
     if (event.key === 'Enter') jump()
   })
   if (page_count > 1) {
-    query(box, '#mixPrev').addEventListener('click', () => {
+    query(box, '#mix_prev').addEventListener('click', () => {
       if (page <= 0) return
       page--
       render_page()
     })
-    query(box, '#mixNext').addEventListener('click', () => {
+    query(box, '#mix_next').addEventListener('click', () => {
       if (page >= page_count - 1) return
       page++
       render_page()
@@ -109,7 +109,7 @@ export function modal_mixer(track = -1): void {
       mixer_cell_update(button, frame, track)
       return
     }
-    const frame_button = target.closest<HTMLElement>('button.mixFrame')
+    const frame_button = target.closest<HTMLElement>('button.mix_frame')
     if (!frame_button) return
     dispatch('frame.goto', Number(frame_button.dataset.mixFrame))
     frame_focus()

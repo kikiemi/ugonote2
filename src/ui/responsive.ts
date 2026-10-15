@@ -1,45 +1,46 @@
 import { dispatch } from '../state/commands/index'
 import { st } from '../state/store'
+import { pref_layout, pref_layout_set, pref_tablet_timeline, pref_tablet_timeline_set } from '../prefs'
+import { q } from '../dom'
+import { workspace_layout_render } from './workspace_layout'
+import { view_fit_if_stale } from './viewport'
+import { workspace_media, workspace_timeline_initial } from './workspace_policy'
 
 let mounted = 0
 let landscape_on = 0
 let timeline_restore = 0
-let desktop_on = 0
-let desktop_restore = 0
+let wide_on = 0
+let wide_restore = 0
 
-export function responsive_wide(): number {
-  return window.matchMedia('(min-width:600px) and (min-height:600px)').matches ? 1 : 0
+export function workspace_layout_set(value: number): void {
+  pref_layout_set(value)
+  dispatch('view.set_timeline_open', value ? 1 : 0)
+  responsive_apply()
 }
 
-export function responsive_large(): number {
-  return window.matchMedia('(min-width:1000px) and (min-height:650px)').matches ? 1 : 0
-}
-
-export function responsive_landscape(): number {
-  return window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches ? 1 : 0
+export function workspace_timeline_set(value: number): void {
+  dispatch('view.set_timeline_open', value ? 1 : 0)
+  if (workspace_media().tablet) pref_tablet_timeline_set(value)
+  view_fit_if_stale()
 }
 
 function responsive_apply(): void {
   const g = st()
-  const landscape = responsive_landscape()
-  document.body.dataset.mobile = g.mobile ? '1' : '0'
-  document.body.dataset.wideTools = responsive_wide() ? '1' : '0'
-  const desktop = responsive_large()
-  document.body.dataset.desktop = desktop ? '1' : '0'
-  if (desktop && !desktop_on) {
-    desktop_on = 1
-    desktop_restore = g.view.tlopen ? 1 : 0
-    dispatch('view.set_timeline_open', 1)
-  } else if (!desktop && desktop_on) {
-    desktop_on = 0
-    dispatch('view.set_timeline_open', desktop_restore)
-  }
-  if (desktop) {
+  const profile = workspace_media()
+  workspace_layout_render()
+  if (profile.timeline_wide && !wide_on) {
+    wide_restore = g.view.tlopen ? 1 : 0
+    const saved = profile.tablet ? pref_tablet_timeline() : -1
+    dispatch('view.set_timeline_open', workspace_timeline_initial(profile, pref_layout(), saved))
+  } else if (!profile.timeline_wide && wide_on) dispatch('view.set_timeline_open', wide_restore)
+  wide_on = profile.timeline_wide
+  view_fit_if_stale()
+  if (wide_on) {
     landscape_on = 0
     timeline_restore = 0
     return
   }
-  if (landscape) {
+  if (profile.landscape) {
     if (!landscape_on) {
       landscape_on = 1
       timeline_restore = g.view.tlopen ? 1 : 0
@@ -53,9 +54,11 @@ function responsive_apply(): void {
   timeline_restore = 0
 }
 
-export function responsive_mount(): void {
+export function responsive_mount(close: () => void): void {
   if (mounted) return
   mounted = 1
+  q('layout_simple').addEventListener('click', () => { close(); workspace_layout_set(0) })
+  q('layout_studio').addEventListener('click', () => { close(); workspace_layout_set(1) })
   window.addEventListener('resize', responsive_apply, { passive: true })
   window.addEventListener('orientationchange', responsive_apply, { passive: true })
   responsive_apply()

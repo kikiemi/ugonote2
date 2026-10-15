@@ -1,31 +1,36 @@
-import { render_layers, type RenderPlan } from './render'
+import { pixel_source_bind, pixel_source_collect, type pixel_source_record_t } from './pixel_source'
+import { frame_export, type frame_export_input_t } from './frame_export'
+import { video_encode, type video_encode_input_t } from './video_encode'
+import { canvas_rebuild_async, type canvas_rebuild_input_t } from './canvas_rebuild'
+import { vid_import, type video_import_options_t } from './vid_import'
+import { render_layers, render_prepare, type render_plan_t } from './render'
 import { raster_cache } from './raster'
 import { cache_clear } from './memory'
-import { kwz_build, type KwzFrame } from './codec/kwz'
-import type { FlipMeta } from './codec/kwzdec'
-import { ppm_build, type PpmFrame } from './codec/ppm'
-import { flip_image_convert, type FlipImageInput, type FlipImageResult } from './flipnote/image'
-import { fmt_build, type ProjSnap } from './fmt'
+import { kwz_build, type kwz_frame_t } from './codec/kwz'
+import type { flip_meta_t } from './codec/kwzdec'
+import { ppm_build, type ppm_frame_t } from './codec/ppm'
+import { flip_image_convert, type flip_image_input_t, type flip_image_result_t } from './flipnote/image'
+import { fmt_build_blob, type proj_snap_t } from './fmt'
 
-type KwzMsg = {
-  thumbIdx?: number
-  meta?: FlipMeta
+type kwz_msg_t = {
+  thumb_idx?: number
+  meta?: flip_meta_t
   kind: 'kwz'
   id: number
-  frames: KwzFrame[]
+  frames: kwz_frame_t[]
   speed: number
   loop: number
   name: string
-  thumbJpeg: Uint8Array
+  thumb_jpeg: Uint8Array
   bgm: Int16Array | null
   se: (Int16Array | null)[]
 }
-type PpmMsg = {
-  thumbIdx?: number
-  meta?: FlipMeta
+type ppm_msg_t = {
+  thumb_idx?: number
+  meta?: flip_meta_t
   kind: 'ppm'
   id: number
-  frames: PpmFrame[]
+  frames: ppm_frame_t[]
   speed: number
   loop: number
   name: string
@@ -33,14 +38,20 @@ type PpmMsg = {
   bgm: Int16Array | null
   se: (Int16Array | null)[]
 }
-type Ugn2Msg = { kind: 'ugn2', id: number, snap: ProjSnap }
-type FlipImageMsg = { kind: 'flip-image', id: number, input: FlipImageInput }
-type ThumbnailMsg = { kind: 'thumbnail', id: number, plan: RenderPlan, w: number, h: number }
-type InMsg = KwzMsg | PpmMsg | Ugn2Msg | FlipImageMsg | ThumbnailMsg
+type ugn2_msg_t = { kind: 'ugn2', id: number, snap: proj_snap_t }
+type flip_image_msg_t = { kind: 'flip-image', id: number, input: flip_image_input_t }
+type thumbnail_msg_t = { kind: 'thumbnail', id: number, plan: render_plan_t, w: number, h: number }
+type video_msg_t = { kind: 'video', id: number, file: File, options: video_import_options_t }
+type resize_msg_t = { kind: 'resize', id: number, input: canvas_rebuild_input_t }
+type encode_video_msg_t = { kind: 'encode-video', id: number, input: video_encode_input_t }
+type export_frames_msg_t = { kind: 'export-frames', id: number, input: frame_export_input_t }
+type in_msg_t = export_frames_msg_t | encode_video_msg_t | resize_msg_t | video_msg_t | kwz_msg_t | ppm_msg_t | ugn2_msg_t | flip_image_msg_t | thumbnail_msg_t
 
 declare const self: DedicatedWorkerGlobalScope
 
-function image_transfers(result: FlipImageResult): ArrayBuffer[] {
+function worker_post(message: Record<string, unknown>, transfers: Transferable[] = []): void { self.postMessage({ ...message, sources: pixel_source_collect(message) }, transfers) }
+
+function image_transfers(result: flip_image_result_t): ArrayBuffer[] {
   const transfers: ArrayBuffer[] = []
   for (const frame of result.frames) {
     for (const packed of frame) if (packed) transfers.push(packed.buffer as ArrayBuffer)
@@ -48,35 +59,78 @@ function image_transfers(result: FlipImageResult): ArrayBuffer[] {
   return transfers
 }
 
-self.onmessage = async (event: MessageEvent<InMsg>) => {
+self.onmessage = async (event: MessageEvent<in_msg_t>) => {
   const message = event.data
   try {
+    pixel_source_bind((message as in_msg_t & { sources?: pixel_source_record_t[] }).sources || [])
+    if (message.kind === 'export-frames') {
+      const blob = await frame_export(message.input, progress => worker_post({ id: message.id, ok: 1, progress }))
+      worker_post({ id: message.id, ok: 1, blob })
+      return
+    }
+    if (message.kind === 'encode-video') {
+      try {
+        const blob = await video_encode(message.input, progress => worker_post({ id: message.id, ok: 1, progress }))
+        worker_post({ id: message.id, ok: 1, blob })
+      } catch (error) {
+        const audio = { pcm: message.input.pcm, sound: message.input.sound }
+        const transfers = new Set<ArrayBuffer>()
+        if (audio.pcm) transfers.add(audio.pcm.buffer as ArrayBuffer)
+        for (const track of audio.sound?.tracks || []) for (const channel of track.channels) transfers.add(channel.buffer as ArrayBuffer)
+        worker_post({ id: message.id, ok: 0, error: String(error), audio }, [...transfers])
+      }
+      return
+    }
+    if (message.kind === 'resize') {
+      const frames = await canvas_rebuild_async(message.input, progress => worker_post({ id: message.id, ok: 1, progress }))
+      const transfers = new Set<ArrayBuffer>()
+      for (const frame of frames) for (const packed of frame.pk) if (packed) transfers.add(packed.buffer as ArrayBuffer)
+      worker_post({ id: message.id, ok: 1, frames }, [...transfers])
+      return
+    }
+    if (message.kind === 'video') {
+      if (typeof OffscreenCanvas === 'undefined' || typeof VideoDecoder === 'undefined' || typeof AudioDecoder === 'undefined') {
+        worker_post({ id: message.id, ok: 0, fallback: 1 })
+        return
+      }
+      const project = await vid_import(message.file, message.options, progress => worker_post({ id: message.id, ok: 1, progress }))
+      const transfers = new Set<ArrayBuffer>()
+      for (const frame of project.frames) for (const packed of frame.pk) if (packed) transfers.add(packed.buffer as ArrayBuffer)
+      for (const slot of project.slots) if (slot.bytes) transfers.add(slot.bytes)
+      worker_post({ id: message.id, ok: 1, project }, [...transfers])
+      return
+    }
     if (message.kind === 'thumbnail') {
       const canvas = new OffscreenCanvas(message.w, message.h)
       const context = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D
       const cache = raster_cache()
+      await render_prepare(message.plan)
       render_layers(message.plan, context, message.w, message.h, cache, 16 << 20)
       const pixels = context.getImageData(0, 0, message.w, message.h).data
       cache_clear(cache)
-      self.postMessage({ id: message.id, ok: 1, pixels }, [pixels.buffer])
+      worker_post({ id: message.id, ok: 1, pixels }, [pixels.buffer])
+      canvas.width = 0
       return
     }
     if (message.kind === 'flip-image') {
       const image = flip_image_convert(message.input)
-      self.postMessage({ id: message.id, ok: 1, image }, image_transfers(image))
+      worker_post({ id: message.id, ok: 1, image }, image_transfers(image))
+      return
+    }
+    if (message.kind === 'ugn2') {
+      const blob = await fmt_build_blob(message.snap)
+      worker_post({ id: message.id, ok: 1, blob })
       return
     }
     let out: Uint8Array
-    if (message.kind === 'ugn2') {
-      out = fmt_build(message.snap)
-    } else if (message.kind === 'kwz') {
-      out = await kwz_build({ frames: message.frames, speed: message.speed, loop: message.loop, name: message.name, thumbJpeg: message.thumbJpeg, thumbIdx: message.thumbIdx, bgm: message.bgm, se: message.se, meta: message.meta })
+    if (message.kind === 'kwz') {
+      out = await kwz_build({ frames: message.frames, speed: message.speed, loop: message.loop, name: message.name, thumb_jpeg: message.thumb_jpeg, thumb_idx: message.thumb_idx, bgm: message.bgm, se: message.se, meta: message.meta })
     } else {
-      out = await ppm_build({ frames: message.frames, speed: message.speed, loop: message.loop, name: message.name, thumb: message.thumb, thumbIdx: message.thumbIdx, bgm: message.bgm, se: message.se, meta: message.meta })
+      out = await ppm_build({ frames: message.frames, speed: message.speed, loop: message.loop, name: message.name, thumb: message.thumb, thumb_idx: message.thumb_idx, bgm: message.bgm, se: message.se, meta: message.meta })
     }
     const buffer = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer
-    self.postMessage({ id: message.id, ok: 1, bytes: new Uint8Array(buffer) }, [buffer])
+    worker_post({ id: message.id, ok: 1, bytes: new Uint8Array(buffer) }, [buffer])
   } catch (error) {
-    self.postMessage({ id: message.id, ok: 0, error: String(error) })
+    worker_post({ id: message.id, ok: 0, error: String(error) })
   }
 }

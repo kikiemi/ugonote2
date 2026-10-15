@@ -1,39 +1,31 @@
 import { doc_frame_order } from '../doc'
 import { q, toast } from '../dom'
-import { D_ALL, D_PEN, D_SAVE, D_TOOLS, K_PASTE, T_PEN } from '../h'
-import { lang_set, lang_saved } from '../lang'
+import { k_paste, t_pen, t_text } from '../h'
 import { file_pick } from '../lib'
 import { mark_capture_from_file, mark_capture_from_selection, mark_delete, mark_place } from '../mark'
-import { pref_theme_toggle, pref_uisfx_toggle, pref_kit_set } from '../prefs'
 import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
-import { dirty, st } from '../state/store'
+import { st } from '../state/store'
 import { storage_read_json } from '../storage'
-import { tool_has_options } from '../sync'
+import { tool_has_options, tool_page_show } from './tool_options'
 import { tf_active, tf_begin, tf_cancel, tf_commit, tf_preview } from '../tool'
-import { pop_close, pop_is_open, pop_open, pop_toggle, tool_page_show } from './overlay'
+import { pop_close, pop_is_open, pop_open, pop_toggle } from './overlay'
 import { tool_pick } from './stage_input'
 
-function pref_kit_apply(v: number): void {
-  pref_kit_set(v)
-  dirty(D_TOOLS | D_PEN)
-}
-
 export function rail_events(): void {
-  q('railTools').addEventListener('click', e => {
+  q('rail_tools').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('.rb') as HTMLElement | null
     if (!b) return
     const t = Number(b.dataset.t)
     if (st().pen.tool === t && tool_has_options(t)) {
-      pop_toggle('popTool', b)
+      pop_toggle('pop_tool', b)
       return
     }
     tool_pick(t)
-    if (pop_is_open() === 'popTool') pop_open('popTool', b)
+    if (pop_is_open() === 'pop_tool') pop_open('pop_tool', b)
   })
-  q('colorBtn').addEventListener('click', () => pop_toggle('popColor', q('colorBtn')))
-  q('sizeBtn').addEventListener('click', () => { tool_page_show('size'); pop_toggle('popTool', q('sizeBtn')) })
-  q('optBtn').addEventListener('click', () => pop_toggle('popSettings', q('optBtn')))
+  q('color_btn').addEventListener('click', () => pop_toggle('pop_color', q('color_btn')))
+  q('tool_settings_btn').addEventListener('click', () => { tool_page_show('tool'); pop_toggle('pop_tool', q('tool_settings_btn')) })
 }
 
 function hex_ok(s: string): number {
@@ -43,54 +35,59 @@ function hex_ok(s: string): number {
 export function custom_load(): void {
   const value = storage_read_json('ug2_pal')
   if (!Array.isArray(value)) return
-  dispatch('pen.custom_set', value.filter((color: unknown): color is string => typeof color === 'string' && hex_ok(color) !== 0))
+  const colors: string[] = []
+  for (let i = 0; i < value.length; i++) {
+    const color = value[i]
+    if (typeof color === 'string' && hex_ok(color)) colors.push(color)
+  }
+  dispatch('pen.custom_set', colors)
 }
 
-let custLp: ReturnType<typeof setTimeout> | 0 = 0
+let cust_lp: ReturnType<typeof setTimeout> | 0 = 0
 
 export function color_pop_events(): void {
   for (let t = 0; t < 3; t++) {
-    q('palTab_' + t).addEventListener('click', () => {
+    q('pal_tab_' + t).addEventListener('click', () => {
       dispatch('pen.set_pal_mode', t)
       sfx_play('tap')
     })
   }
-  const pickC = (c: string) => {
+  const pick_c = (c: string) => {
     dispatch('pen.set_color', c)
     sfx_play('tap')
   }
-  q('palGrid').addEventListener('click', e => {
+  q('pal_grid').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('.palc') as HTMLElement | null
-    if (b && b.dataset.c) pickC(b.dataset.c)
+    if (b && b.dataset.c) pick_c(b.dataset.c)
   })
-  q('custGrid').addEventListener('click', e => {
+  q('cust_grid').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('.palc') as HTMLElement | null
-    if (b && b.dataset.c) pickC(b.dataset.c)
+    if (b && b.dataset.c) pick_c(b.dataset.c)
   })
-  q('custGrid').addEventListener('pointerdown', e => {
+  q('cust_grid').addEventListener('pointerdown', e => {
     const b = (e.target as HTMLElement).closest('.palc') as HTMLElement | null
     if (!b || b.dataset.ci === undefined) return
-    if (custLp) clearTimeout(custLp)
-    custLp = setTimeout(() => {
-      custLp = 0
+    if (cust_lp) clearTimeout(cust_lp)
+    cust_lp = setTimeout(() => {
+      cust_lp = 0
       dispatch('pen.custom_remove', Number(b.dataset.ci))
     }, 600)
   })
-  const custUp = () => {
-    if (custLp) clearTimeout(custLp)
-    custLp = 0
+  const cust_up = () => {
+    if (cust_lp) clearTimeout(cust_lp)
+    cust_lp = 0
   }
-  q('custGrid').addEventListener('pointerup', custUp)
-  q('custGrid').addEventListener('pointercancel', custUp)
-  q('custGrid').addEventListener('pointerleave', custUp)
-  q('custAdd').addEventListener('click', () => {
+  q('cust_grid').addEventListener('pointerup', cust_up)
+  q('cust_grid').addEventListener('pointercancel', cust_up)
+  q('cust_grid').addEventListener('pointerleave', cust_up)
+  q('cust_add').addEventListener('click', () => {
     dispatch('pen.custom_add', st().pen.color)
   })
-  q<HTMLInputElement>('pickIn').addEventListener('input', e => {
+  q<HTMLInputElement>('pick_in').addEventListener('input', e => {
     dispatch('pen.set_color', (e.target as HTMLInputElement).value)
   })
-  const applyHex = () => {
-    const v = q<HTMLInputElement>('hexIn').value.trim()
+  const apply_hex = () => {
+    const v = q<HTMLInputElement>('hex_in').value.trim()
     if (!hex_ok(v)) {
       toast('#RRGGBB の形で入れてね')
       return
@@ -98,14 +95,14 @@ export function color_pop_events(): void {
     dispatch('pen.set_color', v)
     sfx_play('tap')
   }
-  q('hexIn').addEventListener('keydown', e => {
-    if ((e as KeyboardEvent).key === 'Enter') applyHex()
+  q('hex_in').addEventListener('keydown', e => {
+    if ((e as KeyboardEvent).key === 'Enter') apply_hex()
   })
-  q('hexIn').addEventListener('blur', applyHex)
+  q('hex_in').addEventListener('blur', apply_hex)
 }
 
 export function tool_pop_events(): void {
-  q('popTool').addEventListener('click', e => {
+  q('pop_tool').addEventListener('click', e => {
     const sz = (e.target as HTMLElement).closest('.szb') as HTMLElement | null
     if (sz) {
       dispatch('pen.set_size', Number(sz.dataset.sz))
@@ -120,115 +117,126 @@ export function tool_pop_events(): void {
     }
   })
   const tgl = (id: string, fn: () => void) => q(id).addEventListener('click', fn)
-  tgl('optPressure', () => {
+  tgl('opt_pressure', () => {
     dispatch('pen.toggle_pressure', null)
     sfx_play('tap')
   })
-  tgl('optSymX', () => {
+  tgl('opt_sym_x', () => {
     dispatch('pen.toggle_sym', null)
     sfx_play('tap')
   })
-  tgl('optSymY', () => {
+  tgl('opt_sym_y', () => {
     dispatch('pen.toggle_symy', null)
     sfx_play('tap')
   })
-  tgl('optOutline', () => {
+  tgl('opt_outline', () => {
     dispatch('pen.toggle_outline', null)
     sfx_play('tap')
   })
-  tgl('optFill', () => {
+  tgl('opt_fill', () => {
     dispatch('pen.toggle_fill', null)
     sfx_play('tap')
   })
-  q<HTMLInputElement>('optSmooth').addEventListener('input', e => {
+  q<HTMLInputElement>('opt_smooth').addEventListener('input', e => {
     dispatch('pen.set_smooth', Number((e.target as HTMLInputElement).value))
   })
-  q<HTMLInputElement>('optAlpha').addEventListener('input', e => {
+  q<HTMLInputElement>('opt_alpha').addEventListener('input', e => {
     dispatch('pen.set_alpha_pct', Number((e.target as HTMLInputElement).value))
   })
-  q<HTMLInputElement>('optOWidth').addEventListener('input', e => {
+  q<HTMLInputElement>('opt_o_width').addEventListener('input', e => {
     dispatch('pen.set_owidth', Number((e.target as HTMLInputElement).value))
   })
-  q<HTMLInputElement>('optOColor').addEventListener('input', e => {
+  q<HTMLInputElement>('opt_o_color').addEventListener('input', e => {
     dispatch('pen.set_ocolor', (e.target as HTMLInputElement).value)
   })
-  const pxnSet = (v: number) => {
+  const pxn_set = (v: number) => {
     if (!Number.isFinite(v) || v <= 0) return
     dispatch('pen.set_pxn', v)
   }
-  q<HTMLInputElement>('pxnRange').addEventListener('input', e => pxnSet(Number((e.target as HTMLInputElement).value)))
-  q<HTMLInputElement>('pxnNum').addEventListener('input', e => pxnSet(Number((e.target as HTMLInputElement).value)))
-  const sizeSet = (v: number) => {
+  q<HTMLInputElement>('pxn_range').addEventListener('input', e => pxn_set(Number((e.target as HTMLInputElement).value)))
+  q<HTMLInputElement>('pxn_num').addEventListener('input', e => pxn_set(Number((e.target as HTMLInputElement).value)))
+  const size_set = (v: number) => {
     if (!Number.isFinite(v) || v <= 0) return
     dispatch('pen.set_size', v)
   }
-  q<HTMLInputElement>('sizeRange').addEventListener('input', e => sizeSet(Number((e.target as HTMLInputElement).value)))
-  q<HTMLInputElement>('sizeNum').addEventListener('input', e => sizeSet(Number((e.target as HTMLInputElement).value)))
-  q('popTool').addEventListener('click', e => {
+  q<HTMLInputElement>('size_range').addEventListener('input', e => size_set(Number((e.target as HTMLInputElement).value)))
+  q<HTMLInputElement>('size_num').addEventListener('input', e => size_set(Number((e.target as HTMLInputElement).value)))
+  q('pop_tool').addEventListener('click', e => {
+    const target = e.target as HTMLElement
+    const native = target.closest<HTMLElement>('[data-native-tip]')
+    if (native) { dispatch('pen.set_native_tip', Number(native.dataset.nativeTip)); sfx_play('tap'); return }
+    if (target.closest('#native_pen_expand')) { dispatch('pen.toggle_native_expand', null); sfx_play('tap'); return }
+    if (target.closest('#native_pen_font')) { tool_pick(t_text); return }
     const bb = (e.target as HTMLElement).closest('.brushb') as HTMLElement | null
     if (!bb) return
     dispatch('pen.set_brush', Number(bb.dataset.b))
-    if (st().pen.tool !== T_PEN) tool_pick(T_PEN)
+    if (st().pen.tool !== t_pen) tool_pick(t_pen)
     sfx_play('tap')
   })
-  q('optFillAll').addEventListener('click', () => {
+  q('opt_fill_all').addEventListener('click', () => {
     dispatch('pen.toggle_fill_all', null)
     sfx_play('tap')
   })
-  q('selCopy').addEventListener('click', () => dispatch('sel.copy', null))
-  q('selCut').addEventListener('click', () => dispatch('sel.cut', null))
-  q('selDel').addEventListener('click', () => dispatch('sel.delete', null))
+  q('paint_normal').addEventListener('click', () => dispatch('pen.set_paint_over', 0))
+  q('paint_over').addEventListener('click', () => dispatch('pen.set_paint_over', 1))
+  q('sel_invert').addEventListener('click', () => dispatch('sel.invert', null))
+  q('sel_paint_mode').addEventListener('click', () => dispatch('pen.set_paint_over', st().pen.paint_over ? 0 : 1))
+  q('sel_paint').addEventListener('click', () => dispatch('sel.paint', null))
+  q('sel_register_paint').addEventListener('click', () => dispatch('sel.register_paint', null))
+  q('sel_copy').addEventListener('click', () => dispatch('sel.copy', null))
+  q('sel_cut').addEventListener('click', () => dispatch('sel.cut', null))
+  q('sel_del').addEventListener('click', () => dispatch('sel.delete', null))
 }
 
-let tfTarget = -1
+let tf_target = -1
 
 export function tf_pop_events(): void {
-  const rScale = q<HTMLInputElement>('tfScale')
-  const rDx = q<HTMLInputElement>('tfDx')
-  const rDy = q<HTMLInputElement>('tfDy')
-  const rRot = q<HTMLInputElement>('tfRot')
-  const cur = () => ({ f: Number(rScale.value) / 100, dx: Number(rDx.value), dy: Number(rDy.value), deg: Number(rRot.value) })
+  const r_scale = q<HTMLInputElement>('tf_scale')
+  const r_dx = q<HTMLInputElement>('tf_dx')
+  const r_dy = q<HTMLInputElement>('tf_dy')
+  const r_rot = q<HTMLInputElement>('tf_rot')
+  const cur = () => ({ f: Number(r_scale.value) / 100, dx: Number(r_dx.value), dy: Number(r_dy.value), deg: Number(r_rot.value) })
   const show = () => {
-    q('tfScaleV').textContent = rScale.value + '%'
-    q('tfDxV').textContent = rDx.value
-    q('tfDyV').textContent = rDy.value
-    q('tfRotV').textContent = rRot.value + '°'
+    q('tf_scale_v').textContent = r_scale.value + '%'
+    q('tf_dx_v').textContent = r_dx.value
+    q('tf_dy_v').textContent = r_dy.value
+    q('tf_rot_v').textContent = r_rot.value + '°'
   }
   const reset_ui = () => {
-    rScale.value = '100'
-    rDx.value = '0'
-    rDy.value = '0'
-    rRot.value = '0'
+    r_scale.value = '100'
+    r_dx.value = '0'
+    r_dy.value = '0'
+    r_rot.value = '0'
     show()
   }
   const move = () => {
-    if (!tf_active()) tf_begin(tfTarget < 0 ? -1 : st().pen.layer)
+    if (!tf_active()) tf_begin(tf_target < 0 ? -1 : st().pen.layer)
     const v = cur()
     show()
     tf_preview(v.f, v.dx, v.dy, v.deg)
   }
-  for (const r of [rScale, rDx, rDy, rRot]) r.addEventListener('input', move)
-  q('tfAll').addEventListener('click', () => {
+  for (const r of [r_scale, r_dx, r_dy, r_rot]) r.addEventListener('input', move)
+  q('tf_all').addEventListener('click', () => {
     tf_cancel()
     reset_ui()
-    tfTarget = -1
-    q('tfAll').classList.add('on')
-    q('tfOne').classList.remove('on')
+    tf_target = -1
+    q('tf_all').classList.add('on')
+    q('tf_one').classList.remove('on')
   })
-  q('tfOne').addEventListener('click', () => {
+  q('tf_one').addEventListener('click', () => {
     tf_cancel()
     reset_ui()
-    tfTarget = 1
-    q('tfOne').classList.add('on')
-    q('tfAll').classList.remove('on')
+    tf_target = 1
+    q('tf_one').classList.add('on')
+    q('tf_all').classList.remove('on')
   })
-  q('tfApply').addEventListener('click', () => {
+  q('tf_apply').addEventListener('click', () => {
     tf_commit()
     reset_ui()
     sfx_play('save')
     toast('絵をうごかしました')
   })
-  q('tfCancel').addEventListener('click', () => {
+  q('tf_cancel').addEventListener('click', () => {
     tf_cancel()
     reset_ui()
     sfx_play('tap')
@@ -236,7 +244,7 @@ export function tf_pop_events(): void {
 }
 
 export function layer_pop_events(): void {
-  const rows = q('layerRows')
+  const rows = q('layer_rows')
   rows.addEventListener('click', e => {
     const eye = (e.target as HTMLElement).closest('.leye') as HTMLElement | null
     if (eye) {
@@ -261,7 +269,7 @@ export function layer_pop_events(): void {
     if (pick) {
       const layer = Number(pick.dataset.l)
       if (layer === 0) {
-        q('photoLayerBtn').click()
+        q('photo_layer_btn').click()
         return
       }
       dispatch('pen.set_layer', layer)
@@ -275,12 +283,12 @@ export function layer_pop_events(): void {
   })
 }
 
-let markLp: ReturnType<typeof setTimeout> | 0 = 0
+let mark_lp: ReturnType<typeof setTimeout> | 0 = 0
 
 export function mark_events(): void {
   const g = st()
-  q('markBtn').addEventListener('click', () => pop_toggle('popMark', q('markBtn')))
-  q('markGrid').addEventListener('click', e => {
+  q('mark_btn').addEventListener('click', () => pop_toggle('pop_mark', q('mark_btn')))
+  q('mark_grid').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('.mkb') as HTMLElement | null
     if (!b || !b.dataset.markid) return
     const id = b.dataset.markid
@@ -289,37 +297,37 @@ export function mark_events(): void {
         toast('マークを読み込めなかった…')
         return
       }
-      dispatch('flo.begin_image', { canvas, kind: K_PASTE, x: g.doc.w / 2, y: g.doc.h / 2, continuous: 1 })
+      dispatch('flo.begin_image', { canvas, kind: k_paste, x: g.doc.w / 2, y: g.doc.h / 2, continuous: 1 })
       pop_close()
       toast('✓で確定→そのまま連続スタンプ！おわるときはEsc')
       sfx_play('tap')
     })
   })
-  q('markGrid').addEventListener('pointerdown', e => {
+  q('mark_grid').addEventListener('pointerdown', e => {
     const b = (e.target as HTMLElement).closest('.mkb') as HTMLElement | null
     if (!b || !b.dataset.markid) return
     const id = b.dataset.markid
-    if (markLp) clearTimeout(markLp)
-    markLp = setTimeout(() => {
-      markLp = 0
+    if (mark_lp) clearTimeout(mark_lp)
+    mark_lp = setTimeout(() => {
+      mark_lp = 0
       mark_delete(id)
       toast('マークを消しました')
     }, 600)
   })
-  const mUp = () => {
-    if (markLp) clearTimeout(markLp)
-    markLp = 0
+  const m_up = () => {
+    if (mark_lp) clearTimeout(mark_lp)
+    mark_lp = 0
   }
-  q('markGrid').addEventListener('pointerup', mUp)
-  q('markGrid').addEventListener('pointercancel', mUp)
-  q('markGrid').addEventListener('pointerleave', mUp)
-  q('markAddSel').addEventListener('click', () => {
+  q('mark_grid').addEventListener('pointerup', m_up)
+  q('mark_grid').addEventListener('pointercancel', m_up)
+  q('mark_grid').addEventListener('pointerleave', m_up)
+  q('mark_add_sel').addEventListener('click', () => {
     mark_capture_from_selection('マーク', ok => {
       toast(ok ? '選択範囲をマークに登録しました' : '登録できるものが見つからないよ（レイヤーがからっぽかも）')
       if (ok) sfx_play('save')
     })
   })
-  q('markAddFile').addEventListener('click', () => {
+  q('mark_add_file').addEventListener('click', () => {
     file_pick('image/*', f => mark_capture_from_file(f, ok => {
       toast(ok ? '画像をマークに登録しました' : '画像を読めなかった…')
       if (ok) sfx_play('save')
@@ -327,45 +335,9 @@ export function mark_events(): void {
   })
 }
 
-export function settings_events(): void {
-  const gs = (v: number) => {
-    if (!Number.isFinite(v)) return
-    dispatch('view.set_grid_size', v)
-  }
-  q<HTMLInputElement>('setGsize').addEventListener('input', e => gs(Number((e.target as HTMLInputElement).value)))
-  q<HTMLInputElement>('setGsizeN').addEventListener('input', e => gs(Number((e.target as HTMLInputElement).value)))
-  q<HTMLInputElement>('setOnion').addEventListener('input', e => {
-    dispatch('view.set_onion_count', Number((e.target as HTMLInputElement).value))
-  })
-  q('setTheme').addEventListener('click', () => {
-    pref_theme_toggle()
-    dirty(D_ALL)
-    sfx_play('tap')
-  })
-  q('setUisfx').addEventListener('click', () => {
-    pref_uisfx_toggle()
-    dirty(D_SAVE | D_TOOLS)
-    sfx_play('tap')
-  })
-  q('setVflip').addEventListener('click', () => {
-    dispatch('view.toggle_flip', null)
-    sfx_play('tap')
-  })
-  const langSel = q<HTMLSelectElement>('setLang')
-  langSel.value = lang_saved()
-  langSel.addEventListener('change', () => lang_set(langSel.value))
-  const kit = (v: number) => {
-    pref_kit_apply(v)
-    toast(v ? '初級筆箱にしたよ（7つのどうぐ）' : '上級筆箱にしたよ（ぜんぶのどうぐ）')
-    sfx_play('tap')
-  }
-  q('kitAdv').addEventListener('click', () => kit(0))
-  q('kitBasic').addEventListener('click', () => kit(1))
-}
-
 export function tool_input_interrupt(): void {
-  if (custLp) clearTimeout(custLp)
-  custLp = 0
-  if (markLp) clearTimeout(markLp)
-  markLp = 0
+  if (cust_lp) clearTimeout(cust_lp)
+  cust_lp = 0
+  if (mark_lp) clearTimeout(mark_lp)
+  mark_lp = 0
 }

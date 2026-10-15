@@ -1,16 +1,16 @@
 import { toast } from './dom'
 import { live_slot } from './engine'
-import { EF_BLUR, EF_MOSAIC, EF_GLOW, EF_CHROMA, EF_NOISE, EF_OUTLINE, EF_WAVE } from './h'
+import { ef_blur, ef_mosaic, ef_glow, ef_chroma, ef_noise, ef_outline, ef_wave } from './h'
 import { hist_grp, rect_grab } from './hist'
 import { hex_rgb, clamp, canvas_make } from './lib'
 import { sfx_play } from './snd'
 import { dispatch } from './state/commands'
 import { st } from './state/store'
 
-export type EffectRegion = { x: number, y: number, w: number, h: number }
-export type EffectCapture = { reg: EffectRegion, src: ImageData }
+export type effect_region_t = { x: number, y: number, w: number, h: number }
+export type effect_capture_t = { reg: effect_region_t, src: ImageData }
 
-function target_region(): EffectRegion {
+function target_region(): effect_region_t {
   const g = st()
   if (g.sel.has) {
     return { x: g.sel.x, y: g.sel.y, w: g.sel.w, h: g.sel.h }
@@ -185,22 +185,22 @@ function apply_wave(d: Uint8ClampedArray, w: number, h: number, amt: number): Ui
 }
 
 function run(kind: number, d: Uint8ClampedArray, w: number, h: number, amt: number): Uint8ClampedArray {
-  if (kind === EF_BLUR) return apply_blur(d, w, h, amt)
-  if (kind === EF_MOSAIC) return apply_mosaic(d, w, h, amt)
-  if (kind === EF_GLOW) return apply_glow(d, w, h, amt)
-  if (kind === EF_CHROMA) return apply_chroma(d, w, h, amt)
-  if (kind === EF_NOISE) return apply_noise(d, w, h, amt)
-  if (kind === EF_OUTLINE) return apply_outline(d, w, h, amt)
-  if (kind === EF_WAVE) return apply_wave(d, w, h, amt)
+  if (kind === ef_blur) return apply_blur(d, w, h, amt)
+  if (kind === ef_mosaic) return apply_mosaic(d, w, h, amt)
+  if (kind === ef_glow) return apply_glow(d, w, h, amt)
+  if (kind === ef_chroma) return apply_chroma(d, w, h, amt)
+  if (kind === ef_noise) return apply_noise(d, w, h, amt)
+  if (kind === ef_outline) return apply_outline(d, w, h, amt)
+  if (kind === ef_wave) return apply_wave(d, w, h, amt)
   return d
 }
 
-export function effect_capture(maxSide = 0): EffectCapture | null {
+export function effect_capture(max_side = 0): effect_capture_t | null {
   const reg = target_region()
   if (reg.w < 1 || reg.h < 1) return null
   const ctx = live_slot(st().pen.layer)
-  if (maxSide > 0 && (reg.w > maxSide || reg.h > maxSide)) {
-    const scale = Math.min(maxSide / reg.w, maxSide / reg.h)
+  if (max_side > 0 && (reg.w > max_side || reg.h > max_side)) {
+    const scale = Math.min(max_side / reg.w, max_side / reg.h)
     const w = Math.max(1, Math.round(reg.w * scale))
     const h = Math.max(1, Math.round(reg.h * scale))
     const [, out] = canvas_make(w, h, 1)
@@ -211,13 +211,13 @@ export function effect_capture(maxSide = 0): EffectCapture | null {
   return { reg, src: ctx.getImageData(reg.x, reg.y, reg.w, reg.h) }
 }
 
-export function effect_preview(kind: number, amt: number, capture: EffectCapture | null = effect_capture()): { reg: EffectRegion, img: ImageData } | null {
+export function effect_preview(kind: number, amt: number, capture: effect_capture_t | null = effect_capture()): { reg: effect_region_t, img: ImageData } | null {
   if (!capture) return null
   const { reg, src } = capture
   const ctx = live_slot(st().pen.layer)
-  const outData = run(kind, src.data, reg.w, reg.h, clamp(amt, 0, 1))
+  const out_data = run(kind, src.data, reg.w, reg.h, clamp(amt, 0, 1))
   const img = ctx.createImageData(reg.w, reg.h)
-  img.data.set(outData)
+  img.data.set(out_data)
   return { reg, img }
 }
 
@@ -229,10 +229,10 @@ export function effect_apply(kind: number, amt: number): void {
   const ctx = live_slot(l)
   const before = rect_grab(l, reg.x, reg.y, reg.w, reg.h)
   const src = ctx.getImageData(reg.x, reg.y, reg.w, reg.h)
-  const outData = run(kind, src.data, reg.w, reg.h, clamp(amt, 0, 1))
-  const outImg = ctx.createImageData(reg.w, reg.h)
-  outImg.data.set(outData)
-  ctx.putImageData(outImg, reg.x, reg.y)
+  const out_data = run(kind, src.data, reg.w, reg.h, clamp(amt, 0, 1))
+  const out_img = ctx.createImageData(reg.w, reg.h)
+  out_img.data.set(out_data)
+  ctx.putImageData(out_img, reg.x, reg.y)
   if (dispatch('frame.commit_pixels', {
     grp: hist_grp(),
     frame: g.doc.cur,

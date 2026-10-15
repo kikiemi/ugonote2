@@ -1,40 +1,43 @@
-import { timeline_index, type Timeline } from './playback_clock'
+import { memory_check, memory_work_budget } from './memory'
+import type { audio_mix_t } from './audio_mix'
+import { timeline_index, type timeline_t } from './playback_clock'
 import { report_warning } from './diagnostics'
 import { snd_buf, snd_buf_set } from './engine'
 import { wav_encode, clamp } from './lib'
 import { pref_uisfx } from './prefs'
 import { st } from './state/store'
 
-const AC: (new () => AudioContext) | null =
+const audio_context_ctor: (new () => AudioContext) | null =
   typeof AudioContext !== 'undefined' ? AudioContext :
   typeof (globalThis as { webkitAudioContext?: new () => AudioContext }).webkitAudioContext !== 'undefined' ? (globalThis as { webkitAudioContext?: new () => AudioContext }).webkitAudioContext as new () => AudioContext :
   null
 
 export function snd_ok(): number {
-  return AC ? 1 : 0
+  return audio_context_ctor ? 1 : 0
 }
 
 export function snd_load_epoch(): number {
-  return loadEpoch
+  return load_epoch
 }
 
 export function snd_load_epoch_bump(): void {
-  loadEpoch = (loadEpoch + 1) >>> 0
-  restoreSeq++
+  load_epoch = (load_epoch + 1) >>> 0
+  restore_seq++
 }
 
+const decoded_audio = new WeakMap<ArrayBuffer, AudioBuffer>()
 let ac: AudioContext | null = null
-let bgmGain: GainNode | null = null
-let seGain: GainNode | null = null
-let uiGain: GainNode | null = null
-let liveSources: AudioBufferSourceNode[] = []
-type RecordingSession = { recorder: MediaRecorder, stream: MediaStream, chunks: Blob[], done: boolean, bytes: ArrayBuffer | null, wait: ((bytes: ArrayBuffer | null) => void) | null }
-let recSession: RecordingSession | null = null
-let recError = ''
-let recStarting = 0
-const uiCache: Map<string, AudioBuffer> = new Map()
-let restoreSeq = 0
-let loadEpoch = 0
+let bgm_gain: GainNode | null = null
+let se_gain: GainNode | null = null
+let ui_gain: GainNode | null = null
+let live_sources: AudioBufferSourceNode[] = []
+type recording_session_t = { recorder: MediaRecorder, stream: MediaStream, chunks: Blob[], done: boolean, bytes: ArrayBuffer | null, wait: ((bytes: ArrayBuffer | null) => void) | null }
+let rec_session: recording_session_t | null = null
+let rec_error = ''
+let rec_starting = 0
+const ui_cache: Map<string, AudioBuffer> = new Map()
+let restore_seq = 0
+let load_epoch = 0
 
 function stop_source(source: AudioBufferSourceNode): void {
   try {
@@ -57,22 +60,22 @@ function disconnect_node(node: AudioNode): void {
 }
 
 function actx(): AudioContext {
-  if (!AC) throw new Error('Web Audio API is not available')
+  if (!audio_context_ctor) throw new Error('Web Audio API is not available')
   if (!ac) {
     let context: AudioContext | null = null
     try {
-      context = new AC()
-      const nextBgmGain = context.createGain()
-      const nextSeGain = context.createGain()
-      const nextUiGain = context.createGain()
-      nextBgmGain.connect(context.destination)
-      nextSeGain.connect(context.destination)
-      nextUiGain.connect(context.destination)
-      nextUiGain.gain.value = 0.35
+      context = new audio_context_ctor()
+      const next_bgm_gain = context.createGain()
+      const next_se_gain = context.createGain()
+      const next_ui_gain = context.createGain()
+      next_bgm_gain.connect(context.destination)
+      next_se_gain.connect(context.destination)
+      next_ui_gain.connect(context.destination)
+      next_ui_gain.gain.value = 0.35
       ac = context
-      bgmGain = nextBgmGain
-      seGain = nextSeGain
-      uiGain = nextUiGain
+      bgm_gain = next_bgm_gain
+      se_gain = next_se_gain
+      ui_gain = next_ui_gain
       snd_apply_vol()
     } catch (error) {
       if (context) void context.close().catch(() => {})
@@ -98,8 +101,8 @@ function audio_context(context: string): AudioContext | null {
 
 export function snd_apply_vol(): void {
   const g = st()
-  if (bgmGain) bgmGain.gain.value = g.snd.bgmVol
-  if (seGain) seGain.gain.value = g.snd.seVol
+  if (bgm_gain) bgm_gain.gain.value = g.snd.bgm_vol
+  if (se_gain) se_gain.gain.value = g.snd.se_vol
 }
 
 function synth(rate: number, dur: number, fn: (t: number, i: number) => number): Float32Array {
@@ -120,14 +123,14 @@ function sq(t: number, f: number): number {
 }
 
 function preset_pcm(name: string, rate: number): Float32Array {
-  const R = () => Math.sin(Math.random() * 9999) * 2 - 1
+  const r = () => Math.sin(Math.random() * 9999) * 2 - 1
   if (name === 'coin') return synth(rate, 0.35, t => 0.5 * sq(t, t < 0.08 ? 988 : 1319) * env(t, 0.35, 0.002, 2))
   if (name === 'jump') return synth(rate, 0.3, t => 0.5 * sq(t, 300 + t * 2200) * env(t, 0.3, 0.002, 1.5))
-  if (name === 'hit') return synth(rate, 0.2, t => 0.7 * R() * env(t, 0.2, 0.001, 3) + 0.3 * Math.sin(t * 140 * Math.PI * 2) * env(t, 0.2, 0.001, 2))
+  if (name === 'hit') return synth(rate, 0.2, t => 0.7 * r() * env(t, 0.2, 0.001, 3) + 0.3 * Math.sin(t * 140 * Math.PI * 2) * env(t, 0.2, 0.001, 2))
   if (name === 'chime') return synth(rate, 0.9, t => 0.3 * (Math.sin(t * 880 * Math.PI * 2) + Math.sin(t * 1320 * Math.PI * 2) * 0.6 + Math.sin(t * 1760 * Math.PI * 2) * 0.4) * env(t, 0.9, 0.004, 2.5))
   if (name === 'blip') return synth(rate, 0.09, t => 0.5 * Math.sin(t * 1100 * Math.PI * 2) * env(t, 0.09, 0.002, 2))
-  if (name === 'splash') return synth(rate, 0.5, t => 0.6 * R() * env(t, 0.5, 0.01, 2) * (0.4 + 0.6 * Math.sin(t * 60 * Math.PI * 2)))
-  if (name === 'woosh') return synth(rate, 0.35, t => 0.5 * R() * Math.sin(Math.PI * (t / 0.35)) * Math.sin(t * (200 + 900 * t) * 0.02))
+  if (name === 'splash') return synth(rate, 0.5, t => 0.6 * r() * env(t, 0.5, 0.01, 2) * (0.4 + 0.6 * Math.sin(t * 60 * Math.PI * 2)))
+  if (name === 'woosh') return synth(rate, 0.35, t => 0.5 * r() * Math.sin(Math.PI * (t / 0.35)) * Math.sin(t * (200 + 900 * t) * 0.02))
   if (name === 'ding') return synth(rate, 0.7, t => 0.45 * Math.sin(t * 1568 * Math.PI * 2) * env(t, 0.7, 0.002, 3))
   if (name === 'buzz') return synth(rate, 0.4, t => 0.4 * sq(t, 110) * (0.7 + 0.3 * sq(t, 30)) * env(t, 0.4, 0.005, 1))
   if (name === 'zip') return synth(rate, 0.22, t => 0.45 * sq(t, 1800 - t * 6000) * env(t, 0.22, 0.002, 1.5))
@@ -158,7 +161,9 @@ export function snd_preset_bytes(name: string): ArrayBuffer {
 }
 
 export function snd_decode(bytes: ArrayBuffer, cb: (buf: AudioBuffer | null) => void): void {
-  if (!AC) {
+  const cached = decoded_audio.get(bytes)
+  if (cached) { cb(cached); return }
+  if (!audio_context_ctor) {
     cb(null)
     return
   }
@@ -171,6 +176,7 @@ export function snd_decode(bytes: ArrayBuffer, cb: (buf: AudioBuffer | null) => 
   const finish = (buffer: AudioBuffer | null): void => {
     if (completed) return
     completed = 1
+    if (buffer) decoded_audio.set(bytes, buffer)
     cb(buffer)
   }
   try {
@@ -197,7 +203,7 @@ function slot_of(kind: string) {
 
 export function bgm_rate(): number {
   const g = st()
-  const base = g.snd.bgmFps
+  const base = g.snd.bgm_fps
   if (!base || !Number.isFinite(base)) return 1
   return clamp(g.doc.fps / base, 0.1, 8)
 }
@@ -215,10 +221,10 @@ function one_shot(buf: AudioBuffer, dest: AudioNode, when: number, offset: numbe
 function live_one_shot(buf: AudioBuffer, dest: AudioNode, when: number, offset: number, rate: number, context: string): AudioBufferSourceNode | null {
   try {
     const src = one_shot(buf, dest, when, offset, rate)
-    liveSources.push(src)
+    live_sources.push(src)
     src.onended = () => {
-      const i = liveSources.indexOf(src)
-      if (i >= 0) liveSources.splice(i, 1)
+      const i = live_sources.indexOf(src)
+      if (i >= 0) live_sources.splice(i, 1)
     }
     return src
   } catch (error) {
@@ -228,45 +234,45 @@ function live_one_shot(buf: AudioBuffer, dest: AudioNode, when: number, offset: 
 }
 
 export function snd_se_preview(i: number): void {
-  if (!AC) return
+  if (!audio_context_ctor) return
   const buf = snd_buf('se' + i)
   if (!buf) return
-  if (!seGain && !audio_context('効果音の再生を準備できませんでした')) return
-  live_one_shot(buf, seGain as GainNode, 0, 0, 1, '効果音を試聴できませんでした')
+  if (!se_gain && !audio_context('効果音の再生を準備できませんでした')) return
+  live_one_shot(buf, se_gain as GainNode, 0, 0, 1, '効果音を試聴できませんでした')
 }
 
 export function snd_bgm_preview(i: number, on: number): void {
-  if (!AC) return
+  if (!audio_context_ctor) return
   snd_stop_all()
   if (!on) return
   const buf = snd_buf('bgm' + i)
   if (!buf) return
   if (!audio_context('BGMの試聴を準備できませんでした')) return
-  live_one_shot(buf, bgmGain as GainNode, 0, 0, 1, 'BGMを試聴できませんでした')
+  live_one_shot(buf, bgm_gain as GainNode, 0, 0, 1, 'BGMを試聴できませんでした')
 }
 
-type SoundPlayback = { timeline: Timeline, loop: number, offset: number, audioOrigin: number, wallOrigin: number, nextCycle: number, nextFrame: number, scheduled: number, elapsed: number }
-let playback: SoundPlayback | null = null
+type sound_playback_t = { timeline: timeline_t, loop: number, offset: number, audio_origin: number, wall_origin: number, next_cycle: number, next_frame: number, scheduled: number, elapsed: number }
+let playback: sound_playback_t | null = null
 
-export function snd_play_start(off: number, timeline: Timeline, loop: number, now: number): void {
+export function snd_play_start(off: number, timeline: timeline_t, loop: number, now: number): void {
   snd_stop_all()
-  if (!AC) return
+  if (!audio_context_ctor) return
   let any = 0
   for (const name of ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']) if (snd_buf(name)) any = 1
   if (!any) return
   const cx = audio_context('音声の再生を準備できませんでした')
   if (!cx) return
-  playback = { timeline, loop, offset: off, audioOrigin: cx.currentTime, wallOrigin: now, nextCycle: 0, nextFrame: timeline_index(timeline, off), scheduled: -1, elapsed: 0 }
+  playback = { timeline, loop, offset: off, audio_origin: cx.currentTime, wall_origin: now, next_cycle: 0, next_frame: timeline_index(timeline, off), scheduled: -1, elapsed: 0 }
   snd_play_schedule(0)
 }
 
 export function snd_play_elapsed(now: number): number | null {
   if (!playback || !ac) return null
-  if (ac.state === 'closed') return Math.max(playback.elapsed, (now - playback.wallOrigin) / 1000)
+  if (ac.state === 'closed') return Math.max(playback.elapsed, (now - playback.wall_origin) / 1000)
   if (ac.state !== 'running') return playback.elapsed
   const stamp = ac.getOutputTimestamp?.()
-  const audioNow = stamp?.performanceTime && stamp.contextTime !== undefined && now - stamp.performanceTime < 200 ? stamp.contextTime + (now - stamp.performanceTime) / 1000 : ac.currentTime
-  playback.elapsed = Math.max(playback.elapsed, audioNow - playback.audioOrigin)
+  const audio_now = stamp?.performanceTime && stamp.contextTime !== undefined && now - stamp.performanceTime < 200 ? stamp.contextTime + (now - stamp.performanceTime) / 1000 : ac.currentTime
+  playback.elapsed = Math.max(playback.elapsed, audio_now - playback.audio_origin)
   return playback.elapsed
 }
 
@@ -276,57 +282,57 @@ function schedule_bgm(when: number, offset: number, duration: number): void {
   for (let i = 0; i < 2; i++) {
     const buffer = snd_buf('bgm' + i)
     if (!buffer || offset * rate >= buffer.duration) continue
-    const source = live_one_shot(buffer, bgmGain as GainNode, when, offset * rate, rate, 'BGMを再生できませんでした')
+    const source = live_one_shot(buffer, bgm_gain as GainNode, when, offset * rate, rate, 'BGMを再生できませんでした')
     if (source) { try { source.stop(when + duration) } catch {} }
   }
 }
 
 export function snd_play_schedule(seconds: number): void {
   const p = playback
-  if (!p || !ac || ac.state !== 'running' || !seGain || !bgmGain) return
+  if (!p || !ac || ac.state !== 'running' || !se_gain || !bgm_gain) return
   const absolute = p.offset + seconds
   const end = absolute + 3
   const timeline = p.timeline
-  const cycleNow = p.loop ? Math.floor(absolute / timeline.duration) : 0
+  const cycle_now = p.loop ? Math.floor(absolute / timeline.duration) : 0
   if (!p.loop && absolute >= timeline.duration) return
-  if (p.nextCycle < cycleNow || p.nextCycle === cycleNow && timeline.starts[p.nextFrame - timeline.first] + cycleNow * timeline.duration < absolute - 0.05) {
-    p.nextCycle = cycleNow
-    p.nextFrame = timeline_index(timeline, absolute - cycleNow * timeline.duration)
+  if (p.next_cycle < cycle_now || p.next_cycle === cycle_now && timeline.starts[p.next_frame - timeline.first] + cycle_now * timeline.duration < absolute - 0.05) {
+    p.next_cycle = cycle_now
+    p.next_frame = timeline_index(timeline, absolute - cycle_now * timeline.duration)
   }
-  if (p.scheduled < cycleNow) {
-    const position = absolute - cycleNow * timeline.duration
+  if (p.scheduled < cycle_now) {
+    const position = absolute - cycle_now * timeline.duration
     schedule_bgm(ac.currentTime, position, timeline.duration - position)
-    p.scheduled = cycleNow
+    p.scheduled = cycle_now
   }
   let count = 0
   while (count++ < 512) {
-    const time = p.nextCycle * timeline.duration + timeline.starts[p.nextFrame - timeline.first]
-    if (time > end || !p.loop && p.nextCycle > 0) break
-    if (p.loop && p.nextFrame === timeline.first && p.scheduled < p.nextCycle) {
-      schedule_bgm(p.audioOrigin + time - p.offset, 0, timeline.duration)
-      p.scheduled = p.nextCycle
+    const time = p.next_cycle * timeline.duration + timeline.starts[p.next_frame - timeline.first]
+    if (time > end || !p.loop && p.next_cycle > 0) break
+    if (p.loop && p.next_frame === timeline.first && p.scheduled < p.next_cycle) {
+      schedule_bgm(p.audio_origin + time - p.offset, 0, timeline.duration)
+      p.scheduled = p.next_cycle
     }
-    const when = p.audioOrigin + time - p.offset
+    const when = p.audio_origin + time - p.offset
     if (time >= absolute - 0.05) {
-      const frame = st().doc.frames[p.nextFrame]
+      const frame = st().doc.frames[p.next_frame]
       for (let slot = 0; slot < 4; slot++) {
         if (!(frame.se & (1 << slot))) continue
         const buffer = snd_buf('se' + slot)
-        if (buffer) live_one_shot(buffer, seGain, Math.max(ac.currentTime, when), 0, 1, 'コマ効果音を再生できませんでした')
+        if (buffer) live_one_shot(buffer, se_gain, Math.max(ac.currentTime, when), 0, 1, 'コマ効果音を再生できませんでした')
       }
     }
-    p.nextFrame++
-    if (p.nextFrame > timeline.last) {
-      p.nextFrame = timeline.first
-      p.nextCycle++
+    p.next_frame++
+    if (p.next_frame > timeline.last) {
+      p.next_frame = timeline.first
+      p.next_cycle++
     }
   }
 }
 
 export function snd_stop_all(): void {
   playback = null
-  const sources = liveSources
-  liveSources = []
+  const sources = live_sources
+  live_sources = []
   for (const source of sources) stop_source(source)
 }
 
@@ -348,91 +354,52 @@ export function snd_slot_pcm(kind: string): { pcm: Float32Array, rate: number } 
   if (!buffer || buffer.length === 0 || buffer.numberOfChannels < 1) return null
   if (buffer.numberOfChannels === 1) return { pcm: buffer.getChannelData(0), rate: buffer.sampleRate }
   const pcm = new Float32Array(buffer.length)
-  const channelGain = 1 / buffer.numberOfChannels
+  const channel_gain = 1 / buffer.numberOfChannels
   for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
     const source = buffer.getChannelData(channel)
-    for (let index = 0; index < pcm.length; index++) pcm[index] += source[index] * channelGain
+    for (let index = 0; index < pcm.length; index++) pcm[index] += source[index] * channel_gain
   }
   return { pcm, rate: buffer.sampleRate }
 }
 
-export function snd_offline_mix(dur: number, tickTimes: number[], cb: (pcm: Float32Array | null, rate: number) => void): void {
-  const rate = 44100
-  let completed = 0
-  const finish = (pcm: Float32Array | null): void => {
-    if (completed) return
-    completed = 1
-    cb(pcm, rate)
-  }
-  const OAC =
-    typeof OfflineAudioContext !== 'undefined'
-      ? OfflineAudioContext
-      : (globalThis as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext
-  if (!OAC || !Number.isFinite(dur) || dur <= 0) {
-    finish(null)
-    return
-  }
-
-  try {
-    const g = st()
-    const cx = new OAC(1, Math.max(1, Math.ceil(dur * rate)), rate)
-    const bg = cx.createGain()
-    const sg = cx.createGain()
-    bg.gain.value = g.snd.bgmVol
-    sg.gain.value = g.snd.seVol
-    bg.connect(cx.destination)
-    sg.connect(cx.destination)
-    let any = 0
-    const playbackRate = bgm_rate()
-    for (let i = 0; i < 2; i++) {
-      const buf = snd_buf('bgm' + i)
-      if (!buf) continue
-      const src = cx.createBufferSource()
-      src.buffer = buf
-      src.playbackRate.value = playbackRate
-      src.connect(bg)
-      src.start(0, 0, Math.min(buf.duration, dur * playbackRate))
-      any = 1
-    }
-    for (let i = 0; i < g.doc.frames.length && i < tickTimes.length; i++) {
-      const frame = g.doc.frames[i]
-      if (!frame || !frame.se) continue
-      const startTime = clamp(tickTimes[i], 0, dur)
-      for (let slot = 0; slot < 4; slot++) {
-        if (!(frame.se & (1 << slot))) continue
-        const buf = snd_buf('se' + slot)
-        if (!buf) continue
-        const src = cx.createBufferSource()
-        src.buffer = buf
-        src.connect(sg)
-        src.start(startTime, 0)
-        any = 1
+export function snd_mix_plan(dur: number, tick_times: number[]): audio_mix_t {
+  if (!Number.isFinite(dur) || dur <= 0) throw new Error('音声の長さが正しくありません')
+  const g = st(), tracks: audio_mix_t['tracks'] = []
+  let bytes = 0
+  const add = (kind: string, gain: number, speed: number, starts: number[]): void => {
+    const buffer = snd_buf(kind)
+    if (!buffer || !starts.length) return
+    bytes += buffer.length * 4 * (buffer.numberOfChannels + Math.min(2, buffer.numberOfChannels))
+    memory_check(bytes, memory_work_budget(g.mobile))
+    const channels: Float32Array[] = []
+    for (let channel = 0; channel < Math.min(2, buffer.numberOfChannels); channel++) channels.push(buffer.getChannelData(channel).slice())
+    if (buffer.numberOfChannels === 4 || buffer.numberOfChannels === 6) {
+      const surround_left = buffer.getChannelData(buffer.numberOfChannels === 4 ? 2 : 4)
+      const surround_right = buffer.getChannelData(buffer.numberOfChannels === 4 ? 3 : 5)
+      const center = buffer.numberOfChannels === 6 ? buffer.getChannelData(2) : null
+      for (let i = 0; i < buffer.length; i++) {
+        channels[0][i] = center ? channels[0][i] + Math.SQRT1_2 * (center[i] + surround_left[i]) : (channels[0][i] + surround_left[i]) * 0.5
+        channels[1][i] = center ? channels[1][i] + Math.SQRT1_2 * (center[i] + surround_right[i]) : (channels[1][i] + surround_right[i]) * 0.5
       }
     }
-    if (!any) {
-      finish(null)
-      return
-    }
-    cx.startRendering().then(
-      buffer => finish(buffer.getChannelData(0)),
-      error => {
-        report_warning('音声のオフライン合成に失敗しました', error)
-        finish(null)
-      }
-    )
-  } catch (error) {
-    report_warning('音声のオフライン合成を準備できませんでした', error)
-    finish(null)
+    tracks.push({ channels, rate: buffer.sampleRate, gain, speed, starts })
   }
+  for (let i = 0; i < 2; i++) add('bgm' + i, g.snd.bgm_vol, bgm_rate(), [0])
+  for (let slot = 0; slot < 4; slot++) {
+    const starts: number[] = []
+    for (let i = 0; i < g.doc.frames.length && i < tick_times.length; i++) if (g.doc.frames[i].se & (1 << slot)) starts.push(tick_times[i])
+    add('se' + slot, g.snd.se_vol, 1, starts)
+  }
+  return { rate: 44100, length: Math.ceil(dur * 44100), tracks }
 }
 
-export type SoundExportDestination = {
+export type sound_export_destination_t = {
   node: MediaStreamAudioDestinationNode
   begin: () => number
   end: () => void
 }
 
-export function snd_export_dest(tickTimes: number[], totalDur: number): SoundExportDestination | null {
+export function snd_export_dest(tick_times: number[], total_dur: number): sound_export_destination_t | null {
   const g = st()
   const cx = audio_context('動画書き出し用のAudioContextを準備できませんでした')
   if (!cx) return null
@@ -440,8 +407,8 @@ export function snd_export_dest(tickTimes: number[], totalDur: number): SoundExp
     const dest = cx.createMediaStreamDestination()
     const bg = cx.createGain()
     const sg = cx.createGain()
-    bg.gain.value = g.snd.bgmVol
-    sg.gain.value = g.snd.seVol
+    bg.gain.value = g.snd.bgm_vol
+    sg.gain.value = g.snd.se_vol
     bg.connect(dest)
     sg.connect(dest)
     const started: AudioBufferSourceNode[] = []
@@ -455,22 +422,22 @@ export function snd_export_dest(tickTimes: number[], totalDur: number): SoundExp
       disconnect_node(sg)
     }
     const begin = (): number => {
-      if (begun || ended) return 0
+      if (begun || ended || cx.state !== 'running') return 0
       begun = 1
       try {
-        const startTime = cx.currentTime + 0.05
-        const playbackRate = bgm_rate()
+        const start_time = cx.currentTime + 0.05
+        const playback_rate = bgm_rate()
         for (let i = 0; i < 2; i++) {
           const buf = snd_buf('bgm' + i)
           if (!buf) continue
           const src = cx.createBufferSource()
           started.push(src)
           src.buffer = buf
-          src.playbackRate.value = playbackRate
+          src.playbackRate.value = playback_rate
           src.connect(bg)
-          src.start(startTime, 0, Math.min(buf.duration, totalDur * playbackRate))
+          src.start(start_time, 0, Math.min(buf.duration, total_dur * playback_rate))
         }
-        for (let i = 0; i < g.doc.frames.length && i < tickTimes.length; i++) {
+        for (let i = 0; i < g.doc.frames.length && i < tick_times.length; i++) {
           const frame = g.doc.frames[i]
           if (!frame || !frame.se) continue
           for (let slot = 0; slot < 4; slot++) {
@@ -481,7 +448,7 @@ export function snd_export_dest(tickTimes: number[], totalDur: number): SoundExp
             started.push(src)
             src.buffer = buf
             src.connect(sg)
-            src.start(startTime + tickTimes[i], 0)
+            src.start(start_time + tick_times[i], 0)
           }
         }
         return 1
@@ -500,13 +467,13 @@ export function snd_export_dest(tickTimes: number[], totalDur: number): SoundExp
 
 function recording_error(error: unknown): void {
   const name = error instanceof DOMException || error instanceof Error ? error.name : ''
-  recError = name === 'NotAllowedError' || name === 'SecurityError' ? 'マイクの利用を許可してください。ブラウザのサイト設定で変更できます。' :
+  rec_error = name === 'NotAllowedError' || name === 'SecurityError' ? 'マイクの利用を許可してください。ブラウザのサイト設定で変更できます。' :
     name === 'NotFoundError' ? 'マイクが見つかりません。接続を確認してください。' :
     name === 'NotReadableError' ? 'マイクを使えません。ほかのアプリで使用中でないか確認してください。' :
     name === 'NotSupportedError' ? 'このブラウザの録音形式に対応していません。' : '録音を完了できませんでした。マイクの接続を確認して、もう一度試してください。'
 }
 
-function recording_finish(session: RecordingSession, bytes: ArrayBuffer | null): void {
+function recording_finish(session: recording_session_t, bytes: ArrayBuffer | null): void {
   if (session.done) return
   session.done = true
   session.bytes = bytes
@@ -520,44 +487,44 @@ function recording_finish(session: RecordingSession, bytes: ArrayBuffer | null):
 }
 
 export function snd_record_message(): string {
-  return recError
+  return rec_error
 }
 
 export function snd_record_complete(): number {
-  return recSession?.done ? 1 : 0
+  return rec_session?.done ? 1 : 0
 }
 
 export function snd_record_start(cb: (error: number) => void): void {
-  if (recSession || recStarting) {
-    recError = '録音の準備中、または録音中です。'
+  if (rec_session || rec_starting) {
+    rec_error = '録音の準備中、または録音中です。'
     cb(-1)
     return
   }
-  recError = ''
-  if (!AC || typeof MediaRecorder === 'undefined' || !audio_context('録音用のAudioContextを準備できませんでした')) {
-    recError = 'このブラウザでは録音を使えません。'
+  rec_error = ''
+  if (!audio_context_ctor || typeof MediaRecorder === 'undefined' || !audio_context('録音用のAudioContextを準備できませんでした')) {
+    rec_error = 'このブラウザでは録音を使えません。'
     cb(-1)
     return
   }
   if (!navigator.mediaDevices?.getUserMedia) {
-    recError = 'この画面ではマイクを使えません。公開サイトをブラウザで開いてください。'
+    rec_error = 'この画面ではマイクを使えません。公開サイトをブラウザで開いてください。'
     cb(-1)
     return
   }
-  recStarting = 1
+  rec_starting = 1
   let request: Promise<MediaStream>
   try {
     request = navigator.mediaDevices.getUserMedia({ audio: true })
   } catch (error) {
-    recStarting = 0
+    rec_starting = 0
     recording_error(error)
     report_warning('マイクの利用を要求できませんでした', error)
     cb(-1)
     return
   }
   request.then(stream => {
-    recStarting = 0
-    let session: RecordingSession
+    rec_starting = 0
+    let session: recording_session_t
     try {
       const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']
       const mime = typeof MediaRecorder.isTypeSupported === 'function' ? types.find(type => MediaRecorder.isTypeSupported(type)) : ''
@@ -572,7 +539,7 @@ export function snd_record_start(cb: (error: number) => void): void {
       recorder.onstop = () => {
         const blob = new Blob(session.chunks, { type: recorder.mimeType || session.chunks[0]?.type || mime })
         if (!blob.size) {
-          recError = '録音した音が空でした。少し長めに録音して、もう一度試してください。'
+          rec_error = '録音した音が空でした。少し長めに録音して、もう一度試してください。'
           recording_finish(session, null)
           return
         }
@@ -590,10 +557,10 @@ export function snd_record_start(cb: (error: number) => void): void {
       cb(-1)
       return
     }
-    recSession = session
+    rec_session = session
     cb(0)
   }, error => {
-    recStarting = 0
+    rec_starting = 0
     recording_error(error)
     report_warning('マイクを開始できませんでした', error)
     cb(-1)
@@ -601,12 +568,12 @@ export function snd_record_start(cb: (error: number) => void): void {
 }
 
 export function snd_record_stop(cb: (bytes: ArrayBuffer | null) => void): void {
-  const session = recSession
+  const session = rec_session
   if (!session) {
     cb(null)
     return
   }
-  recSession = null
+  rec_session = null
   if (session.done) {
     cb(session.bytes)
     return
@@ -623,11 +590,11 @@ export function snd_record_stop(cb: (bytes: ArrayBuffer | null) => void): void {
 }
 
 export function snd_recording(): number {
-  return recSession ? 1 : 0
+  return rec_session ? 1 : 0
 }
 
 function ui_buf(name: string): AudioBuffer {
-  const hit = uiCache.get(name)
+  const hit = ui_cache.get(name)
   if (hit) return hit
   const cx = actx()
   const rate = 22050
@@ -644,16 +611,16 @@ function ui_buf(name: string): AudioBuffer {
   else pcm = synth(rate, 0.05, t => 0.35 * Math.sin(t * 900 * Math.PI * 2) * env(t, 0.05, 0.002, 2))
   const buf = cx.createBuffer(1, pcm.length, rate)
   buf.getChannelData(0).set(pcm)
-  uiCache.set(name, buf)
+  ui_cache.set(name, buf)
   return buf
 }
 
 let scr: { src: AudioBufferSourceNode, bp: BiquadFilterNode, gain: GainNode } | null = null
-let scrLastMove = 0
-let scrIdleT: ReturnType<typeof setInterval> | 0 = 0
-let noiseBuf: AudioBuffer | null = null
+let scr_last_move = 0
+let scr_idle_t: ReturnType<typeof setInterval> | 0 = 0
+let noise_buf: AudioBuffer | null = null
 
-const SCRATCH_HZ: { [k: number]: number } = { 0: 1900, 1: 900, 2: 2600, 3: 650, 4: 1200, 5: 780, 6: 1500, 7: 1100, 8: 520, 9: 1400, 10: 2200, 11: 1000, 12: 850 }
+const scratch_hz: { [k: number]: number } = { 0: 1900, 1: 900, 2: 2600, 3: 650, 4: 1200, 5: 780, 6: 1500, 7: 1100, 8: 520, 9: 1400, 10: 2200, 11: 1000, 12: 850 }
 
 export function scratch_start(brush: number, eraser: number): void {
   if (!pref_uisfx()) return
@@ -661,10 +628,10 @@ export function scratch_start(brush: number, eraser: number): void {
   const c = audio_context('描画音のAudioContextを準備できませんでした')
   if (!c) return
   try {
-    if (!noiseBuf) {
+    if (!noise_buf) {
       const len = Math.floor(c.sampleRate * 0.4)
-      noiseBuf = c.createBuffer(1, len, c.sampleRate)
-      const d = noiseBuf.getChannelData(0)
+      noise_buf = c.createBuffer(1, len, c.sampleRate)
+      const d = noise_buf.getChannelData(0)
       let last = 0
       for (let i = 0; i < len; i++) {
         const w = Math.random() * 2 - 1
@@ -674,11 +641,11 @@ export function scratch_start(brush: number, eraser: number): void {
     }
     scratch_stop()
     const src = c.createBufferSource()
-    src.buffer = noiseBuf
+    src.buffer = noise_buf
     src.loop = true
     const bp = c.createBiquadFilter()
     bp.type = 'bandpass'
-    bp.frequency.value = eraser ? 1400 : SCRATCH_HZ[brush] || 1200
+    bp.frequency.value = eraser ? 1400 : scratch_hz[brush] || 1200
     bp.Q.value = 1.1
     const gain = c.createGain()
     gain.gain.value = 0
@@ -687,11 +654,11 @@ export function scratch_start(brush: number, eraser: number): void {
     gain.connect(c.destination)
     src.start()
     scr = { src, bp, gain }
-    scrLastMove = performance.now()
-    if (scrIdleT) clearInterval(scrIdleT)
-    scrIdleT = setInterval(() => {
+    scr_last_move = performance.now()
+    if (scr_idle_t) clearInterval(scr_idle_t)
+    scr_idle_t = setInterval(() => {
       if (!scr) return
-      if (performance.now() - scrLastMove > 110) {
+      if (performance.now() - scr_last_move > 110) {
         try {
           const current = audio_context('描画音のAudioContextを再取得できませんでした')
           if (!current) {
@@ -718,7 +685,7 @@ export function scratch_move(speed: number): void {
   if (!snd_ok()) return
   const c = audio_context('描画音のAudioContextを再取得できませんでした')
   if (!c) return
-  scrLastMove = performance.now()
+  scr_last_move = performance.now()
   try {
     const v = Math.min(0.16, speed * 0.012)
     scr.gain.gain.setTargetAtTime(v, c.currentTime, 0.03)
@@ -729,9 +696,9 @@ export function scratch_move(speed: number): void {
 }
 
 export function scratch_stop(): void {
-  if (scrIdleT) {
-    clearInterval(scrIdleT)
-    scrIdleT = 0
+  if (scr_idle_t) {
+    clearInterval(scr_idle_t)
+    scr_idle_t = 0
   }
   if (!scr) return
   const current = scr
@@ -745,29 +712,39 @@ export function scratch_stop(): void {
 
 export function snd_restore_slots(): void {
   const kinds = ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']
-  const seq = ++restoreSeq
+  const seq = ++restore_seq
   for (const k of kinds) {
     const sl = slot_of(k)
     snd_buf_set(k, null)
     const bytes = sl.bytes
     if (bytes) {
       snd_decode(bytes, buf => {
-        if (seq === restoreSeq && slot_of(k).bytes === bytes && buf) snd_buf_set(k, buf)
+        if (seq === restore_seq && slot_of(k).bytes === bytes && buf) snd_buf_set(k, buf)
       })
     }
   }
 }
 
+let sfx_player: ((name: string) => void) | null = null
+
+export function sfx_player_set(player: ((name: string) => void) | null): void {
+  sfx_player = player
+}
+
 export function sfx_play(name: string): void {
   if (!pref_uisfx()) return
+  if (sfx_player) {
+    sfx_player(name)
+    return
+  }
   if (!audio_context('操作音のAudioContextを準備できませんでした')) return
   try {
-    one_shot(ui_buf(name), uiGain as GainNode, 0, 0, 1)
+    one_shot(ui_buf(name), ui_gain as GainNode, 0, 0, 1)
   } catch {}
 }
 
 export function sfx_warm(): void {
-  if (!AC) return
+  if (!audio_context_ctor) return
   audio_context('操作音のAudioContextを準備できませんでした')
 }
 export function snd_ready(cb: () => void): void {

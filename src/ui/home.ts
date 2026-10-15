@@ -6,7 +6,7 @@ import { anim_playhead, anim_play_time } from '../state/commands/play'
 import { st } from '../state/store'
 import { anim_stop, anim_toggle } from './playback'
 
-let previewRaf = 0
+let preview_raf = 0
 
 function preview_draw(cv: HTMLCanvasElement, frame: number, playing = false): void {
   const doc = st().doc
@@ -19,13 +19,13 @@ function preview_draw(cv: HTMLCanvasElement, frame: number, playing = false): vo
 }
 
 export function home_preview_stop(): void {
-  if (!previewRaf) return
-  cancelAnimationFrame(previewRaf)
-  previewRaf = 0
+  if (!preview_raf) return
+  cancelAnimationFrame(preview_raf)
+  preview_raf = 0
   anim_stop()
-  q('menuPreviewPlay').innerHTML = ic('play')
-  q('menuPreviewPlay').setAttribute('aria-pressed', 'false')
-  q('menuPreviewPlay').setAttribute('title', tr_line('作品を再生'))
+  q('menu_preview_play').innerHTML = ic('play')
+  q('menu_preview_play').setAttribute('aria-pressed', 'false')
+  q('menu_preview_play').setAttribute('title', tr_line('作品を再生'))
 }
 
 function preview_tick(): void {
@@ -33,48 +33,48 @@ function preview_tick(): void {
     home_preview_stop()
     return
   }
-  preview_draw(q<HTMLCanvasElement>('notePreviewCv'), anim_playhead(), true)
+  preview_draw(q<HTMLCanvasElement>('note_preview_cv'), anim_playhead(), true)
   if (!st().play.on) {
     home_preview_stop()
     return
   }
-  previewRaf = requestAnimationFrame(preview_tick)
+  preview_raf = requestAnimationFrame(preview_tick)
 }
 
 export function home_group_show(group: string): void {
   home_preview_stop()
   q('drawer').dataset.page = group
-  q('menuCrumb').textContent = tr_line(group === 'home' ? '' : 'メニュー / 作品の道具')
-  q('menuHeading').textContent = tr_line(({ home: 'メニュー', files: '保存・ひらく', imports: 'とりこむ', make: 'うごきをつくる', sound: '音をつける', canvas: '紙とサイズ', frames: 'コマのこと', settings: 'せってい', project: 'さくひん設定' } as Record<string, string>)[group] || 'メニュー')
-  for (const section of q('drawerBody').children) {
+  q('menu_crumb').textContent = tr_line(group === 'home' ? '' : 'メニュー / 作品の道具')
+  q('menu_heading').textContent = tr_line(({ home: 'メニュー', files: '保存・ひらく', imports: 'とりこむ', sound: '音をつける', canvas: '紙とサイズ', frames: 'コマのこと', settings: 'せってい', project: 'さくひん設定' } as Record<string, string>)[group] || 'メニュー')
+  for (const section of q('drawer_body').children) {
     const el = section as HTMLElement
     el.hidden = el.dataset.menuGroup !== group
   }
-  q('drawerBody').scrollTop = 0
+  q('drawer_body').scrollTop = 0
 }
 
 export function home_show(): void {
   home_group_show('home')
-  preview_draw(q<HTMLCanvasElement>('notePreviewCv'), st().doc.cur)
-  q('notePreviewName').textContent = st().doc.name || 'じぶんのノート'
-  q('notePreviewMeta').textContent = tr_line(`${st().doc.frames.length} コマ / ${st().doc.fps} コマ/秒`)
+  preview_draw(q<HTMLCanvasElement>('note_preview_cv'), st().doc.cur)
+  q('note_preview_name').textContent = st().doc.name || 'じぶんのノート'
+  q('note_preview_meta').textContent = tr_line(`${st().doc.frames.length} コマ / ${st().doc.fps} コマ/秒`)
 }
 
 export function home_mount(resume: () => void, frames: () => void): void {
-  q('menuHomeBack').addEventListener('click', home_show)
-  q('menuResume').addEventListener('click', resume)
-  q('menuDraw').addEventListener('click', resume)
-  q('menuFrames').addEventListener('click', frames)
-  q('menuDetails').addEventListener('click', () => home_group_show('project'))
-  q('projectMode').addEventListener('click', () => q('modeBtn').click())
-  q('menuNew').addEventListener('click', () => { home_preview_stop(); q('newBtn').click() })
-  q('menuPreviewPlay').addEventListener('click', () => {
-    if (previewRaf) { home_preview_stop(); return }
+  q('menu_home_back').addEventListener('click', home_show)
+  q('menu_resume').addEventListener('click', resume)
+  q('menu_draw').addEventListener('click', resume)
+  q('menu_frames').addEventListener('click', frames)
+  q('menu_details').addEventListener('click', () => home_group_show('project'))
+  q('project_mode').addEventListener('click', () => q('mode_btn').click())
+  q('menu_new').addEventListener('click', () => { home_preview_stop(); q('new_btn').click() })
+  q('menu_preview_play').addEventListener('click', () => {
+    if (preview_raf) { home_preview_stop(); return }
     anim_toggle()
-    q('menuPreviewPlay').innerHTML = ic('pause')
-    q('menuPreviewPlay').setAttribute('aria-pressed', 'true')
-    q('menuPreviewPlay').setAttribute('title', tr_line('再生をとめる'))
-    previewRaf = requestAnimationFrame(preview_tick)
+    q('menu_preview_play').innerHTML = ic('pause')
+    q('menu_preview_play').setAttribute('aria-pressed', 'true')
+    q('menu_preview_play').setAttribute('title', tr_line('再生をとめる'))
+    preview_raf = requestAnimationFrame(preview_tick)
   })
   q('drawer').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-menu-group]')

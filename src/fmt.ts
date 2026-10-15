@@ -1,23 +1,24 @@
+import { pixel_source_collect, pixel_source_restore, type pixel_source_asset_t } from './pixel_source'
 import { binary_reader, binary_writer, crc32, reader_bytes, reader_f32, reader_left, reader_string, reader_u8, reader_u16, reader_u32, writer_bytes, writer_f32, writer_finish, writer_string, writer_u8, writer_u16, writer_u32 } from './binary'
-import { kwz_frame_meta_clone, kwz_frame_meta_read, kwz_frame_meta_write, type KwzFrameMeta } from './codec/kwzmeta'
+import { kwz_frame_meta_clone, kwz_frame_meta_read, kwz_frame_meta_write, type kwz_frame_meta_t } from './codec/kwzmeta'
 import { report_warning } from './diagnostics'
-import { HOLD_MAX, L_BASE_N, L_DRAW_MAX, L_N, anim_fx_zero, note_meta_zero, type AnimFx, type Frame, type NoteMeta, type Rle } from './h'
+import { hold_max, l_base_n, l_draw_max, l_n, anim_fx_zero, note_meta_zero, type anim_fx_t, type frame_t, type note_meta_t, type rle_t } from './h'
 import { pixel_valid } from './pixel'
 import { clamp } from './lib'
 import { mode_frame_limit } from './mode'
 import { st } from './state/store'
 
-const MAGIC = 0x324e4755
-const FORMAT_VERSION = 6
+const magic = 0x324e4755
+const format_version = 8
 
-export function rle_bytes(pk: Rle): Uint8Array {
+export function rle_bytes(pk: rle_t): Uint8Array {
   const out = new Uint8Array(pk.length * 4)
   const dv = new DataView(out.buffer)
   for (let i = 0; i < pk.length; i++) dv.setUint32(i * 4, pk[i], true)
   return out
 }
 
-export function bytes_rle(b: Uint8Array): Rle {
+export function bytes_rle(b: Uint8Array): rle_t {
   const n = b.length >> 2
   const out = new Uint32Array(n)
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength)
@@ -25,7 +26,7 @@ export function bytes_rle(b: Uint8Array): Rle {
   return out
 }
 
-const SLOT_KEYS = ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']
+const slot_keys = ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']
 
 function slot_ref(k: string) {
   const g = st()
@@ -34,12 +35,12 @@ function slot_ref(k: string) {
   return g.snd.se[parseInt(k.slice(2), 10)]
 }
 
-export type ProjSnap = {
+export type proj_snap_t = {
   w: number
   h: number
   fps: number
   loop: number
-  palMode: number
+  pal_mode: number
   name: string
   ratio: string
   res: string
@@ -48,22 +49,24 @@ export type ProjSnap = {
   lalpha: number[]
   lord: number[]
   mode: number
-  anim: AnimFx
-  bgmVol: number
-  bgmFps: number
-  seVol: number
+  anim: anim_fx_t
+  bgm_vol: number
+  bgm_fps: number
+  se_vol: number
   cur: number
-  loopA: number
-  loopB: number
-  frames: { se: number, hold: number, paper?: string, kwz?: KwzFrameMeta, pk: (Uint8Array | null)[] }[]
+  loop_a: number
+  loop_b: number
+  frames: { se: number, hold: number, paper?: string, kwz?: kwz_frame_meta_t, pk: (Uint8Array | null)[] }[]
   slots: { name: string, bytes: ArrayBuffer | null }[]
-  meta: NoteMeta
+  meta: note_meta_t
+  sources?: pixel_source_asset_t[]
+  source_bytes?: { id: number, bytes: Uint8Array }[]
 }
 
-export function fmt_snapshot(): ProjSnap {
+export function fmt_snapshot(): proj_snap_t {
   const g = st()
-  const images = new Map<Rle, Uint8Array>()
-  function image_bytes(p: Rle | null): Uint8Array | null {
+  const images = new Map<rle_t, Uint8Array>()
+  function image_bytes(p: rle_t | null): Uint8Array | null {
     if (!p) return null
     let bytes = images.get(p)
     if (!bytes) { bytes = rle_bytes(p); images.set(p, bytes) }
@@ -77,40 +80,40 @@ export function fmt_snapshot(): ProjSnap {
     pk: f.pk.map(image_bytes),
   }))
   const slots: { name: string, bytes: ArrayBuffer | null }[] = []
-  for (const k of SLOT_KEYS) {
+  for (const k of slot_keys) {
     const s = slot_ref(k)
     slots.push({ name: s.name, bytes: s.bytes })
   }
   return {
-    w: g.doc.w, h: g.doc.h, fps: g.doc.fps, loop: g.doc.loop, palMode: g.pen.palMode,
+    w: g.doc.w, h: g.doc.h, fps: g.doc.fps, loop: g.doc.loop, pal_mode: g.pen.pal_mode,
     name: g.doc.name, ratio: g.doc.ratio, res: g.doc.res, paper: g.doc.paper,
     lvis: [...g.doc.lvis], lalpha: [...g.doc.lalpha], lord: [...g.doc.lord],
-    mode: g.doc.mode, anim: { ...g.doc.anim }, bgmVol: g.snd.bgmVol, bgmFps: g.snd.bgmFps, seVol: g.snd.seVol,
-    cur: g.doc.cur, loopA: g.doc.loopA, loopB: g.doc.loopB,
-    frames, slots, meta: { ...g.doc.meta },
+    mode: g.doc.mode, anim: { ...g.doc.anim }, bgm_vol: g.snd.bgm_vol, bgm_fps: g.snd.bgm_fps, se_vol: g.snd.se_vol,
+    cur: g.doc.cur, loop_a: g.doc.loop_a, loop_b: g.doc.loop_b,
+    frames, slots, meta: { ...g.doc.meta }, sources: pixel_source_collect(g.doc.frames).map(({ id, file }) => ({ id, file })),
   }
 }
 
-function write_anim(w: ReturnType<typeof binary_writer>, anim: AnimFx): void {
+function write_anim(w: ReturnType<typeof binary_writer>, anim: anim_fx_t): void {
   writer_u8(w, anim.wiggle)
-  writer_f32(w, anim.wiggleAmount)
-  writer_f32(w, anim.wiggleCell)
-  writer_f32(w, anim.wiggleRate)
-  writer_u8(w, anim.wigglePhases)
-  writer_u32(w, anim.wiggleSeed)
+  writer_f32(w, anim.wiggle_amount)
+  writer_f32(w, anim.wiggle_cell)
+  writer_f32(w, anim.wiggle_rate)
+  writer_u8(w, anim.wiggle_phases)
+  writer_u32(w, anim.wiggle_seed)
   writer_u8(w, anim.motion)
-  writer_f32(w, anim.motionAmount)
-  writer_f32(w, anim.motionRate)
-  writer_f32(w, anim.motionAnchorX)
-  writer_f32(w, anim.motionAnchorY)
-  writer_u32(w, anim.motionSeed)
+  writer_f32(w, anim.motion_amount)
+  writer_f32(w, anim.motion_rate)
+  writer_f32(w, anim.motion_anchor_x)
+  writer_f32(w, anim.motion_anchor_y)
+  writer_u32(w, anim.motion_seed)
 }
 
-export function fmt_build(p: ProjSnap): Uint8Array {
+function fmt_writer(p: proj_snap_t, source_count: number): ReturnType<typeof binary_writer> {
   const w = binary_writer(1 << 16)
-  writer_u32(w, MAGIC)
-  let layerSlots = 9
-  for (const layer of p.lord) layerSlots = Math.max(layerSlots, layer + 1)
+  writer_u32(w, magic)
+  let layer_slots = 9
+  for (const layer of p.lord) layer_slots = Math.max(layer_slots, layer + 1)
   const unique = new Set<Uint8Array>()
   let repeated = 0
   for (const frame of p.frames) for (const image of frame.pk) {
@@ -118,38 +121,39 @@ export function fmt_build(p: ProjSnap): Uint8Array {
     if (unique.has(image)) repeated += image.byteLength
     else unique.add(image)
   }
-  const version = p.frames.some(f => f.kwz) ? 6 : p.frames.some(f => f.paper) ? 5 : layerSlots > 9 || repeated > (4 << 20) ? 4 : 3
+  const compact = p.frames.some(f => f.pk.some(image => image && (image[3] & 0xc0) === 0x40))
+  const version = source_count ? 8 : compact ? 7 : p.frames.some(f => f.kwz) ? 6 : p.frames.some(f => f.paper) ? 5 : layer_slots > 9 || repeated > (4 << 20) ? 4 : 3
   const images = new Map<Uint8Array, number>()
   writer_u32(w, version)
   writer_u16(w, p.w)
   writer_u16(w, p.h)
   writer_f32(w, p.fps)
   writer_u8(w, p.loop)
-  writer_u8(w, p.palMode)
+  writer_u8(w, p.pal_mode)
   writer_string(w, p.name)
   writer_string(w, p.ratio)
   writer_string(w, p.res)
   writer_string(w, p.paper)
-  writer_u8(w, layerSlots)
+  writer_u8(w, layer_slots)
   writer_u8(w, p.lord.length)
-  for (let i = 0; i < layerSlots; i++) writer_u8(w, p.lvis[i] || 0)
-  for (let i = 0; i < layerSlots; i++) writer_u8(w, p.lalpha[i] === undefined ? 255 : p.lalpha[i])
+  for (let i = 0; i < layer_slots; i++) writer_u8(w, p.lvis[i] || 0)
+  for (let i = 0; i < layer_slots; i++) writer_u8(w, p.lalpha[i] === undefined ? 255 : p.lalpha[i])
   for (const layer of p.lord) writer_u8(w, layer)
   writer_u8(w, p.mode)
-  writer_f32(w, p.bgmVol)
-  writer_f32(w, p.bgmFps)
-  writer_f32(w, p.seVol)
+  writer_f32(w, p.bgm_vol)
+  writer_f32(w, p.bgm_fps)
+  writer_f32(w, p.se_vol)
   write_anim(w, p.anim)
   writer_u16(w, p.frames.length)
   writer_u16(w, p.cur)
-  writer_u16(w, p.loopA < 0 ? 0xffff : p.loopA)
-  writer_u16(w, p.loopB < 0 ? 0xffff : p.loopB)
+  writer_u16(w, p.loop_a < 0 ? 0xffff : p.loop_a)
+  writer_u16(w, p.loop_b < 0 ? 0xffff : p.loop_b)
   for (const f of p.frames) {
     writer_u8(w, f.se)
     writer_u8(w, f.hold)
     if (version >= 5) writer_string(w, f.paper || '')
     if (version >= 6) kwz_frame_meta_write(w, f.kwz)
-    for (let l = 0; l < layerSlots; l++) {
+    for (let l = 0; l < layer_slots; l++) {
       const b = f.pk[l]
       if (!b) {
         writer_u32(w, 0)
@@ -192,20 +196,50 @@ export function fmt_build(p: ProjSnap): Uint8Array {
   writer_u16(w, mt.flags)
   writer_u16(w, mt.layer_flags)
   writer_u32(w, mt.app_ver)
-  const body = writer_finish(w)
-  const out = binary_writer(body.length + 4)
-  writer_bytes(out, body)
-  writer_u32(out, crc32(body, 0))
-  return writer_finish(out)
+  return w
 }
 
-export type LoadedProject = {
-  meta: NoteMeta
+export function fmt_build(p: proj_snap_t): Uint8Array {
+  if (p.sources?.length && !p.source_bytes) throw new Error('動画を含む作品は非同期の保存処理を使ってください')
+  const sources = p.source_bytes || [], w = fmt_writer(p, sources.length)
+  if (sources.length) {
+    writer_u32(w, sources.length)
+    for (const source of sources) { writer_u32(w, source.id); writer_u32(w, source.bytes.length); writer_u32(w, 0); writer_bytes(w, source.bytes) }
+  }
+  writer_u32(w, crc32(w.buf.subarray(0, w.len), 0))
+  return writer_finish(w)
+}
+
+export async function fmt_build_blob(p: proj_snap_t): Promise<Blob> {
+  const sources = p.sources || []
+  const header = (() => {
+    const writer = fmt_writer(p, sources.length)
+    if (sources.length) writer_u32(writer, sources.length)
+    return writer_finish(writer)
+  })()
+  const parts: BlobPart[] = [header as BlobPart]
+  for (const source of sources) {
+    const entry = new Uint8Array(12), view = new DataView(entry.buffer)
+    view.setUint32(0, source.id, true); view.setUint32(4, source.file.size % 0x100000000, true); view.setUint32(8, Math.floor(source.file.size / 0x100000000), true)
+    parts.push(entry, source.file)
+  }
+  const body = new Blob(parts)
+  let checksum = 0
+  const reader = body.stream().getReader()
+  try { for (;;) { const part = await reader.read(); if (part.done) break; checksum = crc32(part.value, checksum) } }
+  finally { reader.releaseLock() }
+  const end = new Uint8Array(4)
+  new DataView(end.buffer).setUint32(0, checksum, true)
+  return new Blob([body, end], { type: 'application/octet-stream' })
+}
+
+export type loaded_project_t = {
+  meta: note_meta_t
   w: number
   h: number
   fps: number
   loop: number
-  palMode: number
+  pal_mode: number
   name: string
   ratio: string
   res: string
@@ -214,14 +248,14 @@ export type LoadedProject = {
   lalpha: Uint8Array
   lord: number[]
   mode: number
-  anim: AnimFx
-  bgmVol: number
-  bgmFps: number
-  seVol: number
-  frames: Frame[]
+  anim: anim_fx_t
+  bgm_vol: number
+  bgm_fps: number
+  se_vol: number
+  frames: frame_t[]
   cur: number
-  loopA: number
-  loopB: number
+  loop_a: number
+  loop_b: number
   slots: { name: string, bytes: ArrayBuffer | null }[]
 }
 
@@ -229,79 +263,79 @@ export function fmt_save(): Uint8Array {
   return fmt_build(fmt_snapshot())
 }
 
-function read_anim(r: ReturnType<typeof binary_reader>): AnimFx {
+function read_anim(r: ReturnType<typeof binary_reader>): anim_fx_t {
   const anim = anim_fx_zero()
   anim.wiggle = reader_u8(r)
-  anim.wiggleAmount = reader_f32(r)
-  anim.wiggleCell = reader_f32(r)
-  anim.wiggleRate = reader_f32(r)
-  anim.wigglePhases = reader_u8(r)
-  anim.wiggleSeed = reader_u32(r)
+  anim.wiggle_amount = reader_f32(r)
+  anim.wiggle_cell = reader_f32(r)
+  anim.wiggle_rate = reader_f32(r)
+  anim.wiggle_phases = reader_u8(r)
+  anim.wiggle_seed = reader_u32(r)
   anim.motion = reader_u8(r)
-  anim.motionAmount = reader_f32(r)
-  anim.motionRate = reader_f32(r)
-  anim.motionAnchorX = reader_f32(r)
-  anim.motionAnchorY = reader_f32(r)
-  anim.motionSeed = reader_u32(r)
+  anim.motion_amount = reader_f32(r)
+  anim.motion_rate = reader_f32(r)
+  anim.motion_anchor_x = reader_f32(r)
+  anim.motion_anchor_y = reader_f32(r)
+  anim.motion_seed = reader_u32(r)
   return anim
 }
 
-function fmt_parse_inner(bytes: Uint8Array): LoadedProject | null {
+function fmt_parse_inner(bytes: Uint8Array): loaded_project_t | null {
   if (bytes.length < 32) return null
   const body = bytes.subarray(0, bytes.length - 4)
   const dv = new DataView(bytes.buffer, bytes.byteOffset + bytes.length - 4, 4)
   if (dv.getUint32(0, true) !== crc32(body, 0)) return null
   const r = binary_reader(body)
-  if (reader_u32(r) !== MAGIC) return null
+  if (reader_u32(r) !== magic) return null
   const version = reader_u32(r)
-  if (version < 1 || version > FORMAT_VERSION) return null
+  if (version < 1 || version > format_version) return null
   const w = reader_u16(r)
   const h = reader_u16(r)
   if (w < 8 || h < 8 || w > 4096 || h > 4096) return null
   const fps = reader_f32(r)
   const loop = reader_u8(r)
-  const palMode = reader_u8(r)
+  const pal_mode = reader_u8(r)
   const name = reader_string(r)
   const ratio = reader_string(r)
   const res = reader_string(r)
   const paper = reader_string(r)
-  let layerSlots = L_BASE_N
-  let orderCount = 3
+  let layer_slots = l_base_n
+  let order_count = 3
   if (version >= 3) {
-    layerSlots = reader_u8(r)
-    orderCount = reader_u8(r)
-    if (layerSlots < L_BASE_N || layerSlots > L_N || orderCount < 1 || orderCount > L_DRAW_MAX) return null
+    layer_slots = reader_u8(r)
+    order_count = reader_u8(r)
+    if (layer_slots < l_base_n || layer_slots > l_n || order_count < 1 || order_count > l_draw_max) return null
   }
-  const lvis = new Uint8Array(L_N)
-  for (let i = 0; i < layerSlots; i++) lvis[i] = reader_u8(r)
-  const lalpha = new Uint8Array(L_N)
+  const lvis = new Uint8Array(l_n)
+  for (let i = 0; i < layer_slots; i++) lvis[i] = reader_u8(r)
+  const lalpha = new Uint8Array(l_n)
   lalpha.fill(255)
-  for (let i = 0; i < layerSlots; i++) lalpha[i] = reader_u8(r)
+  for (let i = 0; i < layer_slots; i++) lalpha[i] = reader_u8(r)
   const lord: number[] = []
-  for (let i = 0; i < orderCount; i++) lord.push(reader_u8(r))
+  for (let i = 0; i < order_count; i++) lord.push(reader_u8(r))
   const mode = reader_u8(r)
-  const bgmVol = reader_f32(r)
-  const bgmFps = reader_f32(r)
-  const seVol = reader_f32(r)
+  const bgm_vol = reader_f32(r)
+  const bgm_fps = reader_f32(r)
+  const se_vol = reader_f32(r)
   const anim = version >= 3 ? read_anim(r) : anim_fx_zero()
   const fcount = reader_u16(r)
   const cur = reader_u16(r)
   const la = reader_u16(r)
   const lb = reader_u16(r)
-  const loopA = la === 0xffff ? -1 : la
-  const loopB = lb === 0xffff ? -1 : lb
+  const loop_a = la === 0xffff ? -1 : la
+  const loop_b = lb === 0xffff ? -1 : lb
   if (fcount < 1 || fcount > mode_frame_limit(mode)) return null
-  const frames: Frame[] = []
-  const images: Rle[] = []
+  const frames: frame_t[] = []
+  const images: rle_t[] = []
   for (let i = 0; i < fcount; i++) {
-    if (reader_left(r) < 2 + 4 * layerSlots) return null
+    if (reader_left(r) < 2 + 4 * layer_slots) return null
     const se = reader_u8(r)
-    const hold = clamp(reader_u8(r), 1, HOLD_MAX)
-    const framePaper = version >= 5 ? reader_string(r) : ''
-    if (framePaper && !/^#[0-9a-f]{6}(00)?$/i.test(framePaper)) return null
+    const hold = clamp(reader_u8(r), 1, hold_max)
+    const frame_paper = version >= 5 ? reader_string(r) : ''
+    if (frame_paper && !/^#[0-9a-f]{6}(00)?$/i.test(frame_paper)) return null
     const kwz = version >= 6 ? kwz_frame_meta_read(r) : undefined
-    const pk: (Rle | null)[] = new Array<Rle | null>(L_N).fill(null)
-    for (let l = 0; l < layerSlots; l++) {
+    const pk: (rle_t | null)[] = new Array<rle_t | null>(l_n).fill(null)
+    for (let l = 0; l < layer_slots; l++) {
       const n = reader_u32(r)
       if (n === 0) continue
       if (version >= 4 && (n & 0x80000000)) {
@@ -316,7 +350,7 @@ function fmt_parse_inner(bytes: Uint8Array): LoadedProject | null {
       pk[l] = packed
       if (version >= 4) images.push(packed)
     }
-    frames.push({ id: -1, se, hold, paper: framePaper || undefined, kwz, pk })
+    frames.push({ id: -1, se, hold, paper: frame_paper || undefined, kwz, pk })
   }
   const slots: { name: string, bytes: ArrayBuffer | null }[] = []
   for (let i = 0; i < 6; i++) {
@@ -348,10 +382,21 @@ function fmt_parse_inner(bytes: Uint8Array): LoadedProject | null {
     if (version >= 2) meta.layer_flags = reader_u16(r)
     meta.app_ver = reader_u32(r)
   }
-  return { w, h, fps, loop, palMode, name, ratio, res, paper, lvis, lalpha, lord, mode, anim, bgmVol, bgmFps, seVol, frames, cur, loopA, loopB, slots, meta }
+  const sources: pixel_source_asset_t[] = []
+  if (version >= 8) {
+    const count = reader_u32(r)
+    if (count > fcount * layer_slots) return null
+    for (let i = 0; i < count; i++) {
+      const id = reader_u32(r), length = reader_u32(r) + reader_u32(r) * 0x100000000
+      if (!id || !Number.isSafeInteger(length) || !length || length > reader_left(r) || sources.some(source => source.id === id)) return null
+      sources.push({ id, file: new Blob([reader_bytes(r, length) as BlobPart]) })
+    }
+  }
+  pixel_source_restore(frames, sources)
+  return { w, h, fps, loop, pal_mode, name, ratio, res, paper, lvis, lalpha, lord, mode, anim, bgm_vol, bgm_fps, se_vol, frames, cur, loop_a, loop_b, slots, meta }
 }
 
-export function fmt_parse(bytes: Uint8Array): LoadedProject | null {
+export function fmt_parse(bytes: Uint8Array): loaded_project_t | null {
   try {
     return fmt_parse_inner(bytes)
   } catch (error) {

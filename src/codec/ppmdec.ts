@@ -1,11 +1,12 @@
+import { ppm_speeds } from './ppmformat'
 import { report_warning } from '../diagnostics'
 import { ppm_adpcm_decode } from './adpcm'
 import { bytes_to_hex, unix_from_nintendo_ts, ppm_filename_unpack, ppm_filename_format } from './fname'
-import { flip_meta_zero, type FlipMeta } from './kwzdec'
-import { PPM_H, PPM_W } from './ppm'
+import { flip_meta_zero, type flip_meta_t } from './kwzdec'
+import { ppm_h, ppm_w } from './ppm'
 
-function frameSpeedIdxSafe(b: Uint8Array, soundOff: number): number {
-  const p = soundOff + 16
+function frame_speed_idx_safe(b: Uint8Array, sound_off: number): number {
+  const p = sound_off + 16
   if (p < b.length) return 8 - b[p]
   return 5
 }
@@ -26,26 +27,25 @@ function ppm_id_hex(b: Uint8Array, ptr: number): string {
   return bytes_to_hex(rev)
 }
 
-export type PpmDecoded = {
-  meta: FlipMeta
+export type ppm_decoded_t = {
+  meta: flip_meta_t
   w: number
   h: number
-  frameCount: number
+  frame_count: number
   fps: number
   speed: number
   loop: number
   paper: number[]
-  thumbIdx: number
-  penIdx: number[][]
+  thumb_idx: number
+  pen_idx: number[][]
   layers: Uint8Array[][]
-  seFlags: number[]
+  se_flags: number[]
   bgm: Int16Array | null
-  bgmRate: number
-  bgmFps: number
+  bgm_rate: number
+  bgm_fps: number
   se: (Int16Array | null)[]
 }
 
-const FPS_TABLE = [0, 0.5, 1, 2, 4, 6, 12, 20, 30]
 
 function dv_u16(d: DataView, o: number): number {
   return d.getUint16(o, true)
@@ -54,12 +54,12 @@ function dv_u32(d: DataView, o: number): number {
   return d.getUint32(o, true)
 }
 
-function dec_line(bytes: Uint8Array, p: { o: number }, t: number, out: Uint8Array, rowBase: number): void {
+function dec_line(bytes: Uint8Array, p: { o: number }, t: number, out: Uint8Array, row_base: number): void {
   if (t === 0) return
   if (t === 3) {
     for (let c = 0; c < 32; c++) {
       const b = bytes[p.o++]
-      for (let bit = 0; bit < 8; bit++) out[rowBase + c * 8 + bit] = (b >> bit) & 1
+      for (let bit = 0; bit < 8; bit++) out[row_base + c * 8 + bit] = (b >> bit) & 1
     }
     return
   }
@@ -70,29 +70,29 @@ function dec_line(bytes: Uint8Array, p: { o: number }, t: number, out: Uint8Arra
     if (t === 2) {
       if (present) {
         const b = bytes[p.o++]
-        for (let bit = 0; bit < 8; bit++) out[rowBase + c * 8 + bit] = (b >> bit) & 1
+        for (let bit = 0; bit < 8; bit++) out[row_base + c * 8 + bit] = (b >> bit) & 1
       } else {
-        for (let bit = 0; bit < 8; bit++) out[rowBase + c * 8 + bit] = 1
+        for (let bit = 0; bit < 8; bit++) out[row_base + c * 8 + bit] = 1
       }
     } else {
       if (present) {
         const b = bytes[p.o++]
-        for (let bit = 0; bit < 8; bit++) out[rowBase + c * 8 + bit] = (b >> bit) & 1
+        for (let bit = 0; bit < 8; bit++) out[row_base + c * 8 + bit] = (b >> bit) & 1
       }
     }
   }
 }
 
-export function ppm_decode(buf: ArrayBuffer): PpmDecoded | null {
+export function ppm_decode(buf: ArrayBuffer): ppm_decoded_t | null {
   const bytes = new Uint8Array(buf)
   if (bytes.length < 0x6a0) return null
   const d = new DataView(buf)
   if (bytes[0] !== 0x50 || bytes[1] !== 0x41 || bytes[2] !== 0x52 || bytes[3] !== 0x41) return null
-  const animDataSize = dv_u32(d, 4)
-  let frameCount = dv_u16(d, 12) + 1
-  if (frameCount > 999) frameCount = 999
-  let thumbIdx = d.getInt16(0x12, true)
-  if (thumbIdx < 0 || thumbIdx >= frameCount) thumbIdx = 0
+  const anim_data_size = dv_u32(d, 4)
+  let frame_count = dv_u16(d, 12) + 1
+  if (frame_count > 999) frame_count = 999
+  let thumb_idx = d.getInt16(0x12, true)
+  if (thumb_idx < 0 || thumb_idx >= frame_count) thumb_idx = 0
 
   const meta = flip_meta_zero()
   meta.lock = dv_u16(d, 0x10) ? 1 : 0
@@ -110,46 +110,46 @@ export function ppm_decode(buf: ArrayBuffer): PpmDecoded | null {
   meta.modified = unix_from_nintendo_ts(dv_u32(d, 0x9a))
   meta.created = meta.modified
 
-  const animOff = 0x6a0
-  const tableSize = dv_u16(d, animOff)
-  const flags = dv_u16(d, animOff + 6)
+  const anim_off = 0x6a0
+  const table_size = dv_u16(d, anim_off)
+  const flags = dv_u16(d, anim_off + 6)
   meta.flags = flags
   const loop = flags & 0x2 ? 1 : 0
-  const offBase = animOff + 8 + tableSize
-  const frameOffsets: number[] = []
-  for (let i = 0; i < frameCount; i++) {
-    const rel = animOff + 8 + i * 4
+  const off_base = anim_off + 8 + table_size
+  const frame_offsets: number[] = []
+  for (let i = 0; i < frame_count; i++) {
+    const rel = anim_off + 8 + i * 4
     if (rel + 4 > bytes.length) break
     const off = dv_u32(d, rel)
-    if (offBase + off >= bytes.length) break
-    frameOffsets.push(off)
+    if (off_base + off >= bytes.length) break
+    frame_offsets.push(off)
   }
-  if (frameOffsets.length < frameCount) frameCount = frameOffsets.length
-  if (frameCount < 1) return null
+  if (frame_offsets.length < frame_count) frame_count = frame_offsets.length
+  if (frame_count < 1) return null
 
   const layers: Uint8Array[][] = []
   const paper: number[] = []
-  const penIdx: number[][] = []
-  const N = PPM_W * PPM_H
-  const prev: Uint8Array[] = [new Uint8Array(N), new Uint8Array(N)]
-  let decodedFrames = frameCount
-  for (let f = 0; f < frameCount; f++) {
+  const pen_idx: number[][] = []
+  const n = ppm_w * ppm_h
+  const prev: Uint8Array[] = [new Uint8Array(n), new Uint8Array(n)]
+  let decoded_frames = frame_count
+  for (let f = 0; f < frame_count; f++) {
     try {
-      const start = offBase + frameOffsets[f]
+      const start = off_base + frame_offsets[f]
       let o = start
       const header = bytes[o++]
       paper.push(header & 1)
-      penIdx.push([(header >> 1) & 3, (header >> 3) & 3])
-      const isKey = (header >> 7) & 1
-      const isTranslated = (header >> 5) & 3
+      pen_idx.push([(header >> 1) & 3, (header >> 3) & 3])
+      const is_key = (header >> 7) & 1
+      const is_translated = (header >> 5) & 3
       let tx = 0
       let ty = 0
-      if (isTranslated) {
+      if (is_translated) {
         tx = (bytes[o] << 24) >> 24
         ty = (bytes[o + 1] << 24) >> 24
         o += 2
       }
-      const types: number[][] = [new Array(PPM_H), new Array(PPM_H)]
+      const types: number[][] = [new Array(ppm_h), new Array(ppm_h)]
       for (let l = 0; l < 2; l++) {
         for (let i = 0; i < 48; i++) {
           const value = bytes[o++]
@@ -159,87 +159,87 @@ export function ppm_decode(buf: ArrayBuffer): PpmDecoded | null {
           types[l][i * 4 + 3] = (value >> 6) & 3
         }
       }
-      const frameLayers: Uint8Array[] = [new Uint8Array(N), new Uint8Array(N)]
+      const frame_layers: Uint8Array[] = [new Uint8Array(n), new Uint8Array(n)]
       const pointer = { o }
       for (let l = 0; l < 2; l++) {
-        for (let y = 0; y < PPM_H; y++) dec_line(bytes, pointer, types[l][y], frameLayers[l], y * PPM_W)
+        for (let y = 0; y < ppm_h; y++) dec_line(bytes, pointer, types[l][y], frame_layers[l], y * ppm_w)
       }
-      if (!isKey) {
+      if (!is_key) {
         if (tx === 0 && ty === 0) {
-          for (let i = 0; i < N; i++) {
-            frameLayers[0][i] ^= prev[0][i]
-            frameLayers[1][i] ^= prev[1][i]
+          for (let i = 0; i < n; i++) {
+            frame_layers[0][i] ^= prev[0][i]
+            frame_layers[1][i] ^= prev[1][i]
           }
         } else {
           const sx0 = Math.max(tx, 0)
           const sy0 = Math.max(ty, 0)
-          const ex = Math.min(PPM_W + tx, PPM_W)
-          const ey = Math.min(PPM_H + ty, PPM_H)
-          const shift = ty * PPM_W + tx
+          const ex = Math.min(ppm_w + tx, ppm_w)
+          const ey = Math.min(ppm_h + ty, ppm_h)
+          const shift = ty * ppm_w + tx
           for (let y = sy0; y < ey; y++) {
             for (let x = sx0; x < ex; x++) {
-              const dest = y * PPM_W + x
+              const dest = y * ppm_w + x
               const src = dest - shift
-              frameLayers[0][dest] ^= prev[0][src]
-              frameLayers[1][dest] ^= prev[1][src]
+              frame_layers[0][dest] ^= prev[0][src]
+              frame_layers[1][dest] ^= prev[1][src]
             }
           }
         }
       }
-      prev[0].set(frameLayers[0])
-      prev[1].set(frameLayers[1])
-      layers.push(frameLayers)
+      prev[0].set(frame_layers[0])
+      prev[1].set(frame_layers[1])
+      layers.push(frame_layers)
     } catch (error) {
       report_warning('PPMのフレーム' + (f + 1) + 'を最後まで解析できませんでした', error)
-      decodedFrames = f
+      decoded_frames = f
       break
     }
   }
-  frameCount = decodedFrames
-  if (frameCount < 1) return null
+  frame_count = decoded_frames
+  if (frame_count < 1) return null
 
-  const seFlagOff = 0x6a0 + animDataSize
-  let soundOff = seFlagOff + frameCount
-  if (soundOff % 4 !== 0) soundOff += 4 - (soundOff % 4)
-  const seFlags: number[] = []
-  for (let f = 0; f < frameCount; f++) seFlags.push(seFlagOff + f < bytes.length ? bytes[seFlagOff + f] & 0x7 : 0)
-  if (soundOff + 32 > bytes.length) {
-    const spd = frameSpeedIdxSafe(bytes, soundOff)
-    return { thumbIdx, w: PPM_W, h: PPM_H, meta, frameCount, fps: FPS_TABLE[spd] || 6, speed: spd, loop, paper, penIdx, layers, seFlags, bgm: null, bgmRate: 8180, bgmFps: 0, se: [null, null, null] }
+  const se_flag_off = 0x6a0 + anim_data_size
+  let sound_off = se_flag_off + frame_count
+  if (sound_off % 4 !== 0) sound_off += 4 - (sound_off % 4)
+  const se_flags: number[] = []
+  for (let f = 0; f < frame_count; f++) se_flags.push(se_flag_off + f < bytes.length ? bytes[se_flag_off + f] & 0x7 : 0)
+  if (sound_off + 32 > bytes.length) {
+    const spd = frame_speed_idx_safe(bytes, sound_off)
+    return { thumb_idx, w: ppm_w, h: ppm_h, meta, frame_count, fps: ppm_speeds[spd] || 6, speed: spd, loop, paper, pen_idx, layers, se_flags, bgm: null, bgm_rate: 8180, bgm_fps: 0, se: [null, null, null] }
   }
-  const bgmLen = dv_u32(d, soundOff)
-  const se1Len = dv_u32(d, soundOff + 4)
-  const se2Len = dv_u32(d, soundOff + 8)
-  const se3Len = dv_u32(d, soundOff + 12)
-  const speed = 8 - bytes[soundOff + 16]
-  const bgmSpeed = 8 - bytes[soundOff + 17]
-  let tp = soundOff + 32
+  const bgm_len = dv_u32(d, sound_off)
+  const se1_len = dv_u32(d, sound_off + 4)
+  const se2_len = dv_u32(d, sound_off + 8)
+  const se3_len = dv_u32(d, sound_off + 12)
+  const speed = 8 - bytes[sound_off + 16]
+  const bgm_speed = 8 - bytes[sound_off + 17]
+  let tp = sound_off + 32
   let bgm: Int16Array | null = null
   const se: (Int16Array | null)[] = [null, null, null]
-  if (bgmLen > 0) bgm = ppm_adpcm_decode(bytes.subarray(tp, tp + bgmLen))
-  tp += bgmLen
-  if (se1Len > 0) se[0] = ppm_adpcm_decode(bytes.subarray(tp, tp + se1Len))
-  tp += se1Len
-  if (se2Len > 0) se[1] = ppm_adpcm_decode(bytes.subarray(tp, tp + se2Len))
-  tp += se2Len
-  if (se3Len > 0) se[2] = ppm_adpcm_decode(bytes.subarray(tp, tp + se3Len))
+  if (bgm_len > 0) bgm = ppm_adpcm_decode(bytes.subarray(tp, tp + bgm_len))
+  tp += bgm_len
+  if (se1_len > 0) se[0] = ppm_adpcm_decode(bytes.subarray(tp, tp + se1_len))
+  tp += se1_len
+  if (se2_len > 0) se[1] = ppm_adpcm_decode(bytes.subarray(tp, tp + se2_len))
+  tp += se2_len
+  if (se3_len > 0) se[2] = ppm_adpcm_decode(bytes.subarray(tp, tp + se3_len))
 
   return {
-    thumbIdx,
-    w: PPM_W,
-    h: PPM_H,
+    thumb_idx,
+    w: ppm_w,
+    h: ppm_h,
     meta,
-    frameCount,
-    fps: FPS_TABLE[speed] || 6,
+    frame_count,
+    fps: ppm_speeds[speed] || 6,
     speed,
     loop,
     paper,
-    penIdx,
+    pen_idx,
     layers,
-    seFlags,
+    se_flags,
     bgm,
-    bgmRate: 8180,
-    bgmFps: FPS_TABLE[bgmSpeed] || FPS_TABLE[speed] || 6,
+    bgm_rate: 8180,
+    bgm_fps: ppm_speeds[bgm_speed] || ppm_speeds[speed] || 6,
     se,
   }
 }

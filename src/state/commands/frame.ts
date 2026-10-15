@@ -1,50 +1,51 @@
 import { animfx_cache_clear } from '../../animfx'
-import { doc_frame_order, doc_cache_clear, doc_frame_clone, doc_frame_new, doc_frame_snap, doc_frame_insert, doc_frame_delete, doc_frame_move, doc_goto, doc_pack_live, doc_pack_layer, doc_unpack_live, frame_id_next, doc_loop_insert, doc_loop_delete, doc_loop_move } from '../../doc'
+import { doc_frame_order, doc_cache_clear, doc_frame_clone, doc_frame_new, doc_frame_snap, doc_frame_insert, doc_frame_delete, doc_frame_move, doc_goto, doc_pack_live, doc_pack_layer, doc_unpack_live, doc_loop_insert, doc_loop_delete, doc_loop_move } from '../../doc'
 import { live_write, live_drop, live_accept, live_canvas } from '../../engine'
-import { D_ALL, D_STAGE, D_THUMB, D_TIMELINE, D_FRAMEINFO, D_LAYER, D_TOOLS, D_PLAY, D_SOUND, D_PAGE, L_DRAW_DEFAULT, L_DRAW_MAX, L_N, HOLD_MAX, FPS_SPEEDS, ERR_BAD, ERR_NOOP, ERR_FULL, MODE_NORMAL, MODE_3D, type Frame, type NoteMeta, type Rle } from '../../h'
+import { d_all, d_stage, d_thumb, d_timeline, d_frameinfo, d_layer, d_tools, d_play, d_sound, d_page, l_draw_default, l_draw_max, l_n, hold_max, err_bad, err_noop, err_full, mode_normal, mode_3_d, type frame_t, type note_meta_t, type rle_t } from '../../h'
 import { hist_grp, hist_frame_ins, hist_frame_del, hist_frame_move, hist_se, hist_pix, rect_grab, hist_undo, hist_redo, hist_clear, hist_layer_alpha, hist_frame_cursor, hist_paper } from '../../hist'
 import { canvas_make, clamp, hex_rgb } from '../../lib'
-import { mode_allows_layer_alpha, mode_frame_limit, mode_order, mode_paper_opts } from '../../mode'
+import { mode_allows_layer_alpha, mode_frame_limit, mode_speeds, mode_order, mode_paper_opts } from '../../mode'
 import { thumb_clear } from '../../thumb'
 import { fx_toast, fx_sfx } from '../fx_hooks'
-import type { Globals } from '../store'
-import { anim_playing, PLAY_COMMANDS } from './play'
+import type { globals_t } from '../store'
+import { anim_playing, play_commands } from './play'
 
-type PixelChange = {
+type pixel_change_t = {
   layer: number
   x: number
   y: number
   w: number
   h: number
-  before: Rle
+  before: rle_t
 }
 
-type PixelCommit = {
+type pixel_commit_t = {
   grp: number
   frame: number
-  changes: PixelChange[]
+  changes: pixel_change_t[]
 }
 
-let frameClip: Frame | null = null
+type frame_clip_t = { frame: frame_t, w: number, h: number, mode: number }
+let frame_clip: frame_clip_t | null = null
 
-function stop_if_playing(g: Globals): void {
-  if (anim_playing()) PLAY_COMMANDS['play.stop'](g, null)
+function stop_if_playing(g: globals_t): void {
+  if (anim_playing()) play_commands['play.stop'](g, null)
 }
 
-function frame_limit(g: Globals): number {
+function frame_limit(g: globals_t): number {
   return mode_frame_limit(g.doc.mode)
 }
 
-function frame_room(g: Globals): number {
+function frame_room(g: globals_t): number {
   return Math.max(0, frame_limit(g) - g.doc.frames.length)
 }
 
-function frame_full(g: Globals): number {
+function frame_full(g: globals_t): number {
   fx_toast('これ以上コマを増やせないよ（最大' + frame_limit(g) + '）')
-  return ERR_FULL
+  return err_full
 }
 
-function range_bounds(g: Globals, a0: number, b0: number): [number, number] {
+function range_bounds(g: globals_t, a0: number, b0: number): [number, number] {
   const n = g.doc.frames.length
   const aa = Number.isFinite(a0) ? Math.trunc(a0) : g.doc.cur
   const bb = Number.isFinite(b0) ? Math.trunc(b0) : g.doc.cur
@@ -53,10 +54,10 @@ function range_bounds(g: Globals, a0: number, b0: number): [number, number] {
   return [a, b]
 }
 
-function commit_pixels(g: Globals, p: PixelCommit): number {
-  if (p.frame !== g.doc.cur || !p.changes.length) return ERR_BAD
+function commit_pixels(g: globals_t, p: pixel_commit_t): number {
+  if (p.frame !== g.doc.cur || !p.changes.length) return err_bad
   for (const c of p.changes) {
-    if (![c.layer, c.x, c.y, c.w, c.h].every(Number.isInteger) || c.layer < 0 || c.layer >= g.doc.frames[p.frame].pk.length || c.x < 0 || c.y < 0 || c.w < 1 || c.h < 1 || c.x + c.w > g.doc.w || c.y + c.h > g.doc.h) return ERR_BAD
+    if (![c.layer, c.x, c.y, c.w, c.h].every(Number.isInteger) || c.layer < 0 || c.layer >= g.doc.frames[p.frame].pk.length || c.x < 0 || c.y < 0 || c.w < 1 || c.h < 1 || c.x + c.w > g.doc.w || c.y + c.h > g.doc.h) return err_bad
   }
   const packed = new Map<number, { x: number, y: number, w: number, h: number }>()
   for (const c of p.changes) {
@@ -68,20 +69,20 @@ function commit_pixels(g: Globals, p: PixelCommit): number {
     const bottom = old ? Math.max(old.y + old.h, c.y + c.h) : c.y + c.h
     packed.set(c.layer, { x, y, w: right - x, h: bottom - y })
   }
-  if (!packed.size) return ERR_NOOP
+  if (!packed.size) return err_noop
   for (const [layer, rect] of packed) doc_pack_layer(g, layer, rect)
   return 0
 }
 
-function clear_layer(g: Globals, layer: number): number {
-  if (!Number.isInteger(layer) || layer < 0 || layer >= g.doc.frames[g.doc.cur].pk.length) return ERR_BAD
+function clear_layer(g: globals_t, layer: number): number {
+  if (!Number.isInteger(layer) || layer < 0 || layer >= g.doc.frames[g.doc.cur].pk.length) return err_bad
   stop_if_playing(g)
   const before = rect_grab(layer, 0, 0, g.doc.w, g.doc.h)
   live_write(layer).clearRect(0, 0, g.doc.w, g.doc.h)
   return commit_pixels(g, { grp: hist_grp(), frame: g.doc.cur, changes: [{ layer, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before }] })
 }
 
-export type Cmds = {
+export type cmds_t = {
   'frame.goto': number
   'frame.step': number
   'frame.add': null
@@ -93,15 +94,15 @@ export type Cmds = {
   'frame.add_many': number
   'frame.se_toggle': { i: number, bit: number }
   'frame.set_hold_range': { a: number, b: number, hold: number }
-  'frame.insert_bulk': { at: number, frames: Frame[], setCur: number }
-  'frame.append_bulk': { frames: Frame[], setCur: number }
-  'frame.replace_current_bulk': { frames: Frame[] }
+  'frame.insert_bulk': { at: number, frames: frame_t[], set_cur: number }
+  'frame.append_bulk': { frames: frame_t[], set_cur: number }
+  'frame.replace_current_bulk': { frames: frame_t[] }
   'frame.delete_range': { a: number, b: number }
   'frame.reverse_range': { a: number, b: number }
-  'frame.duplicate_range': { a: number, b: number, pingPong: number }
+  'frame.duplicate_range': { a: number, b: number, ping_pong: number }
   'frame.sync_live': null
   'frame.sync_layer': number
-  'frame.commit_pixels': PixelCommit
+  'frame.commit_pixels': pixel_commit_t
   'history.undo': null
   'history.redo': null
   'layer.toggle_visible': number
@@ -120,21 +121,21 @@ export type Cmds = {
   'doc.set_loop_a': number
   'doc.set_loop_b': number
   'doc.clear_loop_ab': null
-  'doc.set_meta': NoteMeta
+  'doc.set_meta': note_meta_t
 }
 
-export const FRAME_COMMANDS = {
-  'frame.goto': (g: Globals, i: number): number => {
-    if (!Number.isFinite(i)) return ERR_BAD
+export const frame_commands = {
+  'frame.goto': (g: globals_t, i: number): number => {
+    if (!Number.isFinite(i)) return err_bad
     stop_if_playing(g)
     const to = clamp(Math.trunc(i), 0, g.doc.frames.length - 1)
-    if (to === g.doc.cur) return ERR_NOOP
+    if (to === g.doc.cur) return err_noop
     return doc_goto(g, to)
   },
 
-  'frame.step': (g: Globals, d: number): number => FRAME_COMMANDS['frame.goto'](g, g.doc.cur + d),
+  'frame.step': (g: globals_t, d: number): number => frame_commands['frame.goto'](g, g.doc.cur + d),
 
-  'frame.add': (g: Globals, _p: null): number => {
+  'frame.add': (g: globals_t, _p: null): number => {
     if (!frame_room(g)) return frame_full(g)
     stop_if_playing(g)
     const i = g.doc.cur + 1
@@ -144,7 +145,7 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.dup': (g: Globals, _p: null): number => {
+  'frame.dup': (g: globals_t, _p: null): number => {
     if (!frame_room(g)) return frame_full(g)
     stop_if_playing(g)
     doc_pack_live(g)
@@ -156,54 +157,64 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.del': (g: Globals, _p: null): number => {
+  'frame.del': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
     const i = g.doc.cur
-    const markA = g.doc.loopA === i ? 1 : 0
-    const markB = g.doc.loopB === i ? 1 : 0
+    const mark_a = g.doc.loop_a === i ? 1 : 0
+    const mark_b = g.doc.loop_b === i ? 1 : 0
     const removed = doc_frame_delete(g, i)
     if (!removed) {
       fx_toast('最後の1枚は消せないよ')
-      return ERR_NOOP
+      return err_noop
     }
-    hist_frame_del(g, hist_grp(), i, removed, markA, markB)
+    hist_frame_del(g, hist_grp(), i, removed, mark_a, mark_b)
     fx_sfx('del')
     return 0
   },
 
-  'frame.copy': (g: Globals, _p: null): number => {
-    frameClip = doc_frame_snap(g, g.doc.cur)
+  'frame.copy': (g: globals_t, _p: null): number => {
+    frame_clip = { frame: doc_frame_snap(g, g.doc.cur), w: g.doc.w, h: g.doc.h, mode: g.doc.mode }
     fx_toast('コマをコピーしました')
     fx_sfx('tap')
     return 0
   },
 
-  'frame.paste': (g: Globals, _p: null): number => {
-    if (!frameClip) {
+  'frame.paste': (g: globals_t, _p: null): number => {
+    if (!frame_clip) {
       fx_toast('コピーしたコマがないよ')
-      return ERR_NOOP
+      return err_noop
+    }
+    if (frame_clip.w !== g.doc.w || frame_clip.h !== g.doc.h || frame_clip.mode !== g.doc.mode) {
+      fx_toast('コピー元とキャンバスのサイズ・モードが違うため、コマを貼り付けられません')
+      return err_bad
+    }
+    for (let layer = 1; layer < frame_clip.frame.pk.length; layer++) {
+      if (frame_clip.frame.pk[layer] && g.doc.lord.indexOf(layer) < 0) {
+        fx_toast('コピー元のレイヤーがこの作品にはありません')
+        return err_bad
+      }
     }
     if (!frame_room(g)) return frame_full(g)
     stop_if_playing(g)
     const i = g.doc.cur + 1
-    const frame = { id: frame_id_next(), se: frameClip.se, hold: frameClip.hold, pk: [...frameClip.pk] }
+    const frame = doc_frame_clone(frame_clip.frame)
     doc_frame_insert(g, i, frame)
     hist_frame_ins(g, hist_grp(), i)
     fx_sfx('paper')
     return 0
   },
 
-  'frame.move': (g: Globals, p: { a: number, b: number }): number => {
-    if (!Number.isInteger(p.a) || !Number.isInteger(p.b)) return ERR_BAD
+  'frame.move': (g: globals_t, p: { a: number, b: number }): number => {
+    if (!Number.isInteger(p.a) || !Number.isInteger(p.b)) return err_bad
     stop_if_playing(g)
-    if (doc_frame_move(g, p.a, p.b) !== 0) return ERR_BAD
+    if (doc_frame_move(g, p.a, p.b) !== 0) return err_bad
     hist_frame_move(g, hist_grp(), p.a, p.b)
     fx_sfx('move')
     return 0
   },
 
-  'frame.add_many': (g: Globals, n: number): number => {
-    if (!Number.isFinite(n)) return ERR_BAD
+  'frame.add_many': (g: globals_t, n: number): number => {
+    if (!Number.isFinite(n)) return err_bad
     const room = frame_room(g)
     if (room < 1) return frame_full(g)
     const cnt = clamp(Math.round(n), 1, room)
@@ -223,44 +234,44 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.se_toggle': (g: Globals, p: { i: number, bit: number }): number => {
-    if (!Number.isInteger(p.i) || !Number.isInteger(p.bit)) return ERR_BAD
+  'frame.se_toggle': (g: globals_t, p: { i: number, bit: number }): number => {
+    if (!Number.isInteger(p.i) || !Number.isInteger(p.bit)) return err_bad
     const f = g.doc.frames[p.i]
-    if (!f || p.bit < 0 || p.bit > 3) return ERR_BAD
+    if (!f || p.bit < 0 || p.bit > 3) return err_bad
     const before = f.se
     f.se ^= 1 << p.bit
     hist_se(g, hist_grp(), p.i, before, f.se)
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+    if (g.play.on) play_commands['play.retime'](g, null)
     fx_sfx('tap')
     return 0
   },
 
-  'frame.set_hold_range': (g: Globals, p: { a: number, b: number, hold: number }): number => {
-    if (!Number.isFinite(p.a) || !Number.isFinite(p.b) || !Number.isFinite(p.hold)) return ERR_BAD
+  'frame.set_hold_range': (g: globals_t, p: { a: number, b: number, hold: number }): number => {
+    if (!Number.isFinite(p.a) || !Number.isFinite(p.b) || !Number.isFinite(p.hold)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
-    const hold = clamp(Math.round(p.hold), 1, HOLD_MAX)
+    const hold = clamp(Math.round(p.hold), 1, hold_max)
     let changed = 0
     for (let i = a; i <= b; i++) {
       if (g.doc.frames[i].hold === hold) continue
       g.doc.frames[i].hold = hold
       changed = 1
     }
-    if (changed && g.play.on) PLAY_COMMANDS['play.retime'](g, null)
-    return changed ? 0 : ERR_NOOP
+    if (changed && g.play.on) play_commands['play.retime'](g, null)
+    return changed ? 0 : err_noop
   },
 
-  'frame.insert_bulk': (g: Globals, p: { at: number, frames: Frame[], setCur: number }): number => {
-    if (!Number.isFinite(p.at) || !Number.isFinite(p.setCur) || !Array.isArray(p.frames)) return ERR_BAD
-    if (!p.frames.length) return ERR_NOOP
+  'frame.insert_bulk': (g: globals_t, p: { at: number, frames: frame_t[], set_cur: number }): number => {
+    if (!Number.isFinite(p.at) || !Number.isFinite(p.set_cur) || !Array.isArray(p.frames)) return err_bad
+    if (!p.frames.length) return err_noop
     const room = frame_room(g)
-    if (room < 1) return ERR_FULL
+    if (room < 1) return err_full
     stop_if_playing(g)
     doc_pack_live(g)
     const at = clamp(Math.round(p.at), 0, g.doc.frames.length)
     const frames = p.frames.slice(0, room)
     g.doc.frames.splice(at, 0, ...frames)
     doc_loop_insert(g, at, frames.length)
-    g.doc.cur = clamp(Math.trunc(p.setCur), 0, g.doc.frames.length - 1)
+    g.doc.cur = clamp(Math.trunc(p.set_cur), 0, g.doc.frames.length - 1)
     hist_clear()
     thumb_clear()
     animfx_cache_clear()
@@ -268,15 +279,15 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.append_bulk': (g: Globals, p: { frames: Frame[], setCur: number }): number => {
-    if (!Number.isFinite(p.setCur) || !Array.isArray(p.frames)) return ERR_BAD
-    if (!p.frames.length) return ERR_NOOP
+  'frame.append_bulk': (g: globals_t, p: { frames: frame_t[], set_cur: number }): number => {
+    if (!Number.isFinite(p.set_cur) || !Array.isArray(p.frames)) return err_bad
+    if (!p.frames.length) return err_noop
     const room = frame_room(g)
-    if (room < 1) return ERR_FULL
+    if (room < 1) return err_full
     stop_if_playing(g)
     doc_pack_live(g)
     g.doc.frames.push(...p.frames.slice(0, room))
-    g.doc.cur = clamp(Math.trunc(p.setCur), 0, g.doc.frames.length - 1)
+    g.doc.cur = clamp(Math.trunc(p.set_cur), 0, g.doc.frames.length - 1)
     hist_clear()
     thumb_clear()
     animfx_cache_clear()
@@ -284,18 +295,18 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.replace_current_bulk': (g: Globals, p: { frames: Frame[] }): number => {
-    if (!Array.isArray(p.frames) || p.frames.length < 2) return ERR_BAD
-    if (g.doc.frames.length - 1 + p.frames.length > frame_limit(g)) return ERR_FULL
-    for (const frame of p.frames) if (!frame || !Array.isArray(frame.pk) || frame.pk.length !== L_N) return ERR_BAD
+  'frame.replace_current_bulk': (g: globals_t, p: { frames: frame_t[] }): number => {
+    if (!Array.isArray(p.frames) || p.frames.length < 2) return err_bad
+    if (g.doc.frames.length - 1 + p.frames.length > frame_limit(g)) return err_full
+    for (const frame of p.frames) if (!frame || !Array.isArray(frame.pk) || frame.pk.length !== l_n) return err_bad
     stop_if_playing(g)
     doc_pack_live(g)
     const at = g.doc.cur
     const delta = p.frames.length - 1
     g.doc.frames.splice(at, 1, ...p.frames)
     const move_marker = (value: number): number => value < 0 || value < at ? value : value === at ? at : value + delta
-    g.doc.loopA = move_marker(g.doc.loopA)
-    g.doc.loopB = move_marker(g.doc.loopB)
+    g.doc.loop_a = move_marker(g.doc.loop_a)
+    g.doc.loop_b = move_marker(g.doc.loop_b)
     g.doc.cur = at
     hist_clear()
     thumb_clear()
@@ -305,10 +316,10 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.delete_range': (g: Globals, p: { a: number, b: number }): number => {
-    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return ERR_BAD
+  'frame.delete_range': (g: globals_t, p: { a: number, b: number }): number => {
+    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
-    if (b - a + 1 >= g.doc.frames.length) return ERR_BAD
+    if (b - a + 1 >= g.doc.frames.length) return err_bad
     stop_if_playing(g)
     doc_pack_live(g)
     const current = g.doc.frames[g.doc.cur]
@@ -324,10 +335,10 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.reverse_range': (g: Globals, p: { a: number, b: number }): number => {
-    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return ERR_BAD
+  'frame.reverse_range': (g: globals_t, p: { a: number, b: number }): number => {
+    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
-    if (a === b) return ERR_NOOP
+    if (a === b) return err_noop
     stop_if_playing(g)
     doc_pack_live(g)
     const current = g.doc.frames[g.doc.cur]
@@ -344,17 +355,17 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'frame.duplicate_range': (g: Globals, p: { a: number, b: number, pingPong: number }): number => {
-    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return ERR_BAD
+  'frame.duplicate_range': (g: globals_t, p: { a: number, b: number, ping_pong: number }): number => {
+    if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
-    if (p.pingPong && b - a < 2) return ERR_BAD
+    if (p.ping_pong && b - a < 2) return err_bad
     const room = frame_room(g)
-    if (room < 1) return ERR_FULL
+    if (room < 1) return err_full
     stop_if_playing(g)
     doc_pack_live(g)
-    const beforeId = g.doc.frames[g.doc.cur].id
-    const src: Frame[] = []
-    if (p.pingPong) {
+    const before_id = g.doc.frames[g.doc.cur].id
+    const src: frame_t[] = []
+    if (p.ping_pong) {
       for (let i = b - 1; i > a; i--) src.push(doc_frame_clone(g.doc.frames[i]))
     } else {
       for (let i = a; i <= b; i++) src.push(doc_frame_clone(g.doc.frames[i]))
@@ -368,61 +379,61 @@ export const FRAME_COMMANDS = {
       g.doc.cur = at
       hist_frame_ins(g, grp, at)
     }
-    hist_frame_cursor(g, grp, beforeId, g.doc.frames[g.doc.cur].id)
+    hist_frame_cursor(g, grp, before_id, g.doc.frames[g.doc.cur].id)
     doc_unpack_live(g)
     if (take < src.length) fx_toast('上限で一部だけ足したよ')
     return 0
   },
 
-  'frame.sync_live': (g: Globals, _p: null): number => {
+  'frame.sync_live': (g: globals_t, _p: null): number => {
     doc_pack_live(g)
     return 0
   },
 
-  'frame.sync_layer': (g: Globals, layer: number): number => {
-    if (!Number.isInteger(layer) || layer < 0 || layer >= g.doc.frames[g.doc.cur].pk.length) return ERR_BAD
+  'frame.sync_layer': (g: globals_t, layer: number): number => {
+    if (!Number.isInteger(layer) || layer < 0 || layer >= g.doc.frames[g.doc.cur].pk.length) return err_bad
     doc_pack_layer(g, layer)
     return 0
   },
 
-  'frame.commit_pixels': (g: Globals, p: PixelCommit): number => commit_pixels(g, p),
+  'frame.commit_pixels': (g: globals_t, p: pixel_commit_t): number => commit_pixels(g, p),
 
-  'history.undo': (g: Globals, _p: null): number => {
+  'history.undo': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
-    if (!hist_undo(g)) return ERR_NOOP
+    if (!hist_undo(g)) return err_noop
     fx_sfx('undo')
     return 0
   },
 
-  'history.redo': (g: Globals, _p: null): number => {
+  'history.redo': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
-    if (!hist_redo(g)) return ERR_NOOP
+    if (!hist_redo(g)) return err_noop
     fx_sfx('redo')
     return 0
   },
 
-  'layer.toggle_visible': (g: Globals, l: number): number => {
-    if (!Number.isInteger(l) || l < 0 || l >= g.doc.lvis.length) return ERR_BAD
+  'layer.toggle_visible': (g: globals_t, l: number): number => {
+    if (!Number.isInteger(l) || l < 0 || l >= g.doc.lvis.length) return err_bad
     g.doc.lvis[l] = g.doc.lvis[l] ? 0 : 1
     return 0
   },
 
-  'layer.reorder_swap': (g: Globals, p: { i: number, j: number }): number => {
+  'layer.reorder_swap': (g: globals_t, p: { i: number, j: number }): number => {
     const o = doc_frame_order(g.doc.cur)
-    if (!Number.isInteger(p.i) || !Number.isInteger(p.j) || p.i < 0 || p.j < 0 || p.i >= o.length || p.j >= o.length) return ERR_BAD
-    if (p.i === p.j) return ERR_NOOP
-    const previousNative = o.filter(layer => layer >= 1 && layer <= 3)
+    if (!Number.isInteger(p.i) || !Number.isInteger(p.j) || p.i < 0 || p.j < 0 || p.i >= o.length || p.j >= o.length) return err_bad
+    if (p.i === p.j) return err_noop
+    const previous_native = o.filter(layer => layer >= 1 && layer <= 3)
     const t = o[p.i]
     o[p.i] = o[p.j]
     o[p.j] = t
     g.doc.lord = [...o, ...g.doc.lord.filter(layer => !o.includes(layer))]
     const native = o.filter(layer => layer >= 1 && layer <= 3)
-    const nativeChanged = native.some((layer, index) => layer !== previousNative[index])
-    if (nativeChanged && (g.doc.mode === MODE_3D || g.doc.mode === MODE_NORMAL && g.doc.frames.some(frame => frame.kwz))) {
+    const native_changed = native.some((layer, index) => layer !== previous_native[index])
+    if (native_changed && (g.doc.mode === mode_3_d || g.doc.mode === mode_normal && g.doc.frames.some(frame => frame.kwz))) {
       const depth = [0, 0, 0]
       for (let i = 0; i < native.length; i++) depth[native[i] - 1] = i
       for (const frame of g.doc.frames) {
-        if (g.doc.mode !== MODE_3D && !frame.kwz) continue
+        if (g.doc.mode !== mode_3_d && !frame.kwz) continue
         frame.kwz = frame.kwz ? { ...frame.kwz, depth: [...depth] } : { depth: [...depth], colors: [1, 2, 1, 3, 1, 4], author: /^[0-9a-f]{20}$/i.test(g.doc.meta.cur_id) ? g.doc.meta.cur_id : '00000000000000000000', camera: 0, reserved: 0 }
       }
     }
@@ -430,49 +441,49 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'layer.set_alpha': (g: Globals, p: { l: number, a255: number }): number => {
-    if (!mode_allows_layer_alpha(g.doc.mode)) return ERR_BAD
-    if (!Number.isInteger(p.l) || !Number.isFinite(p.a255) || p.l < 0 || p.l >= g.doc.lalpha.length) return ERR_BAD
+  'layer.set_alpha': (g: globals_t, p: { l: number, a255: number }): number => {
+    if (!mode_allows_layer_alpha(g.doc.mode)) return err_bad
+    if (!Number.isInteger(p.l) || !Number.isFinite(p.a255) || p.l < 0 || p.l >= g.doc.lalpha.length) return err_bad
     const a = clamp(Math.round(p.a255), 0, 255)
-    if (g.doc.lalpha[p.l] === a) return ERR_NOOP
+    if (g.doc.lalpha[p.l] === a) return err_noop
     g.doc.lalpha[p.l] = a
     return 0
   },
 
-  'layer.clear': (g: Globals, _p: null): number => {
+  'layer.clear': (g: globals_t, _p: null): number => {
     return clear_layer(g, g.pen.layer)
   },
 
-  'layer.clear_at': (g: Globals, layer: number): number => clear_layer(g, layer),
+  'layer.clear_at': (g: globals_t, layer: number): number => clear_layer(g, layer),
 
-  'layer.copy_to': (g: Globals, dst: number): number => {
+  'layer.copy_to': (g: globals_t, dst: number): number => {
     const src = g.pen.layer
     const order = mode_order(g.doc.mode, g.doc.lord)
-    if (!Number.isInteger(dst) || dst < 1 || dst >= g.doc.frames[g.doc.cur].pk.length || dst === src || order.indexOf(src) < 0 || order.indexOf(dst) < 0) return ERR_BAD
+    if (!Number.isInteger(dst) || dst < 1 || dst >= g.doc.frames[g.doc.cur].pk.length || dst === src || order.indexOf(src) < 0 || order.indexOf(dst) < 0) return err_bad
     stop_if_playing(g)
     const before = rect_grab(dst, 0, 0, g.doc.w, g.doc.h)
     live_write(dst).drawImage(live_canvas(src), 0, 0)
     return commit_pixels(g, { grp: hist_grp(), frame: g.doc.cur, changes: [{ layer: dst, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before }] })
   },
 
-  'layer.merge_down': (g: Globals, _p: null): number => {
+  'layer.merge_down': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
     const src = g.pen.layer
     const order = doc_frame_order(g.doc.cur)
     const k = order.indexOf(src)
     if (k < 0 || k >= order.length - 1) {
       fx_toast('いちばん下のレイヤーは結合できないよ')
-      return ERR_NOOP
+      return err_noop
     }
     const dst = order[k + 1]
-    const beforeDst = rect_grab(dst, 0, 0, g.doc.w, g.doc.h)
-    const beforeSrc = rect_grab(src, 0, 0, g.doc.w, g.doc.h)
-    const beforeAlpha = g.doc.lalpha[dst]
-    const alphaEnabled = mode_allows_layer_alpha(g.doc.mode)
+    const before_dst = rect_grab(dst, 0, 0, g.doc.w, g.doc.h)
+    const before_src = rect_grab(src, 0, 0, g.doc.w, g.doc.h)
+    const before_alpha = g.doc.lalpha[dst]
+    const alpha_enabled = mode_allows_layer_alpha(g.doc.mode)
     const [merged, mx] = canvas_make(g.doc.w, g.doc.h)
-    mx.globalAlpha = alphaEnabled ? beforeAlpha / 255 : 1
+    mx.globalAlpha = alpha_enabled ? before_alpha / 255 : 1
     mx.drawImage(live_canvas(dst), 0, 0)
-    mx.globalAlpha = alphaEnabled ? g.doc.lalpha[src] / 255 : 1
+    mx.globalAlpha = alpha_enabled ? g.doc.lalpha[src] / 255 : 1
     mx.drawImage(live_canvas(src), 0, 0)
     mx.globalAlpha = 1
     const dx = live_write(dst)
@@ -484,14 +495,14 @@ export const FRAME_COMMANDS = {
       grp,
       frame: g.doc.cur,
       changes: [
-        { layer: dst, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before: beforeDst },
-        { layer: src, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before: beforeSrc },
+        { layer: dst, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before: before_dst },
+        { layer: src, x: 0, y: 0, w: g.doc.w, h: g.doc.h, before: before_src },
       ],
     })
     if (result < 0) return result
-    if (beforeAlpha !== 255) {
+    if (before_alpha !== 255) {
       g.doc.lalpha[dst] = 255
-      hist_layer_alpha(g, grp, dst, beforeAlpha, 255)
+      hist_layer_alpha(g, grp, dst, before_alpha, 255)
     }
     g.pen.layer = dst
     fx_toast('下のレイヤーと結合しました')
@@ -500,21 +511,21 @@ export const FRAME_COMMANDS = {
   },
 
 
-  'layer.add': (g: Globals, _p: null): number => {
-    if (g.doc.mode !== MODE_NORMAL) return ERR_BAD
-    if (g.doc.lord.length >= L_DRAW_MAX) {
-      fx_toast('レイヤーは最大' + L_DRAW_MAX + '枚だよ')
-      return ERR_FULL
+  'layer.add': (g: globals_t, _p: null): number => {
+    if (g.doc.mode !== mode_normal) return err_bad
+    if (g.doc.lord.length >= l_draw_max) {
+      fx_toast('レイヤーは最大' + l_draw_max + '枚だよ')
+      return err_full
     }
     stop_if_playing(g)
     let layer = 0
-    for (let candidate = L_DRAW_DEFAULT + 1; candidate <= L_DRAW_MAX; candidate++) {
+    for (let candidate = l_draw_default + 1; candidate <= l_draw_max; candidate++) {
       if (g.doc.lord.indexOf(candidate) < 0) {
         layer = candidate
         break
       }
     }
-    if (!layer) return ERR_FULL
+    if (!layer) return err_full
     for (const frame of g.doc.frames) frame.pk[layer] = null
     live_drop(layer)
     live_accept(layer, null)
@@ -531,10 +542,10 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'layer.delete': (g: Globals, layer: number): number => {
-    if (g.doc.mode !== MODE_NORMAL || !Number.isInteger(layer) || layer <= L_DRAW_DEFAULT || layer > L_DRAW_MAX) return ERR_BAD
+  'layer.delete': (g: globals_t, layer: number): number => {
+    if (g.doc.mode !== mode_normal || !Number.isInteger(layer) || layer <= l_draw_default || layer > l_draw_max) return err_bad
     const index = g.doc.lord.indexOf(layer)
-    if (index < 0) return ERR_BAD
+    if (index < 0) return err_bad
     stop_if_playing(g)
     for (const frame of g.doc.frames) frame.pk[layer] = null
     live_drop(layer)
@@ -552,129 +563,130 @@ export const FRAME_COMMANDS = {
     return 0
   },
 
-  'doc.set_name': (g: Globals, name: string): number => {
-    if (g.doc.name === name) return ERR_NOOP
+  'doc.set_name': (g: globals_t, name: string): number => {
+    if (g.doc.name === name) return err_noop
     g.doc.name = name
     return 0
   },
 
-  'doc.set_paper': (g: Globals, color: string): number => {
+  'doc.set_paper': (g: globals_t, color: string): number => {
     const opts = mode_paper_opts(g.doc.mode)
-    if (!/^#[0-9a-f]{6}$/i.test(color)) return ERR_BAD
+    if (!/^#[0-9a-f]{6}$/i.test(color)) return err_bad
     let c = color.toUpperCase()
-    if (g.doc.mode !== MODE_NORMAL && opts.length > 1 && opts.indexOf(c.toUpperCase()) < 0) {
+    if (g.doc.mode !== mode_normal && opts.length > 1 && opts.indexOf(c.toUpperCase()) < 0) {
       const [r, gg, b] = hex_rgb(c)
       let best = 0
-      let bestDist = Infinity
+      let best_dist = Infinity
       for (let i = 0; i < opts.length; i++) {
         const [pr, pg, pb] = hex_rgb(opts[i])
         const dist = (pr - r) * (pr - r) + (pg - gg) * (pg - gg) + (pb - b) * (pb - b)
-        if (dist < bestDist) {
-          bestDist = dist
+        if (dist < best_dist) {
+          best_dist = dist
           best = i
         }
       }
       c = opts[best]
     }
-    if (g.doc.paper === c && !g.doc.frames.some(f => f.paper)) return ERR_NOOP
+    if (g.doc.paper === c && !g.doc.frames.some(f => f.paper)) return err_noop
     hist_paper(g, c)
     g.doc.paper = c
     for (const frame of g.doc.frames) delete frame.paper
     return 0
   },
 
-  'doc.set_fps_idx': (g: Globals, i: number): number => {
-    if (!Number.isFinite(i)) return ERR_BAD
-    const fps = FPS_SPEEDS[clamp(Math.round(i), 0, FPS_SPEEDS.length - 1)]
-    if (g.doc.fps === fps) return ERR_NOOP
+  'doc.set_fps_idx': (g: globals_t, i: number): number => {
+    if (!Number.isFinite(i)) return err_bad
+    const speeds = mode_speeds(g.doc.mode)
+    const fps = speeds[clamp(Math.round(i), 0, speeds.length - 1)]
+    if (g.doc.fps === fps) return err_noop
     g.doc.fps = fps
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+    if (g.play.on) play_commands['play.retime'](g, null)
     return 0
   },
 
-  'doc.toggle_loop': (g: Globals, _p: null): number => {
+  'doc.toggle_loop': (g: globals_t, _p: null): number => {
     g.doc.loop = g.doc.loop ? 0 : 1
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+    if (g.play.on) play_commands['play.retime'](g, null)
     return 0
   },
 
-  'doc.set_loop_a': (g: Globals, i: number): number => {
-    if (!Number.isFinite(i)) return ERR_BAD
+  'doc.set_loop_a': (g: globals_t, i: number): number => {
+    if (!Number.isFinite(i)) return err_bad
     const v = clamp(Math.round(i), -1, g.doc.frames.length - 1)
-    g.doc.loopA = v
-    if (g.doc.loopB >= 0 && g.doc.loopB < v) g.doc.loopB = -1
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+    g.doc.loop_a = v
+    if (g.doc.loop_b >= 0 && g.doc.loop_b < v) g.doc.loop_b = -1
+    if (g.play.on) play_commands['play.retime'](g, null)
     return 0
   },
 
-  'doc.set_loop_b': (g: Globals, i: number): number => {
-    if (!Number.isFinite(i)) return ERR_BAD
+  'doc.set_loop_b': (g: globals_t, i: number): number => {
+    if (!Number.isFinite(i)) return err_bad
     const v = clamp(Math.round(i), -1, g.doc.frames.length - 1)
-    g.doc.loopB = v
-    if (g.doc.loopA >= 0 && g.doc.loopA > v) g.doc.loopA = -1
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+    g.doc.loop_b = v
+    if (g.doc.loop_a >= 0 && g.doc.loop_a > v) g.doc.loop_a = -1
+    if (g.play.on) play_commands['play.retime'](g, null)
     return 0
   },
 
-  'doc.set_meta': (g: Globals, m: NoteMeta): number => {
+  'doc.set_meta': (g: globals_t, m: note_meta_t): number => {
     g.doc.meta = m
     return 0
   },
 
-  'doc.clear_loop_ab': (g: Globals, _p: null): number => {
-    if (g.doc.loopA < 0 && g.doc.loopB < 0) return ERR_NOOP
-    g.doc.loopA = -1
-    g.doc.loopB = -1
-    if (g.play.on) PLAY_COMMANDS['play.retime'](g, null)
+  'doc.clear_loop_ab': (g: globals_t, _p: null): number => {
+    if (g.doc.loop_a < 0 && g.doc.loop_b < 0) return err_noop
+    g.doc.loop_a = -1
+    g.doc.loop_b = -1
+    if (g.play.on) play_commands['play.retime'](g, null)
     return 0
   },
 }
 
-const D_FRAME = D_TIMELINE | D_FRAMEINFO | D_STAGE | D_THUMB | D_LAYER | D_TOOLS | D_PLAY
-const D_PIXELS = D_STAGE | D_THUMB | D_TOOLS | D_PLAY
+const d_frame = d_timeline | d_frameinfo | d_stage | d_thumb | d_layer | d_tools | d_play
+const d_pixels = d_stage | d_thumb | d_tools | d_play
 
-export const FRAME_EFFECTS: Partial<Record<keyof Cmds, number>> = {
-  'frame.goto': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_THUMB | D_LAYER,
-  'frame.step': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_THUMB | D_LAYER,
-  'frame.add': D_FRAME,
-  'frame.dup': D_FRAME,
-  'frame.del': D_FRAME,
-  'frame.paste': D_FRAME,
-  'frame.move': D_FRAME,
-  'frame.add_many': D_FRAME,
-  'frame.se_toggle': D_STAGE | D_FRAMEINFO | D_THUMB | D_SOUND | D_TOOLS,
-  'frame.set_hold_range': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_PLAY,
-  'frame.insert_bulk': D_ALL,
-  'frame.append_bulk': D_ALL,
-  'frame.replace_current_bulk': D_ALL,
-  'frame.delete_range': D_ALL,
-  'frame.reverse_range': D_FRAME,
-  'frame.duplicate_range': D_FRAME,
+export const frame_effects: Partial<Record<keyof cmds_t, number>> = {
+  'frame.goto': d_stage | d_frameinfo | d_timeline | d_thumb | d_layer,
+  'frame.step': d_stage | d_frameinfo | d_timeline | d_thumb | d_layer,
+  'frame.add': d_frame,
+  'frame.dup': d_frame,
+  'frame.del': d_frame,
+  'frame.paste': d_frame,
+  'frame.move': d_frame,
+  'frame.add_many': d_frame,
+  'frame.se_toggle': d_stage | d_frameinfo | d_thumb | d_sound | d_tools,
+  'frame.set_hold_range': d_stage | d_frameinfo | d_timeline | d_play,
+  'frame.insert_bulk': d_all,
+  'frame.append_bulk': d_all,
+  'frame.replace_current_bulk': d_all,
+  'frame.delete_range': d_all,
+  'frame.reverse_range': d_frame,
+  'frame.duplicate_range': d_frame,
   'frame.sync_live': 0,
   'frame.sync_layer': 0,
-  'frame.commit_pixels': D_PIXELS,
-  'history.undo': D_PAGE | D_STAGE | D_THUMB | D_TIMELINE | D_FRAMEINFO | D_TOOLS | D_LAYER | D_PLAY,
-  'history.redo': D_PAGE | D_STAGE | D_THUMB | D_TIMELINE | D_FRAMEINFO | D_TOOLS | D_LAYER | D_PLAY,
-  'layer.toggle_visible': D_STAGE | D_LAYER,
-  'layer.reorder_swap': D_STAGE | D_LAYER | D_THUMB,
-  'layer.set_alpha': D_STAGE | D_LAYER,
-  'layer.clear': D_PIXELS,
-  'layer.clear_at': D_PIXELS | D_LAYER,
-  'layer.copy_to': D_PIXELS,
-  'layer.merge_down': D_PIXELS | D_LAYER,
-  'layer.add': D_LAYER | D_STAGE | D_TOOLS,
-  'layer.delete': D_ALL,
-  'doc.set_name': D_PAGE,
-  'doc.set_paper': D_STAGE | D_THUMB | D_PAGE | D_TOOLS,
-  'doc.set_fps_idx': D_STAGE | D_FRAMEINFO | D_PLAY,
-  'doc.toggle_loop': D_STAGE | D_FRAMEINFO | D_PLAY,
-  'doc.set_loop_a': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_PLAY,
-  'doc.set_loop_b': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_PLAY,
-  'doc.clear_loop_ab': D_STAGE | D_FRAMEINFO | D_TIMELINE | D_PLAY,
+  'frame.commit_pixels': d_pixels,
+  'history.undo': d_page | d_stage | d_thumb | d_timeline | d_frameinfo | d_tools | d_layer | d_play,
+  'history.redo': d_page | d_stage | d_thumb | d_timeline | d_frameinfo | d_tools | d_layer | d_play,
+  'layer.toggle_visible': d_stage | d_layer,
+  'layer.reorder_swap': d_stage | d_layer | d_thumb,
+  'layer.set_alpha': d_stage | d_layer,
+  'layer.clear': d_pixels,
+  'layer.clear_at': d_pixels | d_layer,
+  'layer.copy_to': d_pixels,
+  'layer.merge_down': d_pixels | d_layer,
+  'layer.add': d_layer | d_stage | d_tools,
+  'layer.delete': d_all,
+  'doc.set_name': d_page,
+  'doc.set_paper': d_stage | d_thumb | d_page | d_tools,
+  'doc.set_fps_idx': d_stage | d_frameinfo | d_play,
+  'doc.toggle_loop': d_stage | d_frameinfo | d_play,
+  'doc.set_loop_a': d_stage | d_frameinfo | d_timeline | d_play,
+  'doc.set_loop_b': d_stage | d_frameinfo | d_timeline | d_play,
+  'doc.clear_loop_ab': d_stage | d_frameinfo | d_timeline | d_play,
   'doc.set_meta': 0,
 }
 
-export const FRAME_TOUCH = new Set<keyof Cmds>([
+export const frame_touch = new Set<keyof cmds_t>([
   'frame.add', 'frame.dup', 'frame.del', 'frame.paste', 'frame.move', 'frame.add_many',
   'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.delete_range',
   'frame.reverse_range', 'frame.duplicate_range', 'frame.commit_pixels', 'history.undo', 'history.redo',

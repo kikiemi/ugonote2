@@ -1,34 +1,34 @@
 import { gpu_wiggle, gpu_reset } from './gpu'
 import { memory_budget } from './memory'
 import { doc_compose, doc_frame_paper } from './doc'
-import { D_STAGE, MOTION_BOUNCE, MOTION_BREATHE, MOTION_CAMERA, MOTION_FLOAT, MOTION_NONE, MOTION_SWAY, type AnimFx, type Rle } from './h'
+import { d_stage, motion_bounce, motion_breathe, motion_camera, motion_float, motion_none, motion_sway, type anim_fx_t, type rle_t } from './h'
 import { canvas_make, clamp } from './lib'
 import { dirty, st } from './state/store'
 
-type SourceCache = {
-  frameId: number
-  refs: readonly (Rle | null)[]
-  viewKey: string
+type source_cache_t = {
+  frame_id: number
+  refs: readonly (rle_t | null)[]
+  view_key: string
   w: number
   h: number
   canvas: HTMLCanvasElement
 }
 
-type WiggleGrid = {
+type wiggle_grid_t = {
   w: number
   h: number
   cell: number
   columns: number
   rows: number
   stride: number
-  xCell: Uint16Array
-  xMix: Float32Array
-  yCell: Uint16Array
-  yMix: Float32Array
+  x_cell: Uint16Array
+  x_mix: Float32Array
+  y_cell: Uint16Array
+  y_mix: Float32Array
 }
 
-type WiggleField = {
-  grid: WiggleGrid
+type wiggle_field_t = {
+  grid: wiggle_grid_t
   amount: number
   phase: number
   seed: number
@@ -36,29 +36,29 @@ type WiggleField = {
   dy: Float32Array
 }
 
-type WigglePixels = {
+type wiggle_pixels_t = {
   source: CanvasImageSource
   w: number
   h: number
   data: Uint8ClampedArray
 }
 
-type WiggleImage = {
+type wiggle_image_t = {
   source: CanvasImageSource
-  field: WiggleField
+  field: wiggle_field_t
   canvas: HTMLCanvasElement
 }
 
-const sourceCache: SourceCache[] = []
-const wiggleGridCache: WiggleGrid[] = []
-const wiggleFieldCache: WiggleField[] = []
-const wigglePixelCache: WigglePixels[] = []
-const wiggleImageCache: WiggleImage[] = []
-let driverRaf = 0
-let driverBucket = -1
-let driverRun = 0
+const source_cache: source_cache_t[] = []
+const wiggle_grid_cache: wiggle_grid_t[] = []
+const wiggle_field_cache: wiggle_field_t[] = []
+const wiggle_pixel_cache: wiggle_pixels_t[] = []
+const wiggle_image_cache: wiggle_image_t[] = []
+let driver_raf = 0
+let driver_bucket = -1
+let driver_run = 0
 
-function refs_same(a: readonly (Rle | null)[], b: readonly (Rle | null)[]): number {
+function refs_same(a: readonly (rle_t | null)[], b: readonly (rle_t | null)[]): number {
   if (a.length !== b.length) return 0
   for (let index = 0; index < a.length; index++) if (a[index] !== b[index]) return 0
   return 1
@@ -69,28 +69,28 @@ function source_view_key(): string {
   return g.doc.mode + '|' + g.doc.lvis.join(',') + '|' + g.doc.lalpha.join(',') + '|' + g.doc.lord.join(',')
 }
 
-function effect_trim<T>(entries: T[], size: (entry: T) => number, fraction: number): void {
+function effect_trim<t>(entries: t[], size: (entry: t) => number, fraction: number): void {
   const budget = memory_budget(st().mobile, 'effects') * fraction
   let bytes = 0
   for (const entry of entries) bytes += size(entry)
-  while (bytes > budget && entries.length) bytes -= size(entries.shift() as T)
+  while (bytes > budget && entries.length) bytes -= size(entries.shift() as t)
 }
 
-function source_get(frameIndex: number, w: number, h: number): HTMLCanvasElement {
+function source_get(frame_index: number, w: number, h: number): HTMLCanvasElement {
   const g = st()
-  const frame = g.doc.frames[frameIndex]
+  const frame = g.doc.frames[frame_index]
   const key = source_view_key() + '|' + (frame.kwz?.depth.join(',') || '')
-  for (let index = sourceCache.length - 1; index >= 0; index--) {
-    const entry = sourceCache[index]
-    if (entry.frameId !== frame.id || entry.w !== w || entry.h !== h || entry.viewKey !== key || !refs_same(entry.refs, frame.pk)) continue
-    sourceCache.splice(index, 1)
-    sourceCache.push(entry)
+  for (let index = source_cache.length - 1; index >= 0; index--) {
+    const entry = source_cache[index]
+    if (entry.frame_id !== frame.id || entry.w !== w || entry.h !== h || entry.view_key !== key || !refs_same(entry.refs, frame.pk)) continue
+    source_cache.splice(index, 1)
+    source_cache.push(entry)
     return entry.canvas
   }
   const [canvas, context] = canvas_make(w, h, 1)
-  doc_compose(frameIndex, context, w, h, 0)
-  sourceCache.push({ frameId: frame.id, refs: [...frame.pk], viewKey: key, w, h, canvas })
-  effect_trim(sourceCache, entry => entry.w * entry.h * 4, 0.24)
+  const ready = doc_compose(frame_index, context, w, h, 0)
+  if (ready) source_cache.push({ frame_id: frame.id, refs: [...frame.pk], view_key: key, w, h, canvas })
+  effect_trim(source_cache, entry => entry.w * entry.h * 4, 0.24)
   return canvas
 }
 
@@ -114,52 +114,52 @@ function wiggle_offset(seed: number, phase: number, column: number, row: number,
   return (hash_unit(value) * 2 - 1) * amount
 }
 
-function motion_seed_phase(fx: Readonly<AnimFx>): number {
-  return hash_unit(fx.motionSeed ^ 0x61c88647) * Math.PI * 2
+function motion_seed_phase(fx: Readonly<anim_fx_t>): number {
+  return hash_unit(fx.motion_seed ^ 0x61c88647) * Math.PI * 2
 }
 
-function motion_phase(time: number, fx: Readonly<AnimFx>): number {
-  const speed = clamp(fx.motionRate, 0.25, 6) * 0.25
+function motion_phase(time: number, fx: Readonly<anim_fx_t>): number {
+  const speed = clamp(fx.motion_rate, 0.25, 6) * 0.25
   return time * speed * Math.PI * 2 + motion_seed_phase(fx)
 }
 
-function motion_transform_phase(context: CanvasRenderingContext2D, w: number, h: number, phase: number, fx: Readonly<AnimFx>): void {
-  if (fx.motion === MOTION_NONE || fx.motionAmount <= 0) return
-  const amount = clamp(fx.motionAmount, 0, 24)
-  const anchorX = clamp(fx.motionAnchorX, 0, 1) * w
-  const anchorY = clamp(fx.motionAnchorY, 0, 1) * h
+function motion_transform_phase(context: CanvasRenderingContext2D, w: number, h: number, phase: number, fx: Readonly<anim_fx_t>): void {
+  if (fx.motion === motion_none || fx.motion_amount <= 0) return
+  const amount = clamp(fx.motion_amount, 0, 24)
+  const anchor_x = clamp(fx.motion_anchor_x, 0, 1) * w
+  const anchor_y = clamp(fx.motion_anchor_y, 0, 1) * h
   let dx = 0
   let dy = 0
   let rotation = 0
-  let scaleX = 1
-  let scaleY = 1
-  if (fx.motion === MOTION_BREATHE) {
+  let scale_x = 1
+  let scale_y = 1
+  if (fx.motion === motion_breathe) {
     const scale = 1 + Math.sin(phase) * amount * 0.004
-    scaleX = scale
-    scaleY = 1 + Math.sin(phase) * amount * 0.006
+    scale_x = scale
+    scale_y = 1 + Math.sin(phase) * amount * 0.006
     dy = -Math.sin(phase) * amount * 0.16
-  } else if (fx.motion === MOTION_SWAY) {
+  } else if (fx.motion === motion_sway) {
     rotation = Math.sin(phase) * amount * 0.007
     dx = Math.sin(phase) * amount * 0.15
-  } else if (fx.motion === MOTION_FLOAT) {
+  } else if (fx.motion === motion_float) {
     dx = Math.sin(phase) * amount
     dy = Math.cos(phase) * amount * 0.72
     rotation = Math.sin(phase * 2) * amount * 0.0018
-  } else if (fx.motion === MOTION_BOUNCE) {
+  } else if (fx.motion === motion_bounce) {
     dy = -Math.abs(Math.sin(phase)) * amount * 1.8
     const squash = Math.max(0, -Math.cos(phase)) * amount * 0.003
-    scaleX = 1 + squash
-    scaleY = 1 - squash
-  } else if (fx.motion === MOTION_CAMERA) {
-    const seedPhase = hash_unit(fx.motionSeed ^ 0x243f6a88) * Math.PI * 2
-    dx = (Math.sin(phase + seedPhase) + Math.sin(phase * 2) * 0.35) * amount * 0.55
-    dy = (Math.cos(phase + seedPhase) + Math.sin(phase * 3) * 0.35) * amount * 0.45
-    rotation = Math.sin(phase * 2 + seedPhase) * amount * 0.0025
+    scale_x = 1 + squash
+    scale_y = 1 - squash
+  } else if (fx.motion === motion_camera) {
+    const seed_phase = hash_unit(fx.motion_seed ^ 0x243f6a88) * Math.PI * 2
+    dx = (Math.sin(phase + seed_phase) + Math.sin(phase * 2) * 0.35) * amount * 0.55
+    dy = (Math.cos(phase + seed_phase) + Math.sin(phase * 3) * 0.35) * amount * 0.45
+    rotation = Math.sin(phase * 2 + seed_phase) * amount * 0.0025
   }
-  context.translate(anchorX + dx, anchorY + dy)
+  context.translate(anchor_x + dx, anchor_y + dy)
   context.rotate(rotation)
-  context.scale(scaleX, scaleY)
-  context.translate(-anchorX, -anchorY)
+  context.scale(scale_x, scale_y)
+  context.translate(-anchor_x, -anchor_y)
 }
 
 function smooth_mix(value: number): number {
@@ -167,47 +167,47 @@ function smooth_mix(value: number): number {
   return t * t * (3 - 2 * t)
 }
 
-function wiggle_grid_get(w: number, h: number, cell: number): WiggleGrid {
-  for (let index = wiggleGridCache.length - 1; index >= 0; index--) {
-    const entry = wiggleGridCache[index]
+function wiggle_grid_get(w: number, h: number, cell: number): wiggle_grid_t {
+  for (let index = wiggle_grid_cache.length - 1; index >= 0; index--) {
+    const entry = wiggle_grid_cache[index]
     if (entry.w !== w || entry.h !== h || entry.cell !== cell) continue
-    wiggleGridCache.splice(index, 1)
-    wiggleGridCache.push(entry)
+    wiggle_grid_cache.splice(index, 1)
+    wiggle_grid_cache.push(entry)
     return entry
   }
   const columns = Math.max(1, Math.ceil(w / cell))
   const rows = Math.max(1, Math.ceil(h / cell))
   const stride = columns + 1
-  const xCell = new Uint16Array(w)
-  const xMix = new Float32Array(w)
-  const yCell = new Uint16Array(h)
-  const yMix = new Float32Array(h)
+  const x_cell = new Uint16Array(w)
+  const x_mix = new Float32Array(w)
+  const y_cell = new Uint16Array(h)
+  const y_mix = new Float32Array(h)
   for (let x = 0; x < w; x++) {
     const column = Math.min(columns - 1, Math.floor(x / cell))
     const start = column * cell
     const end = column === columns - 1 ? w : Math.min(w, start + cell)
-    xCell[x] = column
-    xMix[x] = smooth_mix((x + 0.5 - start) / Math.max(1, end - start))
+    x_cell[x] = column
+    x_mix[x] = smooth_mix((x + 0.5 - start) / Math.max(1, end - start))
   }
   for (let y = 0; y < h; y++) {
     const row = Math.min(rows - 1, Math.floor(y / cell))
     const start = row * cell
     const end = row === rows - 1 ? h : Math.min(h, start + cell)
-    yCell[y] = row
-    yMix[y] = smooth_mix((y + 0.5 - start) / Math.max(1, end - start))
+    y_cell[y] = row
+    y_mix[y] = smooth_mix((y + 0.5 - start) / Math.max(1, end - start))
   }
-  const grid = { w, h, cell, columns, rows, stride, xCell, xMix, yCell, yMix }
-  wiggleGridCache.push(grid)
-  effect_trim(wiggleGridCache, entry => entry.xCell.byteLength + entry.xMix.byteLength + entry.yCell.byteLength + entry.yMix.byteLength, 0.06)
+  const grid = { w, h, cell, columns, rows, stride, x_cell, x_mix, y_cell, y_mix }
+  wiggle_grid_cache.push(grid)
+  effect_trim(wiggle_grid_cache, entry => entry.x_cell.byteLength + entry.x_mix.byteLength + entry.y_cell.byteLength + entry.y_mix.byteLength, 0.06)
   return grid
 }
 
-function wiggle_field_get(w: number, h: number, cell: number, amount: number, phase: number, seed: number): WiggleField {
-  for (let index = wiggleFieldCache.length - 1; index >= 0; index--) {
-    const entry = wiggleFieldCache[index]
+function wiggle_field_get(w: number, h: number, cell: number, amount: number, phase: number, seed: number): wiggle_field_t {
+  for (let index = wiggle_field_cache.length - 1; index >= 0; index--) {
+    const entry = wiggle_field_cache[index]
     if (entry.grid.w !== w || entry.grid.h !== h || entry.grid.cell !== cell || entry.amount !== amount || entry.phase !== phase || entry.seed !== seed) continue
-    wiggleFieldCache.splice(index, 1)
-    wiggleFieldCache.push(entry)
+    wiggle_field_cache.splice(index, 1)
+    wiggle_field_cache.push(entry)
     return entry
   }
   const grid = wiggle_grid_get(w, h, cell)
@@ -223,41 +223,41 @@ function wiggle_field_get(w: number, h: number, cell: number, amount: number, ph
     }
   }
   const field = { grid, amount, phase, seed, dx, dy }
-  wiggleFieldCache.push(field)
-  effect_trim(wiggleFieldCache, entry => entry.dx.byteLength + entry.dy.byteLength, 0.22)
+  wiggle_field_cache.push(field)
+  effect_trim(wiggle_field_cache, entry => entry.dx.byteLength + entry.dy.byteLength, 0.22)
   return field
 }
 
 function wiggle_pixels_get(source: CanvasImageSource, w: number, h: number): Uint8ClampedArray {
-  for (let index = wigglePixelCache.length - 1; index >= 0; index--) {
-    const entry = wigglePixelCache[index]
+  for (let index = wiggle_pixel_cache.length - 1; index >= 0; index--) {
+    const entry = wiggle_pixel_cache[index]
     if (entry.source !== source || entry.w !== w || entry.h !== h) continue
-    wigglePixelCache.splice(index, 1)
-    wigglePixelCache.push(entry)
+    wiggle_pixel_cache.splice(index, 1)
+    wiggle_pixel_cache.push(entry)
     return entry.data
   }
   const [, context] = canvas_make(w, h, 1)
   context.clearRect(0, 0, w, h)
   context.drawImage(source, 0, 0, w, h)
   const data = context.getImageData(0, 0, w, h).data
-  wigglePixelCache.push({ source, w, h, data })
-  effect_trim(wigglePixelCache, entry => entry.data.byteLength, 0.24)
+  wiggle_pixel_cache.push({ source, w, h, data })
+  effect_trim(wiggle_pixel_cache, entry => entry.data.byteLength, 0.24)
   return data
 }
 
-export function wiggle_render(source: Uint8ClampedArray, field: WiggleField): HTMLCanvasElement {
+export function wiggle_render(source: Uint8ClampedArray, field: wiggle_field_t): HTMLCanvasElement {
   const grid = field.grid
   const w = grid.w
   const h = grid.h
   const out = new Uint8ClampedArray(w * h * 4)
   for (let y = 0; y < h; y++) {
-    const row = grid.yCell[y]
-    const ty = grid.yMix[y]
+    const row = grid.y_cell[y]
+    const ty = grid.y_mix[y]
     const top = row * grid.stride
     const bottom = top + grid.stride
     for (let x = 0; x < w; x++) {
-      const column = grid.xCell[x]
-      const tx = grid.xMix[x]
+      const column = grid.x_cell[x]
+      const tx = grid.x_mix[x]
       const dxt = field.dx[top + column] + (field.dx[top + column + 1] - field.dx[top + column]) * tx
       const dxb = field.dx[bottom + column] + (field.dx[bottom + column + 1] - field.dx[bottom + column]) * tx
       const dyt = field.dy[top + column] + (field.dy[top + column + 1] - field.dy[top + column]) * tx
@@ -300,166 +300,166 @@ export function wiggle_render(source: Uint8ClampedArray, field: WiggleField): HT
   return canvas
 }
 
-function wiggle_image_get(source: CanvasImageSource, field: WiggleField): HTMLCanvasElement {
-  for (let index = wiggleImageCache.length - 1; index >= 0; index--) {
-    const entry = wiggleImageCache[index]
+function wiggle_image_get(source: CanvasImageSource, field: wiggle_field_t): HTMLCanvasElement {
+  for (let index = wiggle_image_cache.length - 1; index >= 0; index--) {
+    const entry = wiggle_image_cache[index]
     if (entry.source !== source || entry.field.grid.w !== field.grid.w || entry.field.grid.h !== field.grid.h || entry.field.grid.cell !== field.grid.cell || entry.field.amount !== field.amount || entry.field.phase !== field.phase || entry.field.seed !== field.seed) continue
-    wiggleImageCache.splice(index, 1)
-    wiggleImageCache.push(entry)
+    wiggle_image_cache.splice(index, 1)
+    wiggle_image_cache.push(entry)
     return entry.canvas
   }
   const canvas = wiggle_render(wiggle_pixels_get(source, field.grid.w, field.grid.h), field)
-  wiggleImageCache.push({ source, field, canvas })
-  effect_trim(wiggleImageCache, entry => entry.canvas.width * entry.canvas.height * 4, 0.24)
+  wiggle_image_cache.push({ source, field, canvas })
+  effect_trim(wiggle_image_cache, entry => entry.canvas.width * entry.canvas.height * 4, 0.24)
   return canvas
 }
 
-function wiggle_draw_phase(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, phaseValue: number, fx: Readonly<AnimFx>, seedOffset: number): void {
-  if (!fx.wiggle || fx.wiggleAmount <= 0) {
+function wiggle_draw_phase(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, phase_value: number, fx: Readonly<anim_fx_t>, seed_offset: number): void {
+  if (!fx.wiggle || fx.wiggle_amount <= 0) {
     context.drawImage(source, 0, 0, w, h)
     return
   }
   const g = st()
   const scale = Math.min(w / g.doc.w, h / g.doc.h)
-  const cell = clamp(Math.round(fx.wiggleCell * scale), 6, 192)
-  const requested = clamp(fx.wiggleAmount * scale, 0, 16)
+  const cell = clamp(Math.round(fx.wiggle_cell * scale), 6, 192)
+  const requested = clamp(fx.wiggle_amount * scale, 0, 16)
   const amount = Math.round(Math.min(requested, cell * 0.2) * 16) / 16
   if (amount < 0.0625) {
     context.drawImage(source, 0, 0, w, h)
     return
   }
-  const phases = clamp(Math.round(fx.wigglePhases), 2, 12)
-  const phase = ((Math.floor(phaseValue) % phases) + phases) % phases
-  const field = wiggle_field_get(w, h, cell, amount, phase, fx.wiggleSeed ^ seedOffset)
+  const phases = clamp(Math.round(fx.wiggle_phases), 2, 12)
+  const phase = ((Math.floor(phase_value) % phases) + phases) % phases
+  const field = wiggle_field_get(w, h, cell, amount, phase, fx.wiggle_seed ^ seed_offset)
   context.drawImage(gpu_wiggle(source, field) || wiggle_image_get(source, field), 0, 0, w, h)
 }
 
-export function animfx_active(fx: Readonly<AnimFx> = st().doc.anim): number {
-  if (fx.wiggle && fx.wiggleAmount > 0) return 1
-  if (fx.motion !== MOTION_NONE && fx.motionAmount > 0) return 1
+export function animfx_active(fx: Readonly<anim_fx_t> = st().doc.anim): number {
+  if (fx.wiggle && fx.wiggle_amount > 0) return 1
+  if (fx.motion !== motion_none && fx.motion_amount > 0) return 1
   return 0
 }
 
-export type AnimFxLoop = {
+export type anim_fx_loop_t = {
   ticks: number
-  wiggleCycles: number
-  motionCycles: number
+  wiggle_cycles: number
+  motion_cycles: number
 }
 
-export function animfx_loop_plan(fpsValue: number, fx: Readonly<AnimFx>): AnimFxLoop {
-  const fps = clamp(fpsValue, 0.2, 30)
-  const wiggle = fx.wiggle && fx.wiggleAmount > 0 ? 1 : 0
-  const motion = fx.motion !== MOTION_NONE && fx.motionAmount > 0 ? 1 : 0
-  if (!wiggle && !motion) return { ticks: 1, wiggleCycles: 0, motionCycles: 0 }
-  const phases = clamp(Math.round(fx.wigglePhases), 2, 12)
-  const wigglePeriod = wiggle ? phases / clamp(fx.wiggleRate, 1, 24) : 0
-  const motionPeriod = motion ? 4 / clamp(fx.motionRate, 0.25, 6) : 0
-  const duration = Math.max(wigglePeriod, motionPeriod, 2 / fps)
-  let wiggleCycles = wiggle ? Math.max(1, Math.round(duration / wigglePeriod)) : 0
-  let motionCycles = motion ? Math.max(1, Math.round(duration / motionPeriod)) : 0
+export function animfx_loop_plan(fps_value: number, fx: Readonly<anim_fx_t>): anim_fx_loop_t {
+  const fps = clamp(fps_value, 0.2, 30)
+  const wiggle = fx.wiggle && fx.wiggle_amount > 0 ? 1 : 0
+  const motion = fx.motion !== motion_none && fx.motion_amount > 0 ? 1 : 0
+  if (!wiggle && !motion) return { ticks: 1, wiggle_cycles: 0, motion_cycles: 0 }
+  const phases = clamp(Math.round(fx.wiggle_phases), 2, 12)
+  const wiggle_period = wiggle ? phases / clamp(fx.wiggle_rate, 1, 24) : 0
+  const motion_period = motion ? 4 / clamp(fx.motion_rate, 0.25, 6) : 0
+  const duration = Math.max(wiggle_period, motion_period, 2 / fps)
+  let wiggle_cycles = wiggle ? Math.max(1, Math.round(duration / wiggle_period)) : 0
+  let motion_cycles = motion ? Math.max(1, Math.round(duration / motion_period)) : 0
   let ticks = Math.max(2, Math.round(duration * fps))
-  if (wiggle) ticks = Math.max(ticks, wiggleCycles * phases)
-  if (motion) ticks = Math.max(ticks, motionCycles * 8)
+  if (wiggle) ticks = Math.max(ticks, wiggle_cycles * phases)
+  if (motion) ticks = Math.max(ticks, motion_cycles * 8)
   if (ticks > 96) {
     ticks = 96
-    if (wiggle) wiggleCycles = clamp(wiggleCycles, 1, Math.max(1, Math.floor(ticks / phases)))
-    if (motion) motionCycles = clamp(motionCycles, 1, Math.max(1, Math.floor(ticks / 8)))
+    if (wiggle) wiggle_cycles = clamp(wiggle_cycles, 1, Math.max(1, Math.floor(ticks / phases)))
+    if (motion) motion_cycles = clamp(motion_cycles, 1, Math.max(1, Math.floor(ticks / 8)))
   }
-  return { ticks, wiggleCycles, motionCycles }
+  return { ticks, wiggle_cycles, motion_cycles }
 }
 
 export function animfx_time_for_tick(tick: number, fps: number): number {
   return Math.max(0, tick) / Math.max(0.2, fps)
 }
 
-export function animfx_draw_source(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, time: number, fx: Readonly<AnimFx>, seedOffset = 0): void {
-  const rate = clamp(fx.wiggleRate, 1, 24)
+export function animfx_draw_source(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, time: number, fx: Readonly<anim_fx_t>, seed_offset = 0): void {
+  const rate = clamp(fx.wiggle_rate, 1, 24)
   context.save()
   motion_transform_phase(context, w, h, motion_phase(time, fx), fx)
-  wiggle_draw_phase(source, context, w, h, Math.floor(time * rate), fx, seedOffset)
+  wiggle_draw_phase(source, context, w, h, Math.floor(time * rate), fx, seed_offset)
   context.restore()
 }
 
-export function animfx_draw_cycle(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, cycleValue: number, fx: Readonly<AnimFx>, seedOffset = 0, loop: Readonly<AnimFxLoop> = { ticks: 1, wiggleCycles: 1, motionCycles: 1 }): void {
-  const cycle = cycleValue - Math.floor(cycleValue)
-  const phases = clamp(Math.round(fx.wigglePhases), 2, 12)
+export function animfx_draw_cycle(source: CanvasImageSource, context: CanvasRenderingContext2D, w: number, h: number, cycle_value: number, fx: Readonly<anim_fx_t>, seed_offset = 0, loop: Readonly<anim_fx_loop_t> = { ticks: 1, wiggle_cycles: 1, motion_cycles: 1 }): void {
+  const cycle = cycle_value - Math.floor(cycle_value)
+  const phases = clamp(Math.round(fx.wiggle_phases), 2, 12)
   context.save()
-  motion_transform_phase(context, w, h, cycle * Math.PI * 2 * Math.max(1, loop.motionCycles) + motion_seed_phase(fx), fx)
-  wiggle_draw_phase(source, context, w, h, Math.floor(cycle * phases * Math.max(1, loop.wiggleCycles)), fx, seedOffset)
+  motion_transform_phase(context, w, h, cycle * Math.PI * 2 * Math.max(1, loop.motion_cycles) + motion_seed_phase(fx), fx)
+  wiggle_draw_phase(source, context, w, h, Math.floor(cycle * phases * Math.max(1, loop.wiggle_cycles)), fx, seed_offset)
   context.restore()
 }
 
-export function animfx_compose_cycle(frameIndex: number, context: CanvasRenderingContext2D, w: number, h: number, withPaper: number, cycle: number, loop: Readonly<AnimFxLoop>, fx: Readonly<AnimFx> = st().doc.anim): void {
+export function animfx_compose_cycle(frame_index: number, context: CanvasRenderingContext2D, w: number, h: number, with_paper: number, cycle: number, loop: Readonly<anim_fx_loop_t>, fx: Readonly<anim_fx_t> = st().doc.anim): void {
   if (!animfx_active(fx)) {
-    doc_compose(frameIndex, context, w, h, withPaper)
+    doc_compose(frame_index, context, w, h, with_paper)
     return
   }
   const g = st()
   context.clearRect(0, 0, w, h)
-  if (withPaper) {
-    context.fillStyle = doc_frame_paper(frameIndex)
+  if (with_paper) {
+    context.fillStyle = doc_frame_paper(frame_index)
     context.fillRect(0, 0, w, h)
   }
   context.imageSmoothingEnabled = w < g.doc.w
-  const source = source_get(frameIndex, w, h)
-  animfx_draw_cycle(source, context, w, h, cycle, fx, g.doc.frames[frameIndex].id, loop)
+  const source = source_get(frame_index, w, h)
+  animfx_draw_cycle(source, context, w, h, cycle, fx, g.doc.frames[frame_index].id, loop)
 }
 
-export function animfx_compose(frameIndex: number, context: CanvasRenderingContext2D, w: number, h: number, withPaper: number, time: number, fx: Readonly<AnimFx> = st().doc.anim): void {
+export function animfx_compose(frame_index: number, context: CanvasRenderingContext2D, w: number, h: number, with_paper: number, time: number, fx: Readonly<anim_fx_t> = st().doc.anim): void {
   if (!animfx_active(fx)) {
-    doc_compose(frameIndex, context, w, h, withPaper)
+    doc_compose(frame_index, context, w, h, with_paper)
     return
   }
   const g = st()
   context.clearRect(0, 0, w, h)
-  if (withPaper) {
-    context.fillStyle = doc_frame_paper(frameIndex)
+  if (with_paper) {
+    context.fillStyle = doc_frame_paper(frame_index)
     context.fillRect(0, 0, w, h)
   }
   context.imageSmoothingEnabled = w < g.doc.w
-  const source = source_get(frameIndex, w, h)
-  animfx_draw_source(source, context, w, h, time, fx, g.doc.frames[frameIndex].id)
+  const source = source_get(frame_index, w, h)
+  animfx_draw_source(source, context, w, h, time, fx, g.doc.frames[frame_index].id)
 }
 
 export function animfx_cache_clear(): void {
   gpu_reset()
-  sourceCache.length = 0
-  wiggleGridCache.length = 0
-  wiggleFieldCache.length = 0
-  wigglePixelCache.length = 0
-  wiggleImageCache.length = 0
+  source_cache.length = 0
+  wiggle_grid_cache.length = 0
+  wiggle_field_cache.length = 0
+  wiggle_pixel_cache.length = 0
+  wiggle_image_cache.length = 0
 }
 
-function driver_rate(fx: Readonly<AnimFx>): number {
+function driver_rate(fx: Readonly<anim_fx_t>): number {
   let rate = 0
-  if (fx.wiggle && fx.wiggleAmount > 0) rate = Math.max(rate, clamp(fx.wiggleRate, 1, 24))
-  if (fx.motion !== MOTION_NONE && fx.motionAmount > 0) rate = Math.max(rate, clamp(fx.motionRate * 4, 4, 24))
+  if (fx.wiggle && fx.wiggle_amount > 0) rate = Math.max(rate, clamp(fx.wiggle_rate, 1, 24))
+  if (fx.motion !== motion_none && fx.motion_amount > 0) rate = Math.max(rate, clamp(fx.motion_rate * 4, 4, 24))
   return rate
 }
 
 function driver_step(now: number): void {
   const fx = st().doc.anim
-  if (!driverRun || !animfx_active(fx)) {
-    driverRaf = 0
-    driverBucket = -1
+  if (!driver_run || !animfx_active(fx)) {
+    driver_raf = 0
+    driver_bucket = -1
     return
   }
   const rate = driver_rate(fx)
   const bucket = Math.floor(now * rate / 1000)
-  if (bucket !== driverBucket) {
-    driverBucket = bucket
-    dirty(D_STAGE)
+  if (bucket !== driver_bucket) {
+    driver_bucket = bucket
+    dirty(d_stage)
   }
-  driverRaf = requestAnimationFrame(driver_step)
+  driver_raf = requestAnimationFrame(driver_step)
 }
 
 export function animfx_driver_sync(run: number): void {
-  driverRun = run && animfx_active() ? 1 : 0
-  if (!driverRun) {
-    if (driverRaf) cancelAnimationFrame(driverRaf)
-    driverRaf = 0
-    driverBucket = -1
+  driver_run = run && animfx_active() ? 1 : 0
+  if (!driver_run) {
+    if (driver_raf) cancelAnimationFrame(driver_raf)
+    driver_raf = 0
+    driver_bucket = -1
     return
   }
-  if (!driverRaf) driverRaf = requestAnimationFrame(driver_step)
+  if (!driver_raf) driver_raf = requestAnimationFrame(driver_step)
 }

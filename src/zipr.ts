@@ -1,16 +1,16 @@
 import { report_warning } from './diagnostics'
 
-export type ZipEntry = {
+export type zip_entry_t = {
   name: string
   data: Uint8Array
 }
 
-const EOCD_SIZE = 22
-const CENTRAL_HEADER_SIZE = 46
-const LOCAL_HEADER_SIZE = 30
-const MAX_ENTRIES = 10000
-const MAX_ENTRY_BYTES = 64 << 20
-const MAX_TOTAL_BYTES = 256 << 20
+const eocd_size = 22
+const central_header_size = 46
+const local_header_size = 30
+const max_entries = 10000
+const max_entry_bytes = 64 << 20
+const max_total_bytes = 256 << 20
 
 function has_range(bytes: Uint8Array, offset: number, length: number): boolean {
   return Number.isSafeInteger(offset) && Number.isSafeInteger(length) && offset >= 0 && length >= 0 && offset + length <= bytes.length
@@ -27,81 +27,81 @@ function u32le(bytes: Uint8Array, offset: number): number {
 }
 
 async function inflate_raw(data: Uint8Array): Promise<Uint8Array | null> {
-  const Decompressor = typeof DecompressionStream === 'undefined' ? null : DecompressionStream
-  if (!Decompressor) return null
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(new Decompressor('deflate-raw'))
+  const decompressor = typeof DecompressionStream === 'undefined' ? null : DecompressionStream
+  if (!decompressor) return null
+  const stream = new Blob([data as BlobPart]).stream().pipeThrough(new decompressor('deflate-raw'))
   const buffer = await new Response(stream).arrayBuffer()
   return new Uint8Array(buffer)
 }
 
-async function zip_read_inner(buffer: ArrayBuffer): Promise<ZipEntry[] | null> {
+async function zip_read_inner(buffer: ArrayBuffer): Promise<zip_entry_t[] | null> {
   const bytes = new Uint8Array(buffer)
-  if (bytes.length < EOCD_SIZE) return null
-  let eocdOffset = -1
-  const searchStart = Math.max(0, bytes.length - EOCD_SIZE - 65535)
-  for (let offset = bytes.length - EOCD_SIZE; offset >= searchStart; offset--) {
+  if (bytes.length < eocd_size) return null
+  let eocd_offset = -1
+  const search_start = Math.max(0, bytes.length - eocd_size - 65535)
+  for (let offset = bytes.length - eocd_size; offset >= search_start; offset--) {
     if (u32le(bytes, offset) === 0x06054b50) {
-      eocdOffset = offset
+      eocd_offset = offset
       break
     }
   }
-  if (eocdOffset < 0) return null
+  if (eocd_offset < 0) return null
 
-  const diskNumber = u16le(bytes, eocdOffset + 4)
-  const centralDisk = u16le(bytes, eocdOffset + 6)
-  const diskEntries = u16le(bytes, eocdOffset + 8)
-  const entryCount = u16le(bytes, eocdOffset + 10)
-  const centralSize = u32le(bytes, eocdOffset + 12)
-  let centralOffset = u32le(bytes, eocdOffset + 16)
-  const commentLength = u16le(bytes, eocdOffset + 20)
-  if (diskNumber !== 0 || centralDisk !== 0 || diskEntries !== entryCount || entryCount > MAX_ENTRIES) return null
-  if (!has_range(bytes, eocdOffset + EOCD_SIZE, commentLength)) return null
-  if (!has_range(bytes, centralOffset, centralSize) || centralOffset + centralSize > eocdOffset) return null
+  const disk_number = u16le(bytes, eocd_offset + 4)
+  const central_disk = u16le(bytes, eocd_offset + 6)
+  const disk_entries = u16le(bytes, eocd_offset + 8)
+  const entry_count = u16le(bytes, eocd_offset + 10)
+  const central_size = u32le(bytes, eocd_offset + 12)
+  let central_offset = u32le(bytes, eocd_offset + 16)
+  const comment_length = u16le(bytes, eocd_offset + 20)
+  if (disk_number !== 0 || central_disk !== 0 || disk_entries !== entry_count || entry_count > max_entries) return null
+  if (!has_range(bytes, eocd_offset + eocd_size, comment_length)) return null
+  if (!has_range(bytes, central_offset, central_size) || central_offset + central_size > eocd_offset) return null
 
-  const entries: ZipEntry[] = []
-  let totalBytes = 0
-  for (let index = 0; index < entryCount; index++) {
-    if (!has_range(bytes, centralOffset, CENTRAL_HEADER_SIZE) || u32le(bytes, centralOffset) !== 0x02014b50) return null
-    const flags = u16le(bytes, centralOffset + 8)
-    const method = u16le(bytes, centralOffset + 10)
-    const compressedSize = u32le(bytes, centralOffset + 20)
-    const uncompressedSize = u32le(bytes, centralOffset + 24)
-    const nameLength = u16le(bytes, centralOffset + 28)
-    const extraLength = u16le(bytes, centralOffset + 30)
-    const commentSize = u16le(bytes, centralOffset + 32)
-    const localOffset = u32le(bytes, centralOffset + 42)
-    const recordLength = CENTRAL_HEADER_SIZE + nameLength + extraLength + commentSize
-    if (!has_range(bytes, centralOffset, recordLength)) return null
-    if ((flags & 1) !== 0 || uncompressedSize > MAX_ENTRY_BYTES || totalBytes + uncompressedSize > MAX_TOTAL_BYTES) return null
+  const entries: zip_entry_t[] = []
+  let total_bytes = 0
+  for (let index = 0; index < entry_count; index++) {
+    if (!has_range(bytes, central_offset, central_header_size) || u32le(bytes, central_offset) !== 0x02014b50) return null
+    const flags = u16le(bytes, central_offset + 8)
+    const method = u16le(bytes, central_offset + 10)
+    const compressed_size = u32le(bytes, central_offset + 20)
+    const uncompressed_size = u32le(bytes, central_offset + 24)
+    const name_length = u16le(bytes, central_offset + 28)
+    const extra_length = u16le(bytes, central_offset + 30)
+    const comment_size = u16le(bytes, central_offset + 32)
+    const local_offset = u32le(bytes, central_offset + 42)
+    const record_length = central_header_size + name_length + extra_length + comment_size
+    if (!has_range(bytes, central_offset, record_length)) return null
+    if ((flags & 1) !== 0 || uncompressed_size > max_entry_bytes || total_bytes + uncompressed_size > max_total_bytes) return null
 
-    const nameBytes = bytes.subarray(centralOffset + CENTRAL_HEADER_SIZE, centralOffset + CENTRAL_HEADER_SIZE + nameLength)
-    const name = new TextDecoder().decode(nameBytes)
-    if (!has_range(bytes, localOffset, LOCAL_HEADER_SIZE) || u32le(bytes, localOffset) !== 0x04034b50) return null
-    const localNameLength = u16le(bytes, localOffset + 26)
-    const localExtraLength = u16le(bytes, localOffset + 28)
-    const dataOffset = localOffset + LOCAL_HEADER_SIZE + localNameLength + localExtraLength
-    if (!has_range(bytes, dataOffset, compressedSize)) return null
-    const compressed = bytes.slice(dataOffset, dataOffset + compressedSize)
+    const name_bytes = bytes.subarray(central_offset + central_header_size, central_offset + central_header_size + name_length)
+    const name = new TextDecoder().decode(name_bytes)
+    if (!has_range(bytes, local_offset, local_header_size) || u32le(bytes, local_offset) !== 0x04034b50) return null
+    const local_name_length = u16le(bytes, local_offset + 26)
+    const local_extra_length = u16le(bytes, local_offset + 28)
+    const data_offset = local_offset + local_header_size + local_name_length + local_extra_length
+    if (!has_range(bytes, data_offset, compressed_size)) return null
+    const compressed = bytes.slice(data_offset, data_offset + compressed_size)
 
     let data: Uint8Array
     if (method === 0) {
-      if (compressedSize !== uncompressedSize) return null
+      if (compressed_size !== uncompressed_size) return null
       data = compressed
     } else if (method === 8) {
       const inflated = await inflate_raw(compressed)
-      if (!inflated || inflated.length !== uncompressedSize) return null
+      if (!inflated || inflated.length !== uncompressed_size) return null
       data = inflated
     } else {
       return null
     }
     entries.push({ name, data })
-    totalBytes += data.length
-    centralOffset += recordLength
+    total_bytes += data.length
+    central_offset += record_length
   }
   return entries
 }
 
-export async function zip_read(buffer: ArrayBuffer): Promise<ZipEntry[] | null> {
+export async function zip_read(buffer: ArrayBuffer): Promise<zip_entry_t[] | null> {
   try {
     return await zip_read_inner(buffer)
   } catch (error) {

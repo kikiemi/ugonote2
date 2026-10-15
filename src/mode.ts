@@ -1,25 +1,28 @@
-import { KWZ_CANVAS_H, KWZ_CANVAS_W } from './codec/kwzgeom'
-import { L_DRAW_MAX, L_P, MAX_FRAMES_FLIPNOTE, MAX_FRAMES_NORMAL, MODE_3D, MODE_DSI, MODE_NORMAL, PAL_KWZ, PAL_PPM, PAL_STD, INK_KWZ, INK_PPM, INK_STD, PAPER_KWZ, PAPER_PPM, PAPER_STD } from './h'
+import { kwz_speeds } from './codec/kwzformat'
+import { ppm_speeds } from './codec/ppmformat'
+import { kwz_canvas_h, kwz_canvas_w } from './codec/kwzgeom'
+import { l_draw_max, l_p, max_frames_flipnote, max_frames_normal, mode_3_d, mode_dsi, mode_normal, pal_kwz, pal_ppm, pal_std, ink_kwz, ink_ppm, ink_std, paper_kwz, paper_ppm, paper_std } from './h'
+import { hex_rgb } from './lib'
 import { tr } from './lang'
 
 export function mode_canvas(mode: number): { w: number, h: number, ratio: string, res: string } {
-  if (mode === MODE_DSI) return { w: 256, h: 192, ratio: '4:3', res: 'dsi' }
-  if (mode === MODE_3D) return { w: KWZ_CANVAS_W, h: KWZ_CANVAS_H, ratio: '4:3', res: '3ds' }
+  if (mode === mode_dsi) return { w: 256, h: 192, ratio: '4:3', res: 'dsi' }
+  if (mode === mode_3_d) return { w: kwz_canvas_w, h: kwz_canvas_h, ratio: '4:3', res: '3ds' }
   return { w: 512, h: 288, ratio: '16:9', res: 'low' }
 }
 
 export function mode_frame_limit(mode: number): number {
-  return mode === MODE_NORMAL ? MAX_FRAMES_NORMAL : MAX_FRAMES_FLIPNOTE
+  return mode === mode_normal ? max_frames_normal : max_frames_flipnote
 }
 
 export function mode_layers(mode: number): number {
-  if (mode === MODE_DSI) return 2
-  if (mode === MODE_3D) return 3
-  return L_DRAW_MAX
+  if (mode === mode_dsi) return 2
+  if (mode === mode_3_d) return 3
+  return l_draw_max
 }
 
 export function mode_layer_allowed(mode: number, layer: number): number {
-  if (layer === L_P) return 1
+  if (layer === l_p) return 1
   return layer >= 1 && layer <= mode_layers(mode) ? 1 : 0
 }
 
@@ -30,40 +33,76 @@ export function mode_order(mode: number, order: readonly number[]): number[] {
 }
 
 export function layer_name(layer: number): string {
-  if (layer === L_P) return tr('写真')
+  if (layer === l_p) return tr('写真')
   let name = ''
   for (let n = layer; n > 0; n = Math.floor((n - 1) / 26)) name = String.fromCharCode(65 + (n - 1) % 26) + name
   return name
 }
 
 export function mode_pal(mode: number): number {
-  if (mode === MODE_DSI) return PAL_PPM
-  if (mode === MODE_3D) return PAL_KWZ
-  return PAL_STD
+  if (mode === mode_dsi) return pal_ppm
+  if (mode === mode_3_d) return pal_kwz
+  return pal_std
 }
 
 export function mode_ink(mode: number): string[] {
-  if (mode === MODE_DSI) return INK_PPM
-  if (mode === MODE_3D) return INK_KWZ
-  return INK_STD
+  if (mode === mode_dsi) return ink_ppm
+  if (mode === mode_3_d) return ink_kwz
+  return ink_std
 }
 
 export function mode_paper_opts(mode: number): string[] {
-  if (mode === MODE_DSI) return PAPER_PPM
-  if (mode === MODE_3D) return PAPER_KWZ
-  return PAPER_STD
+  if (mode === mode_dsi) return paper_ppm
+  if (mode === mode_3_d) return paper_kwz
+  return paper_std
 }
 
 export function mode_allows_layer_alpha(mode: number): number {
-  return mode === MODE_NORMAL ? 1 : 0
+  return mode === mode_normal ? 1 : 0
 }
 
 export function mode_allows_runtime_anim(mode: number): number {
-  return mode === MODE_NORMAL ? 1 : 0
+  return mode === mode_normal ? 1 : 0
 }
 
 export function mode_name(mode: number): string {
-  if (mode === MODE_DSI) return tr('うごメモ')
-  if (mode === MODE_3D) return tr('うごメモ3D')
+  if (mode === mode_dsi) return tr('うごメモ')
+  if (mode === mode_3_d) return tr('うごメモ3D')
   return tr('ノーマル')
+}
+
+const dsi_speeds = ppm_speeds.slice(1)
+
+export function mode_speeds(mode: number): readonly number[] {
+  return mode === mode_dsi ? dsi_speeds : kwz_speeds
+}
+
+export function mode_speed_index(mode: number, fps: number): number {
+  const speeds = mode_speeds(mode)
+  let best = 0
+  for (let i = 1; i < speeds.length; i++) if (Math.abs(speeds[i] - fps) < Math.abs(speeds[best] - fps)) best = i
+  return best
+}
+
+export function mode_speed_tag(mode: number, fps: number): string {
+  const speeds = mode_speeds(mode)
+  const i = mode_speed_index(mode, fps)
+  return Math.abs(speeds[i] - fps) < 0.01 ? 'はやさ ' + (i + 1) : 'カスタム'
+}
+
+export function mode_color(mode: number, color: string): string {
+  if (mode === mode_normal) return color.toUpperCase()
+  const rgb = hex_rgb(color)
+  const inks = mode_ink(mode)
+  let best = inks[0]
+  let error = Infinity
+  for (const ink of inks) {
+    const c = hex_rgb(ink)
+    const dr = rgb[0] - c[0]
+    const dg = rgb[1] - c[1]
+    const db = rgb[2] - c[2]
+    const d = dr * dr + dg * dg + db * db
+    if (d < error) { best = ink; error = d }
+  }
+  return best
 }

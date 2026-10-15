@@ -1,23 +1,24 @@
+import { thumb_get } from '../thumb'
+import { workspace_timeline_set } from './responsive'
 import { el, pointer_capture, pointer_release, q, toast } from '../dom'
-import { DRAG_SLOP, LONGPRESS_MS } from '../h'
+import { drag_slop, longpress_ms, thumb_w, thumb_h } from '../h'
 import { tr } from '../lang'
 import { clamp } from '../lib'
-import { modal_prompt_num } from '../panels'
+import { modal_addmany, modal_prompt_num } from './modal'
 import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
 import { anim_playing } from '../state/commands/play'
 import { st } from '../state/store'
-import { tl_index_at } from '../sync'
+import { tl_index_at } from './timeline_render'
 import { ctx_show, ctx_show_above, pop_close, pop_is_anchored, pop_toggle } from './overlay'
 import { anim_seek, anim_toggle } from './playback'
 import { last_pointer_type, last_pointer_type_set } from './stage_input'
 
-import { view_fit_if_stale } from './viewport'
 
-let fsRoot: HTMLElement | null = null
-const FS_EDGE = 62
-const FS_SPEED = 17
-type FsDrag = {
+let fs_root: HTMLElement | null = null
+const fs_edge = 62
+const fs_speed = 17
+type fs_drag_t = {
   on: number
   scrolling: number
   from: number
@@ -29,14 +30,14 @@ type FsDrag = {
   y: number
   sl: number
   ghost: HTMLElement | null
-  pointerId: number
+  pointer_id: number
   captured: number
-  touchId: number | null
+  touch: number
+  from_id: number
   raf: number
-  lock: number
 }
-const FS_DRAG_IDLE: FsDrag = { on: 0, scrolling: 0, from: -1, to: -1, timer: 0, sx: 0, sy: 0, x: 0, y: 0, sl: 0, ghost: null, pointerId: -1, captured: 0, touchId: null, raf: 0, lock: 0 }
-let fsDrag: FsDrag = { ...FS_DRAG_IDLE }
+const fs_drag_idle: fs_drag_t = { on: 0, scrolling: 0, from: -1, to: -1, timer: 0, sx: 0, sy: 0, x: 0, y: 0, sl: 0, ghost: null, pointer_id: -1, captured: 0, touch: 0, from_id: -1, raf: 0 }
+let fs_drag: fs_drag_t = { ...fs_drag_idle }
 
 function fs_ctx(e: MouseEvent, i: number): void {
   e.preventDefault()
@@ -65,12 +66,12 @@ function ab_set_b(i: number): void {
 export function ab_cycle(): void {
   const g = st()
   const cur = g.doc.cur
-  if (g.doc.loopA < 0) {
+  if (g.doc.loop_a < 0) {
     ab_set_a(cur)
     return
   }
-  if (g.doc.loopB < 0) {
-    if (cur < g.doc.loopA) {
+  if (g.doc.loop_b < 0) {
+    if (cur < g.doc.loop_a) {
       ab_set_a(cur)
       return
     }
@@ -101,22 +102,21 @@ export function loop_toggle(): void {
 }
 
 function hold_toggle(anchor: HTMLElement): void {
-  pop_toggle('popHold', anchor)
+  pop_toggle('pop_hold', anchor)
 }
 
 function fps_toggle(anchor: HTMLElement): void {
-  pop_toggle('popFps', anchor)
+  pop_toggle('pop_fps', anchor)
 }
 
 function timeline_toggle(): void {
-  dispatch('view.toggle_timeline', null)
-  view_fit_if_stale()
+  workspace_timeline_set(st().view.tlopen ? 0 : 1)
   sfx_play('tap')
 }
 
 function tl_more_open(): void {
   const g = st()
-  const button = q('tlMoreBtn')
+  const button = q('tl_more_btn')
   if (pop_is_anchored(button)) {
     pop_close()
     return
@@ -129,15 +129,17 @@ function tl_more_open(): void {
     { label: tr('A-B区間ループ'), icon: 'ab', fn: ab_cycle },
     { label: tr('このコマの表示時間'), icon: 'clock', fn: () => hold_toggle(button) },
     { label: tr('コマをうつす'), icon: 'swap', off: g.doc.frames.length <= 1 ? 1 : 0, fn: () => {
-      const frameId = st().doc.frames[st().doc.cur].id
+      const frame_id = st().doc.frames[st().doc.cur].id
       modal_prompt_num('コマをうつす', 'このコマを何コマ目に置く？（1〜' + st().doc.frames.length + '）', st().doc.cur + 1, 1, st().doc.frames.length, v => {
-        const from = st().doc.frames.findIndex(frame => frame.id === frameId)
+        const from = st().doc.frames.findIndex(frame => frame.id === frame_id)
         if (from >= 0 && dispatch('frame.move', { a: from, b: v - 1 }) === 0) sfx_play('move')
       })
     } },
     { label: tr('コマを複製'), icon: 'dup', fn: frame_duplicate },
+    { label: tr('まとめて追加'), icon: 'many', fn: modal_addmany },
     { label: tr('コマを削除'), icon: 'trash', fn: () => dispatch('frame.del', null), off: g.doc.frames.length <= 1 ? 1 : 0 },
     { label: tr('はやさ'), icon: 'clock', fn: () => fps_toggle(button) },
+    { label: tr('みえかた'), icon: 'onion', fn: () => pop_toggle('pop_view', button) },
     {
       label: tr(g.view.tlopen ? 'コマ一覧を閉じる' : 'コマ一覧を開く'),
       icon: g.view.tlopen ? 'down' : 'up',
@@ -148,22 +150,21 @@ function tl_more_open(): void {
 }
 
 export function fs_drag_clear(): void {
-  if (fsDrag.pointerId < 0 && fsDrag.touchId === null && !fsDrag.timer && !fsDrag.ghost && !fsDrag.scrolling) return
-  if (fsDrag.timer) clearTimeout(fsDrag.timer)
-  if (fsDrag.raf) cancelAnimationFrame(fsDrag.raf)
-  const fs = fsRoot
-  const pointerId = fsDrag.pointerId
-  const captured = fsDrag.captured
+  if (fs_drag.pointer_id < 0 && !fs_drag.timer && !fs_drag.ghost && !fs_drag.scrolling) return
+  if (fs_drag.timer) clearTimeout(fs_drag.timer)
+  if (fs_drag.raf) cancelAnimationFrame(fs_drag.raf)
+  const fs = fs_root
+  const pointer_id = fs_drag.pointer_id
+  const captured = fs_drag.captured
   if (fs) {
     for (const cell of fs.querySelectorAll<HTMLElement>('.fcell')) {
       cell.classList.remove('drop')
       cell.classList.remove('lift')
     }
   }
-  if (fsDrag.ghost) fsDrag.ghost.remove()
-  if (fs && fsDrag.lock) fs.style.overflowX = ''
-  fsDrag = { ...FS_DRAG_IDLE }
-  if (fs && captured && pointerId >= 0) pointer_release(fs, pointerId)
+  if (fs_drag.ghost) fs_drag.ghost.remove()
+  fs_drag = { ...fs_drag_idle }
+  if (fs && captured && pointer_id >= 0) pointer_release(fs, pointer_id)
 }
 
 function fs_cell_index(cell: HTMLElement | null): number {
@@ -175,113 +176,112 @@ function fs_cell_index(cell: HTMLElement | null): number {
 }
 
 function fs_marks(): void {
-  const fs = fsRoot
+  const fs = fs_root
   if (!fs) return
   for (const cell of fs.querySelectorAll<HTMLElement>('.fcell')) {
     const index = fs_cell_index(cell)
-    const lifted = fsDrag.on === 1 && index >= 0 && index === fsDrag.from
-    const dropped = fsDrag.on === 1 && index >= 0 && index === fsDrag.to && index !== fsDrag.from
+    const lifted = fs_drag.on === 1 && index >= 0 && st().doc.frames[index]?.id === fs_drag.from_id
+    const dropped = fs_drag.on === 1 && index >= 0 && index === fs_drag.to && index !== fs_drag.from
     cell.classList.toggle('lift', lifted)
     cell.classList.toggle('drop', dropped)
   }
 }
 
 function fs_ghost_place(): void {
-  if (!fsDrag.ghost) return
-  fsDrag.ghost.style.left = fsDrag.x - 35 + 'px'
-  fsDrag.ghost.style.top = fsDrag.y - 60 + 'px'
+  if (!fs_drag.ghost) return
+  fs_drag.ghost.style.left = fs_drag.x - 35 + 'px'
+  fs_drag.ghost.style.top = fs_drag.y - 60 + 'px'
 }
 
 function fs_hover(): void {
-  fsDrag.to = tl_index_at(fsDrag.x)
+  fs_drag.to = tl_index_at(fs_drag.x)
   fs_marks()
 }
 
 function fs_autoscroll(): void {
-  fsDrag.raf = 0
-  const fs = fsRoot
-  if (!fs || !fsDrag.on) return
+  fs_drag.raf = 0
+  const fs = fs_root
+  if (!fs || !fs_drag.on) return
   const max = fs.scrollWidth - fs.clientWidth
   if (max > 0) {
     const r = fs.getBoundingClientRect()
-    const left = fsDrag.x - r.left
-    const right = r.right - fsDrag.x
+    const left = fs_drag.x - r.left
+    const right = r.right - fs_drag.x
     let dx = 0
-    if (left < FS_EDGE) dx = -Math.ceil(((FS_EDGE - Math.max(left, -FS_EDGE)) / FS_EDGE) * FS_SPEED)
-    else if (right < FS_EDGE) dx = Math.ceil(((FS_EDGE - Math.max(right, -FS_EDGE)) / FS_EDGE) * FS_SPEED)
+    if (left < fs_edge) dx = -Math.ceil(((fs_edge - Math.max(left, -fs_edge)) / fs_edge) * fs_speed)
+    else if (right < fs_edge) dx = Math.ceil(((fs_edge - Math.max(right, -fs_edge)) / fs_edge) * fs_speed)
     if (dx) {
       const before = fs.scrollLeft
       fs.scrollLeft = clamp(before + dx, 0, max)
-      if (fs.scrollLeft !== before) fsDrag.sl = fs.scrollLeft
+      if (fs.scrollLeft !== before) fs_drag.sl = fs.scrollLeft
     }
   }
   fs_hover()
-  fsDrag.raf = requestAnimationFrame(fs_autoscroll)
+  fs_drag.raf = requestAnimationFrame(fs_autoscroll)
 }
 
-function fs_drag_begin(cell: HTMLElement): void {
-  const canvas = cell.querySelector<HTMLCanvasElement>('canvas')
-  if (!canvas) {
+function fs_drag_begin(): void {
+  const from = st().doc.frames.findIndex(frame => frame.id === fs_drag.from_id)
+  if (from < 0) {
     fs_drag_clear()
     return
   }
-  fsDrag.timer = 0
-  fsDrag.on = 1
-  const fs = fsRoot
-  if (fs && fsDrag.touchId !== null) {
-    fsDrag.lock = 1
-    fs.style.overflowX = 'hidden'
-  }
+  fs_drag.from = from
+  fs_drag.timer = 0
+  fs_drag.on = 1
+  const canvas = thumb_get(from, 1)
   const ghost = el('div', '', '')
-  ghost.id = 'fsGhost'
+  ghost.id = 'fs_ghost'
   ghost.draggable = false
-  const ghostCanvas = canvas.cloneNode(true) as HTMLCanvasElement
-  ghostCanvas.draggable = false
-  const context = ghostCanvas.getContext('2d')
-  if (context) context.drawImage(canvas, 0, 0)
-  ghost.appendChild(ghostCanvas)
+  const ghost_canvas = document.createElement('canvas')
+  ghost_canvas.width = canvas ? canvas.width : thumb_w
+  ghost_canvas.height = canvas ? canvas.height : thumb_h
+  ghost_canvas.draggable = false
+  if (canvas) ghost_canvas.getContext('2d')!.drawImage(canvas, 0, 0)
+  ghost.appendChild(ghost_canvas)
   document.body.appendChild(ghost)
-  fsDrag.ghost = ghost
+  fs_drag.ghost = ghost
   fs_ghost_place()
   fs_marks()
-  fsDrag.raf = requestAnimationFrame(fs_autoscroll)
+  fs_drag.raf = requestAnimationFrame(fs_autoscroll)
   sfx_play('move')
 }
 
 function fs_drag_track(x: number, y: number): void {
-  if (!fsDrag.on) {
-    const fs = fsRoot
-    if (fs && fs.scrollLeft !== fsDrag.sl) {
+  if (!fs_drag.on) {
+    const fs = fs_root
+    if (fs && fs.scrollLeft !== fs_drag.sl) {
       fs_drag_clear()
       return
     }
-    if (Math.hypot(x - fsDrag.sx, y - fsDrag.sy) > DRAG_SLOP) fs_drag_clear()
+    if (Math.hypot(x - fs_drag.sx, y - fs_drag.sy) > drag_slop) fs_drag_clear()
     return
   }
-  fsDrag.x = x
-  fsDrag.y = y
+  fs_drag.x = x
+  fs_drag.y = y
   fs_ghost_place()
   fs_hover()
 }
 
-function fs_drag_finish(cell: HTMLElement | null, canceled: number): void {
-  const from = fsDrag.from
-  const to = fsDrag.to
-  const wasDrag = fsDrag.on
+function fs_drag_finish(canceled: number): void {
+  const id = fs_drag.from_id
+  const to = fs_drag.to
+  const was_drag = fs_drag.on
+  const scrolling = fs_drag.scrolling
   fs_drag_clear()
-  if (canceled) return
-  if (wasDrag) {
+  if (canceled || scrolling) return
+  const from = st().doc.frames.findIndex(frame => frame.id === id)
+  if (from < 0) return
+  if (was_drag) {
     if (to !== from) dispatch('frame.move', { a: from, b: to })
     return
   }
-  const index = fs_cell_index(cell)
-  if (index < 0) return
   if (anim_playing()) {
-    anim_seek(index)
+    anim_seek(from)
     return
   }
-  if (index !== st().doc.cur) {
-    dispatch('frame.goto', index)
+  if (from !== st().doc.cur) {
+    dispatch('frame.goto', from)
     sfx_play('tap')
   }
 }
@@ -289,21 +289,17 @@ function fs_drag_finish(cell: HTMLElement | null, canceled: number): void {
 function fs_press(fs: HTMLElement, cell: HTMLElement, x: number, y: number): number {
   const from = fs_cell_index(cell)
   if (from < 0) return 0
-  fsDrag.from = from
-  fsDrag.to = from
-  fsDrag.on = 0
-  fsDrag.scrolling = 0
-  fsDrag.sx = x
-  fsDrag.sy = y
-  fsDrag.x = x
-  fsDrag.y = y
-  fsDrag.sl = fs.scrollLeft
+  fs_drag.from = from
+  fs_drag.from_id = st().doc.frames[from].id
+  fs_drag.to = from
+  fs_drag.on = 0
+  fs_drag.scrolling = 0
+  fs_drag.sx = x
+  fs_drag.sy = y
+  fs_drag.x = x
+  fs_drag.y = y
+  fs_drag.sl = fs.scrollLeft
   return 1
-}
-
-function fs_touch_of(list: TouchList): Touch | null {
-  for (let i = 0; i < list.length; i++) if (list[i].identifier === fsDrag.touchId) return list[i]
-  return null
 }
 
 function fs_closest_cell(node: EventTarget | null): HTMLElement | null {
@@ -313,117 +309,75 @@ function fs_closest_cell(node: EventTarget | null): HTMLElement | null {
 }
 
 export function fs_pointer(fs: HTMLElement): void {
-  fsRoot = fs
+  fs_root = fs
+  const touches = new Set<number>()
+  window.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return
+    touches.add(e.pointerId)
+    if (touches.size > 1) fs_drag_clear()
+  }, { capture: true })
   fs.addEventListener('pointerdown', e => {
     last_pointer_type_set(e.pointerType)
-    if (e.pointerType === 'touch') return
+    if (e.button !== 0 || touches.size > 1) return
     const cell = fs_closest_cell(e.target)
-    if (!cell || e.button === 2) return
-    if (fsDrag.on && fsDrag.touchId !== null) return
+    if (!cell) return
+    e.preventDefault()
     fs_drag_clear()
     if (!fs_press(fs, cell, e.clientX, e.clientY)) return
-    const from = fsDrag.from
-    fsDrag.pointerId = e.pointerId
-    fsDrag.timer = setTimeout(() => {
-      if (fsDrag.pointerId !== e.pointerId || fsDrag.from !== from) return
-      fsDrag.captured = pointer_capture(fs, e.pointerId)
-      fs_drag_begin(cell)
-    }, LONGPRESS_MS)
-  })
-  fs.addEventListener(
-    'touchstart',
-    e => {
-      if (e.touches.length > 1) {
+    fs_drag.pointer_id = e.pointerId
+    fs_drag.touch = e.pointerType === 'touch' ? 1 : 0
+    fs_drag.captured = pointer_capture(fs, e.pointerId)
+    const id = fs_drag.from_id
+    fs_drag.timer = setTimeout(() => {
+      if (fs_drag.pointer_id !== e.pointerId || fs_drag.from_id !== id) return
+      if (fs.scrollLeft !== fs_drag.sl) {
         fs_drag_clear()
         return
       }
-      const t = e.changedTouches[0]
-      if (!t) return
-      const cell = fs_closest_cell(t.target)
-      if (!cell) return
-      if (e.cancelable) e.preventDefault()
-      fs_drag_clear()
-      if (!fs_press(fs, cell, t.clientX, t.clientY)) return
-      const from = fsDrag.from
-      const id = t.identifier
-      fsDrag.touchId = id
-      fsDrag.timer = setTimeout(() => {
-        if (fsDrag.touchId !== id || fsDrag.from !== from) return
-        if (fs.scrollLeft !== fsDrag.sl) {
-          fs_drag_clear()
-          return
-        }
-        fs_drag_begin(cell)
-      }, LONGPRESS_MS)
-    },
-    { passive: false }
-  )
-  window.addEventListener(
-    'touchmove',
-    e => {
-      if (fsDrag.touchId === null || fsDrag.from < 0) return
-      const t = fs_touch_of(e.touches)
-      if (!t) return
-      if (e.cancelable) e.preventDefault()
-      if (!fsDrag.on) {
-        const dx = t.clientX - fsDrag.sx
-        const dy = t.clientY - fsDrag.sy
-        if (!fsDrag.scrolling && Math.hypot(dx, dy) > DRAG_SLOP) {
-          if (fsDrag.timer) clearTimeout(fsDrag.timer)
-          fsDrag.timer = 0
-          fsDrag.scrolling = 1
-        }
-        if (fsDrag.scrolling) {
-          const max = Math.max(0, fs.scrollWidth - fs.clientWidth)
-          fs.scrollLeft = clamp(fsDrag.sl - dx, 0, max)
-          fsDrag.x = t.clientX
-          fsDrag.y = t.clientY
-          return
-        }
-      }
-      fs_drag_track(t.clientX, t.clientY)
-    },
-    { passive: false, capture: true }
-  )
-  const touch_finish = (e: TouchEvent): void => {
-    if (fsDrag.touchId === null || fsDrag.from < 0) return
-    const t = fs_touch_of(e.changedTouches)
-    if (!t) {
-      if (!fs_touch_of(e.touches)) fs_drag_clear()
-      return
-    }
-    if (e.cancelable) e.preventDefault()
-    if (fsDrag.scrolling) {
-      fs_drag_clear()
-      return
-    }
-    if (fsDrag.on) fs_drag_track(t.clientX, t.clientY)
-    fs_drag_finish(fs_closest_cell(t.target), e.type === 'touchcancel' ? 1 : 0)
-  }
-  window.addEventListener('touchstart', e => {
-    if (fsDrag.touchId !== null && e.touches.length > 1) fs_drag_clear()
-  }, { passive: true, capture: true })
-  window.addEventListener('touchend', touch_finish, { passive: false, capture: true })
-  window.addEventListener('touchcancel', touch_finish, { passive: false, capture: true })
+      fs_drag_begin()
+    }, longpress_ms)
+  })
   const move = (e: PointerEvent): void => {
-    if (fsDrag.touchId !== null || e.pointerId !== fsDrag.pointerId || fsDrag.from < 0) return
+    if (e.pointerId !== fs_drag.pointer_id || fs_drag.from < 0) return
+    if (e.cancelable) e.preventDefault()
+    if (fs_drag.touch && !fs_drag.on) {
+      const dx = e.clientX - fs_drag.sx
+      const dy = e.clientY - fs_drag.sy
+      if (!fs_drag.scrolling && Math.hypot(dx, dy) > drag_slop) {
+        if (fs_drag.timer) clearTimeout(fs_drag.timer)
+        fs_drag.timer = 0
+        fs_drag.scrolling = 1
+      }
+      if (fs_drag.scrolling) {
+        fs.scrollLeft = clamp(fs_drag.sl - dx, 0, Math.max(0, fs.scrollWidth - fs.clientWidth))
+        fs_drag.x = e.clientX
+        fs_drag.y = e.clientY
+        return
+      }
+    }
     fs_drag_track(e.clientX, e.clientY)
   }
   const finish = (e: PointerEvent): void => {
-    if (fsDrag.touchId !== null || e.pointerId !== fsDrag.pointerId || fsDrag.from < 0) return
-    fs_drag_finish(fs_closest_cell(e.target), e.type === 'pointercancel' ? 1 : 0)
+    touches.delete(e.pointerId)
+    if (e.pointerId !== fs_drag.pointer_id || fs_drag.from < 0) return
+    if (e.cancelable) e.preventDefault()
+    if (fs_drag.on) fs_drag_track(e.clientX, e.clientY)
+    const rect = fs.getBoundingClientRect()
+    const outside = e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom
+    fs_drag_finish(e.type === 'pointercancel' || outside ? 1 : 0)
   }
   const lost = (e: PointerEvent): void => {
-    if (fsDrag.touchId === null && e.pointerId === fsDrag.pointerId && fsDrag.from >= 0) fs_drag_clear()
+    if (e.pointerId === fs_drag.pointer_id && fs_drag.from >= 0) fs_drag_clear()
   }
-  const pointerOut = (e: PointerEvent): void => {
-    if (fsDrag.touchId !== null || e.pointerId !== fsDrag.pointerId || e.relatedTarget !== null || fsDrag.captured) return
+  const pointer_out = (e: PointerEvent): void => {
+    if (e.pointerId !== fs_drag.pointer_id || e.relatedTarget !== null || fs_drag.captured) return
     fs_drag_clear()
   }
-  window.addEventListener('pointermove', move, { capture: true })
+  window.addEventListener('pointermove', move, { capture: true, passive: false })
   window.addEventListener('pointerup', finish, { capture: true })
   window.addEventListener('pointercancel', finish, { capture: true })
-  window.addEventListener('pointerout', pointerOut, { capture: true })
+  window.addEventListener('pointerout', pointer_out, { capture: true })
+  window.addEventListener('blur', () => { touches.clear(); fs_drag_clear() })
   fs.addEventListener('lostpointercapture', lost)
   fs.addEventListener('contextmenu', e => {
     const cell = fs_closest_cell(e.target)
@@ -443,35 +397,35 @@ export function fs_pointer(fs: HTMLElement): void {
 
 export function tl_events(): void {
   const g = st()
-  q('prevBtn').addEventListener('click', () => {
+  q('prev_btn').addEventListener('click', () => {
     if (dispatch('frame.step', -1) === 0) sfx_play('tap')
   })
-  q('nextBtn').addEventListener('click', () => {
+  q('next_btn').addEventListener('click', () => {
     if (dispatch('frame.step', 1) === 0) sfx_play('tap')
   })
-  q('homeBtn').addEventListener('click', frame_home)
-  q('lastBtn').addEventListener('click', frame_last)
-  q('frameNo').addEventListener('click', () => {
+  q('home_btn').addEventListener('click', frame_home)
+  q('last_btn').addEventListener('click', frame_last)
+  q('frame_no').addEventListener('click', () => {
     dispatch('play.stop', null)
     modal_prompt_num('コマへジャンプ', '何コマ目にとぶ？（1〜' + g.doc.frames.length + '）', g.doc.cur + 1, 1, g.doc.frames.length, v => {
       dispatch('frame.goto', v - 1)
     })
   })
-  q('playBtn').addEventListener('click', () => anim_toggle())
-  q('loopBtn').addEventListener('click', loop_toggle)
-  q('abBtn').addEventListener('click', ab_cycle)
-  q('fpsBtn').addEventListener('click', () => fps_toggle(q('fpsBtn')))
-  q('holdBtn').addEventListener('click', () => hold_toggle(q('holdBtn')))
-  q('addBtn').addEventListener('click', () => dispatch('frame.add', null))
-  q('dupBtn').addEventListener('click', frame_duplicate)
-  q('delBtn').addEventListener('click', () => dispatch('frame.del', null))
-  q('tlToggle').addEventListener('click', timeline_toggle)
-  q('tlClose').addEventListener('click', () => { if (st().view.tlopen) timeline_toggle() })
-  q('tlMoreBtn').addEventListener('click', tl_more_open)
-  q<HTMLInputElement>('fpsRange').addEventListener('input', e => {
+  q('play_btn').addEventListener('click', () => anim_toggle())
+  q('loop_btn').addEventListener('click', loop_toggle)
+  q('ab_btn').addEventListener('click', ab_cycle)
+  q('fps_btn').addEventListener('click', () => fps_toggle(q('fps_btn')))
+  q('hold_btn').addEventListener('click', () => hold_toggle(q('hold_btn')))
+  q('add_btn').addEventListener('click', () => dispatch('frame.add', null))
+  q('dup_btn').addEventListener('click', frame_duplicate)
+  q('del_btn').addEventListener('click', () => dispatch('frame.del', null))
+  q('tl_toggle').addEventListener('click', timeline_toggle)
+  q('tl_close').addEventListener('click', () => { if (st().view.tlopen) timeline_toggle() })
+  q('tl_more_btn').addEventListener('click', tl_more_open)
+  q<HTMLInputElement>('fps_range').addEventListener('input', e => {
     dispatch('doc.set_fps_idx', Number((e.target as HTMLInputElement).value))
   })
-  q<HTMLInputElement>('holdRange').addEventListener('input', e => {
+  q<HTMLInputElement>('hold_range').addEventListener('input', e => {
     const cur = g.doc.cur
     dispatch('frame.set_hold_range', { a: cur, b: cur, hold: Number((e.target as HTMLInputElement).value) })
   })

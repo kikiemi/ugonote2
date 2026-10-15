@@ -9,13 +9,14 @@
     "watch": "node build.mjs --watch",
     "typecheck": "tsc -p tsconfig.json",
     "check": "npm run typecheck && npm run build:min",
-    "build:single": "npm run build:min && node build-single.mjs"
+    "build:single": "npm run build:min && node build_single.mjs",
+    "build:site": "npm run build:min && node build_hosted.mjs"
   },
   "license": "CC0-1.0",
   "dependencies": {
+    "fflate": "0.8.2",
     "mediabunny": "^1.50.6",
-    "perfect-freehand": "^1.2.3",
-    "preact": "^10.29.7"
+    "perfect-freehand": "^1.2.3"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

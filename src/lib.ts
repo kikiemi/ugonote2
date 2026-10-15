@@ -4,6 +4,23 @@ export function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v
 }
 
+export function rotation_axes(angle: number): [number, number] {
+  if (angle % 90 === 0) {
+    const index = ((angle / 90) % 4 + 4) % 4
+    return [[1, 0], [0, 1], [-1, 0], [0, -1]][index] as [number, number]
+  }
+  const radians = angle * Math.PI / 180
+  return [Math.cos(radians), Math.sin(radians)]
+}
+
+export function canvas_affine_matrix(w: number, h: number, angle: number, scale = 1, dx = 0, dy = 0): [number, number, number, number, number, number] {
+  const [cos, sin] = rotation_axes(angle)
+  let tx = w / 2 + dx - scale * (cos * w / 2 - sin * h / 2)
+  let ty = h / 2 + dy - scale * (sin * w / 2 + cos * h / 2)
+  if (angle % 90 === 0 && scale === 1) { tx = Math.round(tx); ty = Math.round(ty) }
+  return [scale * cos, scale * sin, -scale * sin, scale * cos, tx, ty]
+}
+
 export function hex_rgb(hex: string): [number, number, number] {
   let h = hex.charCodeAt(0) === 35 ? hex.slice(1) : hex
   if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
@@ -19,7 +36,8 @@ export function canvas_make(w: number, h: number, read = 0): [HTMLCanvasElement,
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
-  const x = c.getContext('2d', read ? { willReadFrequently: true } : undefined) as CanvasRenderingContext2D
+  const x = c.getContext('2d', read ? { willReadFrequently: true } : undefined)
+  if (!x) { c.width = 0; throw new Error('画像の作業領域を準備できませんでした。画像の大きさを小さくしてください') }
   x.imageSmoothingEnabled = false
   return [c, x]
 }

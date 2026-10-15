@@ -1,0 +1,6 @@
+node_modules/
+work/
+*.log
+*.map
+.DS_Store
+src/codec/sigkey.local.ts

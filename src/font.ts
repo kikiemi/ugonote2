@@ -1,17 +1,17 @@
 import { report_warning } from './diagnostics'
 import { toast } from './dom'
-import { DOT_FONT_FAMILY, MEMO_FONT_FAMILY } from './dotfont'
+import { dot_font_family, memo_font_family } from './dotfont'
 
-export type FontEntry = { name: string, family: string }
+export type font_entry_t = { name: string, family: string }
 
-const list: FontEntry[] = []
+const list: font_entry_t[] = []
 let seq = 0
 
-export function fonts_list(): FontEntry[] {
-  const base: FontEntry[] = [
+export function fonts_list(): font_entry_t[] {
+  const base: font_entry_t[] = [
     { name: 'まるゴシック（標準）', family: '' },
-    { name: 'ドットフォント（くっきり）', family: DOT_FONT_FAMILY },
-    { name: 'うごメモ風（オリジナル）', family: MEMO_FONT_FAMILY },
+    { name: 'ドットフォント（くっきり）', family: dot_font_family },
+    { name: 'うごメモ風（オリジナル）', family: memo_font_family },
   ]
   return base.concat(list)
 }

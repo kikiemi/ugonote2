@@ -1,6 +1,6 @@
 import { doc_compose, doc_frame_new } from './doc'
 import { toast } from './dom'
-import { TR_FADE, TR_SLIDE_L, TR_SLIDE_R, TR_SLIDE_U, TR_SLIDE_D, TR_ZOOM_IN, TR_ZOOM_OUT, TR_WIPE, L_P, type Frame } from './h'
+import { tr_fade, tr_slide_l, tr_slide_r, tr_slide_u, tr_slide_d, tr_zoom_in, tr_zoom_out, tr_wipe, l_p, type frame_t } from './h'
 import { canvas_make, clamp, rle_pack } from './lib'
 import { mode_frame_limit } from './mode'
 import { sfx_play } from './snd'
@@ -14,28 +14,28 @@ function pack_img(img: ImageData): Uint32Array {
 function blend_frame(kind: number, ca: HTMLCanvasElement, cb: HTMLCanvasElement, t: number, w: number, h: number): ImageData {
   const [, x] = canvas_make(w, h, 1)
   x.clearRect(0, 0, w, h)
-  if (kind === TR_FADE) {
+  if (kind === tr_fade) {
     x.globalAlpha = 1
     x.drawImage(ca, 0, 0)
     x.globalAlpha = t
     x.drawImage(cb, 0, 0)
-  } else if (kind === TR_SLIDE_L || kind === TR_SLIDE_R || kind === TR_SLIDE_U || kind === TR_SLIDE_D) {
+  } else if (kind === tr_slide_l || kind === tr_slide_r || kind === tr_slide_u || kind === tr_slide_d) {
     let ox = 0
     let oy = 0
-    if (kind === TR_SLIDE_L) ox = -w * t
-    if (kind === TR_SLIDE_R) ox = w * t
-    if (kind === TR_SLIDE_U) oy = -h * t
-    if (kind === TR_SLIDE_D) oy = h * t
+    if (kind === tr_slide_l) ox = -w * t
+    if (kind === tr_slide_r) ox = w * t
+    if (kind === tr_slide_u) oy = -h * t
+    if (kind === tr_slide_d) oy = h * t
     x.drawImage(ca, ox, oy)
-    x.drawImage(cb, ox + (kind === TR_SLIDE_L ? w : kind === TR_SLIDE_R ? -w : 0), oy + (kind === TR_SLIDE_U ? h : kind === TR_SLIDE_D ? -h : 0))
-  } else if (kind === TR_ZOOM_IN || kind === TR_ZOOM_OUT) {
+    x.drawImage(cb, ox + (kind === tr_slide_l ? w : kind === tr_slide_r ? -w : 0), oy + (kind === tr_slide_u ? h : kind === tr_slide_d ? -h : 0))
+  } else if (kind === tr_zoom_in || kind === tr_zoom_out) {
     x.drawImage(ca, 0, 0)
-    const s = kind === TR_ZOOM_IN ? t : 1 - t
+    const s = kind === tr_zoom_in ? t : 1 - t
     const sw = w * s
     const sh = h * s
     x.globalAlpha = clamp(t, 0, 1)
     x.drawImage(cb, (w - sw) / 2, (h - sh) / 2, sw, sh)
-  } else if (kind === TR_WIPE) {
+  } else if (kind === tr_wipe) {
     x.drawImage(ca, 0, 0)
     const cut = Math.round(w * t)
     x.save()
@@ -69,15 +69,15 @@ export function transition_insert(kind: number, steps: number): void {
   const [cb, bx] = canvas_make(w, h)
   doc_compose(i, ax, w, h, 0)
   doc_compose(i + 1, bx, w, h, 0)
-  const fresh: Frame[] = []
+  const fresh: frame_t[] = []
   for (let k = 1; k <= steps; k++) {
     const t = k / (steps + 1)
     const img = blend_frame(kind, ca, cb, t, w, h)
     const fr = doc_frame_new()
-    fr.pk[L_P] = pack_img(img)
+    fr.pk[l_p] = pack_img(img)
     fresh.push(fr)
   }
-  dispatch('frame.insert_bulk', { at: i + 1, frames: fresh, setCur: i })
+  dispatch('frame.insert_bulk', { at: i + 1, frames: fresh, set_cur: i })
   toast(steps + '枚のトランジションを挿入しました（もどす不可）')
   sfx_play('paper')
 }

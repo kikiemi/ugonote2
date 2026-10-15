@@ -1,8 +1,9 @@
-import { binary_writer, writer_bytes, writer_finish, writer_u8, writer_u16, type BinaryWriter } from './binary'
+import { task_yield } from './task_queue'
+import { binary_writer, writer_bytes, writer_finish, writer_u8, writer_u16, type binary_writer_t } from './binary'
 
-type Box = { px: number[], rmin: number, rmax: number, gmin: number, gmax: number, bmin: number, bmax: number }
+type box_t = { px: number[], rmin: number, rmax: number, gmin: number, gmax: number, bmin: number, bmax: number }
 
-function box_bounds(b: Box): void {
+function box_bounds(b: box_t): void {
   b.rmin = 255
   b.rmax = 0
   b.gmin = 255
@@ -23,9 +24,9 @@ function box_bounds(b: Box): void {
 }
 
 function median_cut(colors: number[], n: number): number[] {
-  const first: Box = { px: colors, rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
+  const first: box_t = { px: colors, rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
   box_bounds(first)
-  const boxes: Box[] = [first]
+  const boxes: box_t[] = [first]
   while (boxes.length < n) {
     let bi = -1
     let best = -1
@@ -46,8 +47,8 @@ function median_cut(colors: number[], n: number): number[] {
     const shift = gs >= rs && gs >= bs ? 8 : rs >= bs ? 16 : 0
     b.px.sort((a, c) => ((a >> shift) & 255) - ((c >> shift) & 255))
     const mid = b.px.length >> 1
-    const left: Box = { px: b.px.slice(0, mid), rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
-    const right: Box = { px: b.px.slice(mid), rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
+    const left: box_t = { px: b.px.slice(0, mid), rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
+    const right: box_t = { px: b.px.slice(mid), rmin: 0, rmax: 0, gmin: 0, gmax: 0, bmin: 0, bmax: 0 }
     box_bounds(left)
     box_bounds(right)
     boxes.splice(bi, 1, left, right)
@@ -68,35 +69,36 @@ function median_cut(colors: number[], n: number): number[] {
   return pal
 }
 
-export function gif_palette(frames: ImageData[]): number[] {
-  const seen = new Set<number>()
-  const sample: number[] = []
-  for (const f of frames) {
-    const d = f.data
-    for (let i = 0; i < d.length; i += 16) {
-      const c = ((d[i] & 0xf8) << 16) | ((d[i + 1] & 0xf8) << 8) | (d[i + 2] & 0xf8)
-      if (!seen.has(c)) {
-        seen.add(c)
-        sample.push((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
-      } else if (sample.length < 200000) sample.push((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
-    }
-  }
-  if (seen.size <= 256) {
-    const exact = new Set<number>()
-    for (const f of frames) {
-      const d = f.data
-      for (let i = 0; i < d.length; i += 4) {
-        exact.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
-        if (exact.size > 256) break
-      }
-      if (exact.size > 256) break
-    }
-    if (exact.size <= 256) return Array.from(exact)
-  }
-  return median_cut(sample, 256)
+type palette_state_t = { seen: Set<number>, exact: Set<number>, sample: number[] }
+
+function palette_state(): palette_state_t {
+  return { seen: new Set(), exact: new Set(), sample: [] }
 }
 
-const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+function palette_add(state: palette_state_t, image: ImageData): void {
+  const d = image.data
+  for (let i = 0; i < d.length; i += 16) {
+    const color = ((d[i] & 0xf8) << 16) | ((d[i + 1] & 0xf8) << 8) | (d[i + 2] & 0xf8)
+    if (!state.seen.has(color)) { state.seen.add(color); state.sample.push((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]) }
+    else if (state.sample.length < 200000) state.sample.push((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
+  }
+  if (state.exact.size <= 256) for (let i = 0; i < d.length; i += 4) {
+    state.exact.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])
+    if (state.exact.size > 256) break
+  }
+}
+
+function palette_finish(state: palette_state_t): number[] {
+  return state.exact.size <= 256 ? Array.from(state.exact) : median_cut(state.sample, 256)
+}
+
+export function gif_palette(frames: ImageData[]): number[] {
+  const state = palette_state()
+  for (const frame of frames) palette_add(state, frame)
+  return palette_finish(state)
+}
+
+const bayer4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 
 export function gif_index_frame(img: ImageData, pal: number[], dither: number): Uint8Array {
   const w = img.width
@@ -121,7 +123,7 @@ export function gif_index_frame(img: ImageData, pal: number[], dither: number): 
         bi = i
       }
     }
-    cache.set(key, bi)
+    if (cache.size < 65536) cache.set(key, bi)
     return bi
   }
   for (let y = 0; y < h; y++) {
@@ -131,7 +133,7 @@ export function gif_index_frame(img: ImageData, pal: number[], dither: number): 
       let g = d[i + 1]
       let b = d[i + 2]
       if (dither) {
-        const t = (BAYER4[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 24
+        const t = (bayer4[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 24
         r = Math.max(0, Math.min(255, r + t))
         g = Math.max(0, Math.min(255, g + t))
         b = Math.max(0, Math.min(255, b + t))
@@ -142,37 +144,37 @@ export function gif_index_frame(img: ImageData, pal: number[], dither: number): 
   return out
 }
 
-function lzw_encode(w: BinaryWriter, idx: Uint8Array, minCode: number): void {
-  writer_u8(w, minCode)
-  const CLEAR = 1 << minCode
-  const EOI = CLEAR + 1
-  let codeSize = minCode + 1
-  let next = EOI + 1
+function lzw_encode(w: binary_writer_t, idx: Uint8Array, min_code: number): void {
+  writer_u8(w, min_code)
+  const clear = 1 << min_code
+  const eoi = clear + 1
+  let code_size = min_code + 1
+  let next = eoi + 1
   let table = new Map<number, number>()
-  let bitBuf = 0
-  let bitCnt = 0
+  let bit_buf = 0
+  let bit_cnt = 0
   const block = new Uint8Array(255)
-  let blockLen = 0
+  let block_len = 0
   const flush_block = () => {
-    if (blockLen === 0) return
-    writer_u8(w, blockLen)
-    writer_bytes(w, block.subarray(0, blockLen))
-    blockLen = 0
+    if (block_len === 0) return
+    writer_u8(w, block_len)
+    writer_bytes(w, block.subarray(0, block_len))
+    block_len = 0
   }
   const put_byte = (b: number) => {
-    block[blockLen++] = b
-    if (blockLen === 255) flush_block()
+    block[block_len++] = b
+    if (block_len === 255) flush_block()
   }
   const put_code = (c: number) => {
-    bitBuf |= c << bitCnt
-    bitCnt += codeSize
-    while (bitCnt >= 8) {
-      put_byte(bitBuf & 255)
-      bitBuf >>= 8
-      bitCnt -= 8
+    bit_buf |= c << bit_cnt
+    bit_cnt += code_size
+    while (bit_cnt >= 8) {
+      put_byte(bit_buf & 255)
+      bit_buf >>= 8
+      bit_cnt -= 8
     }
   }
-  put_code(CLEAR)
+  put_code(clear)
   let prefix = idx[0]
   for (let i = 1; i < idx.length; i++) {
     const k = idx[i]
@@ -184,40 +186,45 @@ function lzw_encode(w: BinaryWriter, idx: Uint8Array, minCode: number): void {
     }
     put_code(prefix)
     if (next === 4096) {
-      put_code(CLEAR)
+      put_code(clear)
       table = new Map<number, number>()
-      next = EOI + 1
-      codeSize = minCode + 1
+      next = eoi + 1
+      code_size = min_code + 1
     } else {
-      if (next >= 1 << codeSize) codeSize++
+      if (next >= 1 << code_size) code_size++
       table.set(key, next)
       next++
     }
     prefix = k
   }
   put_code(prefix)
-  put_code(EOI)
-  if (bitCnt > 0) put_byte(bitBuf & 255)
+  put_code(eoi)
+  if (bit_cnt > 0) put_byte(bit_buf & 255)
   flush_block()
   writer_u8(w, 0)
 }
 
-export function gif_encode(frames: ImageData[], fps: number, holds: number[], dither: number, onProgress: (p: number) => void, done: (bytes: Uint8Array) => void): void {
-  const w0 = frames[0].width
-  const h0 = frames[0].height
-  const pal = gif_palette(frames)
+export async function gif_stream(w0: number, h0: number, count: number, read: (index: number) => ImageData | Promise<ImageData>, fps: number, holds: number[], dither: number, on_progress: (p: number) => void, budget = 128 << 20): Promise<Uint8Array> {
+  const state = palette_state()
+  for (let index = 0; index < count; index++) {
+    palette_add(state, await read(index))
+    on_progress((index + 1) / count * 0.35)
+    await task_yield()
+  }
+  const pal = palette_finish(state)
   while (pal.length < 2) pal.push(0)
-  let palBits = 1
-  while (1 << palBits < pal.length) palBits++
-  const palSize = 1 << palBits
-  const wtr = binary_writer(1 << 20)
+  let pal_bits = 1
+  while (1 << pal_bits < pal.length) pal_bits++
+  const pal_size = 1 << pal_bits
+  const wtr = binary_writer(Math.min(1 << 20, budget))
+  wtr.limit = budget
   writer_bytes(wtr, new TextEncoder().encode('GIF89a'))
   writer_u16(wtr, w0)
   writer_u16(wtr, h0)
-  writer_u8(wtr, 0x80 | 0x70 | (palBits - 1))
+  writer_u8(wtr, 0x80 | 0x70 | (pal_bits - 1))
   writer_u8(wtr, 0)
   writer_u8(wtr, 0)
-  for (let i = 0; i < palSize; i++) {
+  for (let i = 0; i < pal_size; i++) {
     const c = i < pal.length ? pal[i] : 0
     writer_u8(wtr, (c >> 16) & 255)
     writer_u8(wtr, (c >> 8) & 255)
@@ -231,17 +238,17 @@ export function gif_encode(frames: ImageData[], fps: number, holds: number[], di
   writer_u8(wtr, 1)
   writer_u16(wtr, 0)
   writer_u8(wtr, 0)
-  const minCode = Math.max(2, palBits)
+  const min_code = Math.max(2, pal_bits)
   let i = 0
-  let emittedCs = 0
-  const step = () => {
+  let emitted_cs = 0
+  let tick = 0
+  while (i < count) {
     const t0 = performance.now()
-    while (i < frames.length && performance.now() - t0 < 24) {
-      let tick = 0
-      for (let k = 0; k <= i; k++) tick += holds[k] || 1
-      const targetCs = Math.round((tick * 100) / fps)
-      const delay = Math.max(1, targetCs - emittedCs)
-      emittedCs += delay
+    while (i < count && performance.now() - t0 < 12) {
+      tick += holds[i] || 1
+      const target_cs = Math.round((tick * 100) / fps)
+      const delay = Math.max(1, target_cs - emitted_cs)
+      emitted_cs += delay
       writer_u8(wtr, 0x21)
       writer_u8(wtr, 0xf9)
       writer_u8(wtr, 4)
@@ -255,16 +262,20 @@ export function gif_encode(frames: ImageData[], fps: number, holds: number[], di
       writer_u16(wtr, w0)
       writer_u16(wtr, h0)
       writer_u8(wtr, 0)
-      lzw_encode(wtr, gif_index_frame(frames[i], pal, dither), minCode)
+      lzw_encode(wtr, gif_index_frame(await read(i), pal, dither), min_code)
       i++
     }
-    onProgress(i / frames.length)
-    if (i < frames.length) {
-      setTimeout(step, 0)
-      return
-    }
-    writer_u8(wtr, 0x3b)
-    done(writer_finish(wtr))
+    on_progress(0.35 + i / count * 0.65)
+    if (i < count) await task_yield()
   }
-  step()
+  writer_u8(wtr, 0x3b)
+  return writer_finish(wtr)
+}
+
+export function gif_build(frames: ImageData[], fps: number, holds: number[], dither: number, on_progress: (p: number) => void): Promise<Uint8Array> {
+  return gif_stream(frames[0].width, frames[0].height, frames.length, index => frames[index], fps, holds, dither, on_progress)
+}
+
+export function gif_encode(frames: ImageData[], fps: number, holds: number[], dither: number, on_progress: (p: number) => void, done: (bytes: Uint8Array) => void): void {
+  void gif_build(frames, fps, holds, dither, on_progress).then(done)
 }

@@ -1,10 +1,10 @@
 import { q, toast } from '../dom'
-import { T_PASTE } from '../h'
+import { t_paste } from '../h'
 import { clamp } from '../lib'
-import { modal_active, modal_close } from '../panels'
+import { modal_active, modal_close } from './modal'
 import { store_save_auto } from '../persist'
 import { flo_active } from '../sel'
-import { TOOL_DEFS } from './tool_defs'
+import { tool_defs } from './tool_defs'
 import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
 import { anim_playing } from '../state/commands/play'
@@ -40,33 +40,33 @@ export function keydown(e: KeyboardEvent): void {
     return
   }
   const k = e.key
-  const K = k.length === 1 ? k.toUpperCase() : k
-  if ((e.ctrlKey || e.metaKey) && K === 'Z' && !e.shiftKey) {
+  const key_lower = k.length === 1 ? k.toUpperCase() : k
+  if ((e.ctrlKey || e.metaKey) && key_lower === 'Z' && !e.shiftKey) {
     e.preventDefault()
     do_undo()
     return
   }
-  if ((e.ctrlKey || e.metaKey) && (K === 'Y' || (K === 'Z' && e.shiftKey))) {
+  if ((e.ctrlKey || e.metaKey) && (key_lower === 'Y' || (key_lower === 'Z' && e.shiftKey))) {
     e.preventDefault()
     do_redo()
     return
   }
-  if ((e.ctrlKey || e.metaKey) && K === 'C') {
+  if ((e.ctrlKey || e.metaKey) && key_lower === 'C') {
     e.preventDefault()
     dispatch('sel.copy', null)
     return
   }
-  if ((e.ctrlKey || e.metaKey) && K === 'X') {
+  if ((e.ctrlKey || e.metaKey) && key_lower === 'X') {
     e.preventDefault()
     dispatch('sel.cut', null)
     return
   }
-  if ((e.ctrlKey || e.metaKey) && K === 'V') {
+  if ((e.ctrlKey || e.metaKey) && key_lower === 'V') {
     e.preventDefault()
-    tool_pick(T_PASTE)
+    tool_pick(t_paste)
     return
   }
-  if ((e.ctrlKey || e.metaKey) && K === 'S') {
+  if ((e.ctrlKey || e.metaKey) && key_lower === 'S') {
     e.preventDefault()
     store_save_auto()
     toast('保存したよ')
@@ -78,7 +78,7 @@ export function keydown(e: KeyboardEvent): void {
       modal_close()
       return
     }
-    if (!q('ctxMenu').classList.contains('hide')) {
+    if (!q('ctx_menu').classList.contains('hide')) {
       ctx_hide()
       return
     }
@@ -138,11 +138,11 @@ export function keydown(e: KeyboardEvent): void {
     if (g.sel.has) dispatch('sel.delete', null)
     return
   }
-  if (K === 'N') {
+  if (key_lower === 'N') {
     dispatch('frame.add', null)
     return
   }
-  if (K === 'D') {
+  if (key_lower === 'D') {
     dispatch('frame.dup', null)
     return
   }
@@ -169,8 +169,8 @@ export function keydown(e: KeyboardEvent): void {
     sfx_play('tap')
     return
   }
-  for (const d of TOOL_DEFS) {
-    if (d.key && d.key === K) {
+  for (const d of tool_defs) {
+    if (d.key && d.key === key_lower) {
       tool_pick(d.t)
       return
     }
@@ -182,7 +182,7 @@ export function keyup(e: KeyboardEvent): void {
 }
 
 function zoom_step(f: number): void {
-  const wrap = q('stageWrap')
+  const wrap = q('stage_wrap')
   dispatch('view.zoom_at', { sx: wrap.clientWidth / 2, sy: wrap.clientHeight / 2, factor: f })
 }
 

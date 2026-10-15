@@ -1,16 +1,21 @@
-const CACHE_NAME = 'ug2-switch-20261010-25'
-const CORE_ASSETS = [
+const cache_prefix = 'ugonote2-'
+const cache_name = cache_prefix + 'ui54'
+const core_assets = [
   './',
   './index.html',
   './style.css',
-  './assets/paper-grid.png',
   './assets/rounded.woff',
   './assets/dot.woff2',
   './assets/memo.woff2',
-  './dist/app.js',
-  './dist/worker.js',
+  './assets/font-LICENSE.txt',
+  './assets/library_licenses.txt',
+  './app.js',
+  './worker.js',
   './manifest.webmanifest',
   './icon.svg',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/icon-maskable-512.png',
 ]
 
 function report_warning(context, error) {
@@ -19,8 +24,8 @@ function report_warning(context, error) {
 
 async function install_cache() {
   try {
-    const cache = await caches.open(CACHE_NAME)
-    await cache.addAll(CORE_ASSETS)
+    const cache = await caches.open(cache_name)
+    await cache.addAll(core_assets)
     await self.skipWaiting()
   } catch (error) {
     report_warning('オフライン用ファイルの準備に失敗しました', error)
@@ -31,7 +36,7 @@ async function install_cache() {
 async function activate_cache() {
   try {
     const names = await caches.keys()
-    await Promise.all(names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name)))
+    await Promise.all(names.filter(name => (name.startsWith(cache_prefix) || name.startsWith('ug2-')) && name !== cache_name).map(name => caches.delete(name)))
     await self.clients.claim()
   } catch (error) {
     report_warning('古いキャッシュの整理に失敗しました', error)
@@ -41,7 +46,7 @@ async function activate_cache() {
 
 async function cache_response(request, response) {
   try {
-    const cache = await caches.open(CACHE_NAME)
+    const cache = await caches.open(cache_name)
     await cache.put(request, response)
   } catch (error) {
     report_warning('取得したファイルをキャッシュできませんでした', error)

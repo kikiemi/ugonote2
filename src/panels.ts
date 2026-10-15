@@ -1,35 +1,29 @@
 import { report_warning } from './diagnostics'
+import { lang_set, lang_saved } from './lang'
 import { esc, q, toast } from './dom'
-import { D_ALL, D_SAVE, D_SOUND, D_TOOLS, L_DRAW_DEFAULT, L_P, MODE_NORMAL, reso_size } from './h'
+import { d_all, d_sound, l_draw_default, l_p, mode_normal, reso_size } from './h'
 import { file_pick } from './lib'
 import { layer_name, mode_allows_layer_alpha } from './mode'
-import { pref_theme_toggle, pref_uisfx_toggle } from './prefs'
+import { pref_theme_toggle, pref_uisfx_toggle, pref_hide_controls_toggle } from './prefs'
 import { snd_bgm_preview, snd_recording, snd_se_preview, snd_stop_all, sfx_play } from './snd'
 import { dispatch } from './state/commands/index'
 import { dirty, st } from './state/store'
 import { region_add } from './sync'
-import { file_open, file_save, modal_export, rec_kind, rec_toggle, recsync_toggle, recsync_stop } from './ui/export_ui'
+import { file_save, modal_export } from './ui/export_ui'
+import { rec_kind, rec_toggle, recsync_toggle, recsync_stop } from './ui/recording'
 import { flipnote_maker_pick } from './ui/flipnote_maker'
 import { modal_animation_assist } from './ui/animation_assist'
 import { modal_addmany, modal_close, modal_confirm, modal_goto, modal_is_open } from './ui/modal'
 import { snd_assign_preset, snd_clear, snd_load_begin, snd_load_bytes, snd_vol_set } from './ui/sound_io'
 
-export { modal_export } from './ui/export_ui'
-export { modal_active, modal_addmany, modal_close, modal_confirm, modal_goto, modal_prompt_num, modal_text } from './ui/modal'
-
 import { modal_mixer } from './ui/sound_panel'
-export { modal_mixer } from './ui/sound_panel'
 import { modal_slots, fixed_4_3_res, modal_new } from './ui/project_panel'
-export { modal_slots, modal_new } from './ui/project_panel'
 import { photo_import, video_import, file_open_any, flip_import_ui } from './ui/import_panel'
-import { apply_canvas, transform_all } from './ui/canvas_panel'
+import { apply_canvas } from './ui/canvas_panel'
 import { zip_import } from './ui/zip_import'
 import { op_layer_clear, op_layer_copy, modal_range } from './ui/frame_panel'
-export { op_layer_clear, op_layer_copy, modal_range } from './ui/frame_panel'
 import { modal_effect, modal_transition } from './ui/effect_panel'
-export { modal_effect, modal_transition } from './ui/effect_panel'
 import { modal_mode } from './ui/mode_panel'
-export { modal_mode } from './ui/mode_panel'
 
 function bind(id: string, fn: () => void): void {
   q(id).addEventListener('click', fn)
@@ -51,104 +45,109 @@ function sound_file_load(kind: string, label: string): void {
 }
 
 export function panels_mount(): void {
-  bind('newBtn', () => modal_new())
-  bind('freeNewBtn', () => modal_new(true))
-  bind('slotsBtn', modal_slots)
-  bind('menuOpen', file_open_any)
-  bind('openBtn', file_open)
-  bind('openFlipBtn', flip_import_ui)
-  bind('saveFileBtn', file_save)
-  bind('exportBtn', () => modal_export())
-  bind('photoBtn', photo_import)
-  bind('photoQuickBtn', photo_import)
-  bind('dockImage', photo_import)
-  bind('photoLayerBtn', photo_import)
-  bind('photoDraftBtn', () => {
+  bind('new_btn', () => modal_new())
+  bind('free_new_btn', () => modal_new(true))
+  bind('slots_btn', modal_slots)
+  bind('menu_open', file_open_any)
+  bind('open_btn', file_open_any)
+  bind('open_flip_btn', flip_import_ui)
+  bind('save_file_btn', file_save)
+  bind('export_btn', () => modal_export())
+  bind('photo_btn', photo_import)
+  bind('photo_quick_btn', photo_import)
+  bind('dock_image', photo_import)
+  bind('photo_layer_btn', photo_import)
+  bind('photo_draft_btn', () => {
     const g = st()
     if (!mode_allows_layer_alpha(g.doc.mode)) {
       toast('このモードでは写真の透明度を変えられないよ')
       return
     }
-    if (!g.doc.lvis[L_P]) dispatch('layer.toggle_visible', L_P)
-    const draft = g.doc.lalpha[L_P] >= 250
-    dispatch('layer.set_alpha', { l: L_P, a255: draft ? Math.round(255 * 0.35) : 255 })
+    if (!g.doc.lvis[l_p]) dispatch('layer.toggle_visible', l_p)
+    const draft = g.doc.lalpha[l_p] >= 250
+    dispatch('layer.set_alpha', { l: l_p, a255: draft ? Math.round(255 * 0.35) : 255 })
     toast(draft ? '写真を下書き表示にしました' : '写真を100%表示に戻しました')
     sfx_play('tap')
   })
-  bind('photoClearBtn', () => {
-    if (dispatch('layer.clear_at', L_P) < 0) {
+  bind('photo_clear_btn', () => {
+    if (dispatch('layer.clear_at', l_p) < 0) {
       toast('このコマに写真はないよ')
       return
     }
     toast('写真レイヤーを消しました')
     sfx_play('del')
   })
-  bind('videoBtn', video_import)
-  bind('zipInBtn', zip_import)
-  bind('flipInBtn', flip_import_ui)
-  bind('mixerBtn', () => modal_mixer())
-  bind('flipImageBtn', flipnote_maker_pick)
-  bind('motionAssistBtn', modal_animation_assist)
-  bind('effectBtn', modal_effect)
-  bind('transBtn', modal_transition)
-  bind('modeBtn', modal_mode)
-  bind('syncRecBtn', recsync_toggle)
-  bind('recordStop', recsync_stop)
-  bind('sizeApply', apply_canvas)
-  bind('rotLBtn', () => transform_all('rotl'))
-  bind('rotRBtn', () => transform_all('rotr'))
-  bind('flipHBtn', () => transform_all('fliph'))
-  bind('flipVBtn', () => transform_all('flipv'))
-  bind('mergeBtn', () => dispatch('layer.merge_down', null))
-  bind('lclearBtn', op_layer_clear)
-  bind('lcopyBtn', op_layer_copy)
-  bind('laddBtn', () => dispatch('layer.add', null))
-  bind('ldelBtn', () => {
+  bind('video_btn', video_import)
+  bind('zip_in_btn', zip_import)
+  bind('flip_in_btn', flip_import_ui)
+  bind('mixer_btn', () => modal_mixer())
+  bind('flip_image_btn', flipnote_maker_pick)
+  bind('motion_assist_btn', modal_animation_assist)
+  bind('effect_btn', modal_effect)
+  bind('trans_btn', modal_transition)
+  bind('mode_btn', modal_mode)
+  bind('settings_mode_btn', modal_mode)
+  bind('sync_rec_btn', recsync_toggle)
+  bind('record_stop', recsync_stop)
+  bind('size_apply', apply_canvas)
+  bind('merge_btn', () => dispatch('layer.merge_down', null))
+  bind('lclear_btn', op_layer_clear)
+  bind('lcopy_btn', op_layer_copy)
+  bind('ladd_btn', () => dispatch('layer.add', null))
+  bind('ldel_btn', () => {
     const layer = st().pen.layer
-    if (st().doc.mode !== MODE_NORMAL || layer <= L_DRAW_DEFAULT) return
+    if (st().doc.mode !== mode_normal || layer <= l_draw_default) return
     modal_confirm('レイヤーを削除', 'レイヤー' + esc(layer_name(layer)) + 'を全コマから削除する？', '削除', () => dispatch('layer.delete', layer))
   })
-  bind('addManyBtn', modal_addmany)
-  bind('rangeBtn', modal_range)
-  bind('gotoBtn', modal_goto)
-  bind('themeBtn', () => {
+  bind('add_many_btn', modal_addmany)
+  bind('range_btn', modal_range)
+  bind('goto_btn', modal_goto)
+  bind('theme_btn', () => {
     pref_theme_toggle()
-    dirty(D_ALL)
+    dirty(d_all)
     sfx_play('tap')
   })
-  bind('uisfxTgl', () => {
+  bind('hide_controls_btn', () => {
+    if (!pref_hide_controls_toggle()) document.body.classList.remove('canvas_writing')
+    dirty(d_all)
+    sfx_play('tap')
+  })
+  const language = q<HTMLSelectElement>('set_lang')
+  language.value = lang_saved()
+  language.addEventListener('change', () => lang_set(language.value))
+  bind('uisfx_tgl', () => {
     pref_uisfx_toggle()
-    dirty(D_SAVE | D_TOOLS)
+    dirty(d_sound)
     sfx_play('tap')
   })
-  q<HTMLInputElement>('paperIn').addEventListener('input', e => {
+  q<HTMLInputElement>('paper_in').addEventListener('input', e => {
     dispatch('doc.set_paper', (e.target as HTMLInputElement).value)
   })
-  q<HTMLInputElement>('paperCustom').addEventListener('input', e => dispatch('doc.set_paper', (e.target as HTMLInputElement).value))
-  q('paperChoices').addEventListener('click', e => {
+  q<HTMLInputElement>('paper_custom').addEventListener('input', e => dispatch('doc.set_paper', (e.target as HTMLInputElement).value))
+  q('paper_choices').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-paper]')
     if (b?.dataset.paper) dispatch('doc.set_paper', b.dataset.paper)
   })
-  q('paperSw').addEventListener('click', e => {
+  q('paper_sw').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('[data-paper]') as HTMLElement | null
     if (!b) return
     dispatch('doc.set_paper', b.dataset.paper as string)
     sfx_play('tap')
   })
-  const ratioSel = q<HTMLSelectElement>('ratioSel')
-  const resoSel = q<HTMLSelectElement>('resoSel')
+  const ratio_sel = q<HTMLSelectElement>('ratio_sel')
+  const reso_sel = q<HTMLSelectElement>('reso_sel')
   const size_update = () => {
-    const s2 = reso_size(ratioSel.value, resoSel.value)
-    q('sizeNow').textContent = '→ ' + s2.w + '×' + s2.h
+    const s2 = reso_size(ratio_sel.value, reso_sel.value)
+    q('size_now').textContent = '→ ' + s2.w + '×' + s2.h
   }
-  ratioSel.addEventListener('change', () => {
-    if (resoSel.value === 'free') resoSel.value = 'low'
-    if (ratioSel.value !== '4:3' && fixed_4_3_res(resoSel.value)) resoSel.value = 'low'
+  ratio_sel.addEventListener('change', () => {
+    if (reso_sel.value === 'free') reso_sel.value = 'low'
+    if (ratio_sel.value !== '4:3' && fixed_4_3_res(reso_sel.value)) reso_sel.value = 'low'
     size_update()
   })
-  resoSel.addEventListener('change', () => {
-    if (ratioSel.value === 'free') ratioSel.value = '16:9'
-    if (fixed_4_3_res(resoSel.value)) ratioSel.value = '4:3'
+  reso_sel.addEventListener('change', () => {
+    if (ratio_sel.value === 'free') ratio_sel.value = '16:9'
+    if (fixed_4_3_res(reso_sel.value)) ratio_sel.value = '4:3'
     size_update()
   })
   for (let i = 0; i < 2; i++) {
@@ -175,16 +174,16 @@ export function panels_mount(): void {
     bind('sassign_' + kind, () => modal_mixer(i))
     bind('sclr_' + kind, () => snd_clear(kind))
   }
-  q<HTMLInputElement>('bgmVol').addEventListener('input', e => snd_vol_set('bgm', Number((e.target as HTMLInputElement).value) / 100))
-  q<HTMLInputElement>('seVol').addEventListener('input', e => snd_vol_set('se', Number((e.target as HTMLInputElement).value) / 100))
-  region_add('sound_rec', D_SOUND, () => {
+  q<HTMLInputElement>('bgm_vol').addEventListener('input', e => snd_vol_set('bgm', Number((e.target as HTMLInputElement).value) / 100))
+  q<HTMLInputElement>('se_vol').addEventListener('input', e => snd_vol_set('se', Number((e.target as HTMLInputElement).value) / 100))
+  region_add('sound_rec', d_sound, () => {
     const kinds = ['bgm0', 'bgm1', 'se0', 'se1', 'se2', 'se3']
     for (const k of kinds) q('srec_' + k).classList.toggle('rec', snd_recording() && rec_kind() === k ? true : false)
-    q('syncRecBtn').classList.toggle('on', snd_recording() && (rec_kind() === 'bgm0' || rec_kind() === 'bgm1') ? true : false)
+    q('sync_rec_btn').classList.toggle('on', snd_recording() && (rec_kind() === 'bgm0' || rec_kind() === 'bgm1') ? true : false)
   })
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modal_is_open()) {
-      const back = q('modalRoot').firstElementChild
+      const back = q('modal_root').firstElementChild
       if (back && !back.querySelector('.pfill')) modal_close()
     }
   })

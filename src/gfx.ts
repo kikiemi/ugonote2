@@ -1,8 +1,10 @@
-import { DOT_FONT_FAMILY, dot_text_canvas } from './dotfont'
-import { PAT_TABLE } from './h'
-import { hex_rgb, canvas_make, clamp } from './lib'
+import { dot_font_family, dot_text_canvas } from './dotfont'
+import { paint_active, paint_bit, paint_index, paint_pattern, type paint_pattern_t } from './paint'
+import { st } from './state/store'
+import { mode_normal } from './h'
+import { canvas_affine_matrix, hex_rgb, canvas_make, clamp } from './lib'
 
-export type Mask = {
+export type mask_t = {
   b: Uint8Array
   w: number
   h: number
@@ -12,11 +14,11 @@ export type Mask = {
   y1: number
 }
 
-export function mask_make(w: number, h: number): Mask {
+export function mask_make(w: number, h: number): mask_t {
   return { b: new Uint8Array(w * h), w, h, x0: w, y0: h, x1: -1, y1: -1 }
 }
 
-export function mask_clear(m: Mask): void {
+export function mask_clear(m: mask_t): void {
   m.b.fill(0)
   m.x0 = m.w
   m.y0 = m.h
@@ -24,18 +26,18 @@ export function mask_clear(m: Mask): void {
   m.y1 = -1
 }
 
-export function mask_empty(m: Mask): boolean {
+export function mask_empty(m: mask_t): boolean {
   return m.x1 < m.x0
 }
 
-function mask_bbox(m: Mask, x0: number, y0: number, x1: number, y1: number): void {
+function mask_bbox(m: mask_t, x0: number, y0: number, x1: number, y1: number): void {
   if (x0 < m.x0) m.x0 = x0 < 0 ? 0 : x0
   if (y0 < m.y0) m.y0 = y0 < 0 ? 0 : y0
   if (x1 > m.x1) m.x1 = x1 >= m.w ? m.w - 1 : x1
   if (y1 > m.y1) m.y1 = y1 >= m.h ? m.h - 1 : y1
 }
 
-export function mask_disc(m: Mask, cx: number, cy: number, r: number): void {
+export function mask_disc(m: mask_t, cx: number, cy: number, r: number): void {
   const w = m.w
   const h = m.h
   const b = m.b
@@ -61,7 +63,7 @@ export function mask_disc(m: Mask, cx: number, cy: number, r: number): void {
   mask_bbox(m, ix0, iy0, ix1, iy1)
 }
 
-export function mask_rect(m: Mask, x: number, y: number, rw: number, rh: number): void {
+export function mask_rect(m: mask_t, x: number, y: number, rw: number, rh: number): void {
   const x0 = Math.max(0, x | 0)
   const y0 = Math.max(0, y | 0)
   const x1 = Math.min(m.w - 1, (x + rw - 1) | 0)
@@ -73,7 +75,7 @@ export function mask_rect(m: Mask, x: number, y: number, rw: number, rh: number)
   mask_bbox(m, x0, y0, x1, y1)
 }
 
-export function mask_seg(m: Mask, x0: number, y0: number, x1: number, y1: number, r: number): void {
+export function mask_seg(m: mask_t, x0: number, y0: number, x1: number, y1: number, r: number): void {
   const dx = x1 - x0
   const dy = y1 - y0
   const dist = Math.sqrt(dx * dx + dy * dy)
@@ -85,7 +87,7 @@ export function mask_seg(m: Mask, x0: number, y0: number, x1: number, y1: number
   }
 }
 
-export function mask_polyline(m: Mask, pts: readonly number[], r: number, close: number): void {
+export function mask_polyline(m: mask_t, pts: readonly number[], r: number, close: number): void {
   const n = pts.length >> 1
   if (n === 0) return
   if (n === 1) {
@@ -96,7 +98,7 @@ export function mask_polyline(m: Mask, pts: readonly number[], r: number, close:
   if (close) mask_seg(m, pts[(n - 1) * 2], pts[(n - 1) * 2 + 1], pts[0], pts[1], r)
 }
 
-export function mask_poly_fill(m: Mask, pts: readonly number[]): void {
+export function mask_poly_fill(m: mask_t, pts: readonly number[]): void {
   const n = pts.length >> 1
   if (n < 3) return
   let py0 = m.h
@@ -137,7 +139,7 @@ export function mask_poly_fill(m: Mask, pts: readonly number[]): void {
   }
 }
 
-export function mask_outline_ring(m: Mask, ow: number): Mask {
+export function mask_outline_ring(m: mask_t, ow: number): mask_t {
   const ring = mask_make(m.w, m.h)
   if (mask_empty(m)) return ring
   const w = m.w
@@ -161,12 +163,7 @@ export function mask_outline_ring(m: Mask, ow: number): Mask {
   return ring
 }
 
-function pat_bit(pat: number, x: number, y: number): number {
-  const rows = PAT_TABLE[pat].rows
-  return (rows[y & 7] >> (7 - (x & 7))) & 1
-}
-
-export function blend_mask(ctx: CanvasRenderingContext2D, m: Mask, color: string, alpha: number, pat: number): void {
+export function blend_mask(ctx: CanvasRenderingContext2D, m: mask_t, color: string, alpha: number, pat: number, overwrite = 0, empty_only = 0): void {
   if (mask_empty(m)) return
   const bx = m.x0
   const by = m.y0
@@ -178,29 +175,45 @@ export function blend_mask(ctx: CanvasRenderingContext2D, m: Mask, color: string
   const sa = clamp(alpha, 0, 1)
   const mb = m.b
   const mw = m.w
-  const patterned = pat > 0
+  const g = st()
+  const tile = paint_pattern(g.doc.mode, pat, paint_active(g.doc.mode, g.pen.paint_tile, g.pen.paint_tile_normal))
   for (let y = 0; y < bh; y++) {
     const mrow = (by + y) * mw + bx
     const drow = y * bw * 4
     for (let x = 0; x < bw; x++) {
       if (!mb[mrow + x]) continue
-      if (patterned && !pat_bit(pat, bx + x, by + y)) continue
       const di = drow + x * 4
+      if (empty_only && d[di + 3]) continue
+      const ti = paint_index(tile, bx + x, by + y)
+      if (!tile.b[ti]) {
+        if (overwrite) d.fill(0, di, di + 4)
+        continue
+      }
+      if (overwrite) d.fill(0, di, di + 4)
+      const rgba = tile.rgba
+      const pi = ti * 4
+      const a = rgba ? sa * rgba[pi + 3] / 255 : sa
       const da = d[di + 3] / 255
-      const oa = sa + da * (1 - sa)
+      const oa = a + da * (1 - a)
       if (oa <= 0) continue
-      const inv = (da * (1 - sa)) / oa
-      const sf = sa / oa
-      d[di] = sr * sf + d[di] * inv
-      d[di + 1] = sg * sf + d[di + 1] * inv
-      d[di + 2] = sb * sf + d[di + 2] * inv
+      const inv = (da * (1 - a)) / oa
+      const sf = a / oa
+      d[di] = (rgba ? rgba[pi] : sr) * sf + d[di] * inv
+      d[di + 1] = (rgba ? rgba[pi + 1] : sg) * sf + d[di + 1] * inv
+      d[di + 2] = (rgba ? rgba[pi + 2] : sb) * sf + d[di + 2] * inv
       d[di + 3] = oa * 255
     }
   }
   ctx.putImageData(img, bx, by)
 }
 
-export function erase_mask(ctx: CanvasRenderingContext2D, m: Mask, pat: number): void {
+export function paint_mask(ctx: CanvasRenderingContext2D, m: mask_t): void {
+  const g = st()
+  const native = g.doc.mode !== mode_normal
+  blend_mask(ctx, m, g.pen.color, g.pen.alpha, g.pen.pat, g.pen.paint_over, native && !g.pen.paint_over ? 1 : 0)
+}
+
+export function erase_mask(ctx: CanvasRenderingContext2D, m: mask_t, pat: number): void {
   if (mask_empty(m)) return
   const bx = m.x0
   const by = m.y0
@@ -210,13 +223,14 @@ export function erase_mask(ctx: CanvasRenderingContext2D, m: Mask, pat: number):
   const d = img.data
   const mb = m.b
   const mw = m.w
-  const patterned = pat > 0
+  const g = st()
+  const tile = paint_pattern(g.doc.mode, pat, paint_active(g.doc.mode, g.pen.paint_tile, g.pen.paint_tile_normal))
   for (let y = 0; y < bh; y++) {
     const mrow = (by + y) * mw + bx
     const drow = y * bw * 4
     for (let x = 0; x < bw; x++) {
       if (!mb[mrow + x]) continue
-      if (patterned && !pat_bit(pat, bx + x, by + y)) continue
+      if (!paint_bit(tile, bx + x, by + y)) continue
       const di = drow + x * 4
       d[di] = 0
       d[di + 1] = 0
@@ -227,7 +241,7 @@ export function erase_mask(ctx: CanvasRenderingContext2D, m: Mask, pat: number):
   ctx.putImageData(img, bx, by)
 }
 
-export function flood_mask(ref: ImageData, sx: number, sy: number, tol: number): Mask | null {
+export function flood_mask(ref: ImageData, sx: number, sy: number, tol: number): mask_t | null {
   const w = ref.width
   const h = ref.height
   if (!Number.isFinite(sx) || !Number.isFinite(sy) || sx < 0 || sy < 0 || sx >= w || sy >= h) return null
@@ -334,35 +348,48 @@ export function path_smooth(pts: number[], level: number): number[] {
   return p
 }
 
-const VERT_ROT = 'ー〜…‥－―‐（）｛｝［］「」『』〈〉《》【】()[]{}<>-—–'
+const vert_rot = 'ー〜…‥－―‐（）｛｝［］「」『』〈〉《》【】()[]{}<>-—–'
 
-const patCache = new Map<string, HTMLCanvasElement>()
+const pat_cache = new WeakMap<paint_pattern_t, Map<string, HTMLCanvasElement>>()
 
 export function pat_canvas(pat: number, color: string): HTMLCanvasElement {
-  const key = pat + '|' + color
-  const hit = patCache.get(key)
+  const g = st()
+  const tile = paint_pattern(g.doc.mode, pat, paint_active(g.doc.mode, g.pen.paint_tile, g.pen.paint_tile_normal))
+  let colors = pat_cache.get(tile)
+  if (!colors) { colors = new Map(); pat_cache.set(tile, colors) }
+  const key = tile.rgba ? '' : color
+  const hit = colors.get(key)
   if (hit) return hit
-  const rows = PAT_TABLE[pat].rows
-  const [c, x] = canvas_make(8, 8)
-  x.fillStyle = color
-  for (let y = 0; y < 8; y++) for (let px = 0; px < 8; px++) if ((rows[y] >> (7 - px)) & 1) x.fillRect(px, y, 1, 1)
-  if (patCache.size > 64) patCache.clear()
-  patCache.set(key, c)
+  const [c, x] = canvas_make(tile.w, tile.h)
+  const img = x.createImageData(tile.w, tile.h)
+  const rgb = hex_rgb(color)
+  if (tile.rgba) img.data.set(tile.rgba)
+  else for (let i = 0; i < tile.b.length; i++) {
+    if (!tile.b[i]) continue
+    const p = i * 4
+    img.data[p] = rgb[0]
+    img.data[p + 1] = rgb[1]
+    img.data[p + 2] = rgb[2]
+    img.data[p + 3] = 255
+  }
+  x.putImageData(img, 0, 0)
+  if (colors.size >= 16) colors.delete(colors.keys().next().value!)
+  colors.set(key, c)
   return c
 }
 
 export function text_render(text: string, size: number, bold: number, color: string, outline: number, ocolor: string, owidth: number, vert: number, fam: string): HTMLCanvasElement {
-  if (fam === DOT_FONT_FAMILY) return dot_text_canvas(text, Math.max(1, Math.round(size / 16)), color, outline ? 1 : 0, ocolor, vert, bold, owidth)
+  if (fam === dot_font_family) return dot_text_canvas(text, Math.max(1, Math.round(size / 16)), color, outline ? 1 : 0, ocolor, vert, bold, owidth)
   const lines = text.split('\n')
   const font = (bold ? '700 ' : '400 ') + size + 'px ' + (fam ? '"' + fam + '",' : '') + '"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif'
   const pad = (outline ? owidth : 0) + 4
   if (vert) {
     const cw = Math.ceil(size * 1.16)
     const chh = Math.ceil(size * 1.1)
-    let maxChars = 1
-    for (const ln of lines) maxChars = Math.max(maxChars, [...ln].length)
+    let max_chars = 1
+    for (const ln of lines) max_chars = Math.max(max_chars, [...ln].length)
     const cols = Math.max(1, lines.length)
-    const [c, x] = canvas_make(cw * cols + pad * 2, chh * maxChars + pad * 2)
+    const [c, x] = canvas_make(cw * cols + pad * 2, chh * max_chars + pad * 2)
     x.font = font
     x.textAlign = 'center'
     x.textBaseline = 'middle'
@@ -375,7 +402,7 @@ export function text_render(text: string, size: number, bold: number, color: str
         const cy = pad + ci * chh + chh / 2
         x.save()
         x.translate(cx, cy)
-        if (VERT_ROT.indexOf(ch) >= 0) x.rotate(Math.PI / 2)
+        if (vert_rot.indexOf(ch) >= 0) x.rotate(Math.PI / 2)
         if (outline) {
           x.strokeStyle = ocolor
           x.lineWidth = owidth * 2
@@ -411,13 +438,14 @@ export function text_render(text: string, size: number, bold: number, color: str
   return c
 }
 
-export function canvas_rot90(src: HTMLCanvasElement, dir: number): HTMLCanvasElement {
-  const [c, x] = canvas_make(src.height, src.width)
-  x.save()
-  x.translate(c.width / 2, c.height / 2)
-  x.rotate((dir > 0 ? 90 : -90) * (Math.PI / 180))
-  x.drawImage(src, -src.width / 2, -src.height / 2)
-  x.restore()
+export function canvas_affine(src: HTMLCanvasElement, angle: number, smooth = 0, scale = 1, dx = 0, dy = 0): HTMLCanvasElement {
+  const [c, x] = canvas_make(src.width, src.height)
+  const quarter = angle % 90 === 0
+  const matrix = canvas_affine_matrix(src.width, src.height, angle, scale, dx, dy)
+  x.imageSmoothingEnabled = smooth !== 0 && (!quarter || scale !== 1)
+  x.imageSmoothingQuality = 'high'
+  x.setTransform(...matrix)
+  x.drawImage(src, 0, 0)
   return c
 }
 

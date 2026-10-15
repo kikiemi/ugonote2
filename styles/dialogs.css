@@ -1,8 +1,42 @@
+.mtxt {
+  width: 100%;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.mbtn.primary,
+.primary {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+  border-color: var(--acc);
+}
+
+.export_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  flex: 0 0 auto;
+}
+
+.msub {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 16px 0px 6px;
+}
+
+.aacard .msub {
+  margin-top: 0px;
+}
+
 .mbody.dim {
   color: var(--dim);
 }
 
-.exportBox.mbox {
+.export_box.mbox {
   width: min(620px, 100%);
   padding: 0px;
   display: flex;
@@ -10,7 +44,7 @@
   overflow: hidden;
 }
 
-.exportHead .mhead {
+.export_head .mhead {
   margin: 0px;
   font-size: 20px;
 }
@@ -48,7 +82,7 @@
   align-items: center;
   gap: 8px;
   font-size: 20px;
-  color: var(--acc-d);
+  color: var(--acc_d);
   font-weight: 700;
   margin-bottom: 14px;
 }
@@ -60,13 +94,6 @@
 
 .mbody.warn2 {
   color: var(--warn);
-}
-
-.mrow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin: 10px 0px;
 }
 
 .mrow.end {
@@ -96,59 +123,9 @@
   gap: 8px;
 }
 
-.mixbody {
-  max-height: 50vh;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-}
-
-.mixhead,
-.mixrow {
-  display: grid;
-  grid-template-columns: 46px repeat(4, 1fr);
-  text-align: center;
-  align-items: center;
-}
-
-.mixhead {
-  position: sticky;
-  top: 0px;
-  background: var(--bg3);
-  z-index: 1;
-  font-size: 12px;
-  padding: 8px 0px;
-}
-
-.mixrow {
-  border-top: 1px solid var(--line);
-}
-
-.mixrow.cur {
-  background: var(--acc-soft);
-}
-
-.mixse em {
-  display: block;
-  font-size: 10px;
-  color: var(--dim);
-}
-
 .mixno {
   font-size: 12px;
   color: var(--dim);
-}
-
-.mixc {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--line2);
-}
-
-.mixc.on {
-  color: var(--acc);
 }
 
 #toast {
@@ -161,7 +138,7 @@
   border: 1px solid var(--line2);
   border-radius: 18px;
   padding: 12px 20px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow_lg);
   max-width: 90vw;
   opacity: 0;
   pointer-events: none;
@@ -172,7 +149,7 @@
   opacity: 1;
 }
 
-.newNoteDialog.mbox {
+.new_note_dialog.mbox {
   width: min(520px, 100%);
   display: flex;
   flex-direction: column;
@@ -182,32 +159,26 @@
   border-radius: 18px;
 }
 
-.newNoteHead {
+.new_note_head {
   flex: 0 0 auto;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--line);
 }
 
-.newNoteHead .mhead {
+.new_note_head .mhead {
   font-size: 20px;
   margin: 0px;
   gap: 9px;
 }
 
-.newNoteHead .ic {
-  width: 23px;
-  height: 23px;
-  color: var(--acc);
-}
-
-.newNoteHint {
+.new_note_hint {
   display: block;
   font-size: 11px;
   color: var(--dim);
   margin: 7px 0px 0px 32px;
 }
 
-.newNoteBody {
+.new_note_body {
   flex: 1 1 0%;
   min-height: 0px;
   overflow: auto;
@@ -216,31 +187,26 @@
   touch-action: pan-y;
 }
 
-.newNoteLabel {
+.new_note_label {
   display: block;
   font-size: 12px;
   color: var(--dim);
   margin-bottom: 6px;
 }
 
-.newNoteBody .mtxt {
+.new_note_body .mtxt {
   font-size: 14px;
   min-height: 44px;
   border-radius: 10px;
 }
 
-.newNoteBody .msub {
+.new_note_body .msub {
   margin: 17px 0px 8px;
   font-size: 13px;
-  color: var(--acc-d);
+  color: var(--acc_d);
 }
 
-.newRatios {
-  display: grid;
-  gap: 7px;
-}
-
-.newRatio {
+.new_ratio {
   min-width: 0px;
   min-height: 74px;
   display: flex;
@@ -254,56 +220,37 @@
   color: var(--dim);
 }
 
-.newRatio b {
+.new_ratio b {
   font-size: 12px;
 }
 
-.newPaperShape {
+.new_paper_shape {
   display: block;
   border: 1px solid var(--dim);
   border-radius: 2px;
   background: var(--bg2);
 }
 
-.newRatio.on {
-  background: var(--acc-soft);
-  border-color: var(--acc);
-  color: var(--acc-d);
-}
-
-.newRatio.on .newPaperShape {
-  border-color: var(--acc);
-}
-
-.newFree span {
-  display: flex;
-  flex-direction: column;
-}
-
-.newFree small {
-  color: var(--dim);
-}
-
-.newQualityHead {
+.new_quality_head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.newQualityHead small {
+.new_quality_head small {
   font-size: 11px;
   color: var(--dim);
   font-variant-numeric: tabular-nums;
 }
 
-.newResolutions {
+.new_resolutions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0px, 1fr));
   gap: 6px;
 }
 
-.newResolution {
+.new_resolution {
   min-height: 44px;
   border-radius: 9px;
   background: var(--bg3);
@@ -313,48 +260,20 @@
   padding: 6px;
 }
 
-.newResolution.on {
-  background: var(--acc-soft);
-  border-color: var(--acc);
-  color: var(--acc-d);
-}
-
-.newPapers {
+.new_papers {
   display: grid;
   grid-template-columns: repeat(5, minmax(0px, 1fr));
   gap: 8px;
 }
 
-.newPaper {
-  border: 1px solid var(--line2);
-  border-radius: 9px;
-  position: relative;
-}
-
-.newPaper.on {
-  outline: 2px solid var(--acc);
-  outline-offset: 2px;
-}
-
-.newPaper.on::after {
-  content: "✓";
-  position: absolute;
-  inset: 0px;
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  color: var(--acc-d);
-  text-shadow: white 0px 0px 2px;
-}
-
-.newNoteNotice {
+.new_note_notice {
   font-size: 11px;
   line-height: 1.65;
   color: var(--dim);
   margin: 16px 0px 0px;
 }
 
-.newNoteActions {
+.new_note_actions {
   flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
@@ -364,23 +283,25 @@
   border-top: 1px solid var(--line);
 }
 
-.newNoteActions .mbtn {
+.new_note_actions .mbtn {
   min-height: 44px;
   min-width: 100px;
   font-size: 14px;
   border-radius: 22px;
 }
 
-.newNoteActions .primary {
-  background: var(--acc-soft);
-  color: var(--acc-d);
+.new_note_actions .primary {
+  background: var(--acc_soft);
+  color: var(--acc_d);
 }
 
-.newRatios {
+.new_ratios {
+  display: grid;
+  gap: 7px;
   grid-template-columns: repeat(3, minmax(0px, 1fr));
 }
 
-.newFree {
+.new_free {
   grid-column: auto;
   flex-direction: column;
   justify-content: center;
@@ -390,25 +311,26 @@
   gap: 7px;
 }
 
-.newFree span {
+.new_free span {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
 }
 
-.newFree small {
+.new_free small {
+  color: var(--dim);
   font-size: 10px;
 }
 
-.newFree > .ic {
-  height: 30px;
-  width: 30px;
-}
-
-.newPaper {
+.new_paper {
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  position: relative;
   min-height: 44px;
   height: 44px;
 }
 
-#recordBar {
+#record_bar {
   position: fixed;
   z-index: 60;
   top: calc(12px + env(safe-area-inset-top));
@@ -427,16 +349,16 @@
   color: var(--fg);
 }
 
-#recordBar[hidden] {
+#record_bar[hidden] {
   display: none;
 }
 
-#recordTime {
+#record_time {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.recordLight {
+.record_light {
   width: 9px;
   height: 9px;
   flex: 0 0 auto;
@@ -444,7 +366,7 @@
   background: rgb(231, 94, 70);
 }
 
-#recordStop {
+#record_stop {
   min-width: 44px;
   min-height: 44px;
   display: flex;
@@ -452,17 +374,86 @@
   gap: 5px;
   padding: 8px 12px;
   border-radius: 12px;
-  background: var(--acc-soft);
-  color: var(--acc-d);
+  background: var(--acc_soft);
+  color: var(--acc_d);
   white-space: nowrap;
   font-size: 12px;
 }
 
-#recordStop .ic {
+#record_stop .ic {
   width: 17px;
   height: 17px;
 }
 
 .mrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0px;
   gap: 10px;
+}
+
+
+@media (max-width: 620px) {
+  .export_head {
+    padding: 8px 12px;
+  }
+
+  .export_head .mhead {
+    font-size: 18px;
+  }
+
+  .mbox {
+    padding: 16px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .export_head {
+    padding: 6px 12px;
+  }
+
+  .export_head .mhead {
+    font-size: 18px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  .new_note_head {
+    padding: 10px 18px;
+  }
+
+  .new_note_hint {
+    display: none;
+  }
+
+  .new_note_body {
+    padding: 10px 18px;
+  }
+
+  .new_note_actions {
+    padding: 8px 18px;
+  }
+}
+
+@media (max-width: 350px) {
+  .new_note_head {
+    padding: 14px 14px 10px;
+  }
+
+  .new_note_body {
+    padding: 12px 14px;
+  }
+
+  .new_ratios {
+    gap: 5px;
+  }
+
+  .new_ratio {
+    min-height: 68px;
+  }
+
+  .new_note_actions {
+    padding: 10px 14px;
+  }
 }

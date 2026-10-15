@@ -1,5 +1,5 @@
 import { esc, ic, query, toast } from '../dom'
-import { HOLD_MAX } from '../h'
+import { hold_max } from '../h'
 import { clamp } from '../lib'
 import { layer_name, mode_order } from '../mode'
 import { sfx_play } from '../snd'
@@ -26,8 +26,8 @@ export function op_layer_copy(): void {
     toast('コピー先のレイヤーがありません')
     return
   }
-  const box = modal_open('<div class="mhead">' + ic('dup') + 'レイヤー' + esc(layer_name(src)) + 'をコピー</div>' + '<div class="mrow wrap">' + btns + '</div><div class="mrow end"><button class="mbtn" id="lcNo">やめる</button></div>', 1)
-  query(box, '#lcNo').addEventListener('click', modal_close)
+  const box = modal_open('<div class="mhead">' + ic('dup') + 'レイヤー' + esc(layer_name(src)) + 'をコピー</div>' + '<div class="mrow wrap">' + btns + '</div><div class="mrow end"><button class="mbtn" id="lc_no">やめる</button></div>', 1)
+  query(box, '#lc_no').addEventListener('click', modal_close)
   box.addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('[data-dst]') as HTMLElement | null
     if (!b) return
@@ -44,22 +44,22 @@ export function modal_range(): void {
   const n = g.doc.frames.length
   const box = modal_open(
     '<div class="mhead">' + ic('ab') + 'コマの範囲操作</div>' +
-    '<div class="mrow"><span class="rlab">はんい</span><input type="number" class="mnum" id="rgFrom" min="1" max="' + n + '" value="1"> 〜 <input type="number" class="mnum" id="rgTo" min="1" max="' + n + '" value="' + n + '"></div>' +
+    '<div class="mrow"><span class="rlab">はんい</span><input type="number" class="mnum" id="rg_from" min="1" max="' + n + '" value="1"> 〜 <input type="number" class="mnum" id="rg_to" min="1" max="' + n + '" value="' + n + '"></div>' +
     '<div class="mrow wrap">' +
-    '<button class="mbtn" id="rgRev">' + ic('swap') + '逆順にする</button>' +
-    '<button class="mbtn" id="rgDup">' + ic('dup') + 'うしろに複製</button>' +
-    '<button class="mbtn" id="rgPing">' + ic('loop') + '往復にする</button>' +
-    '<button class="mbtn warn" id="rgDel">' + ic('trash') + '削除</button>' +
+    '<button class="mbtn" id="rg_rev">' + ic('swap') + '逆順にする</button>' +
+    '<button class="mbtn" id="rg_dup">' + ic('dup') + 'うしろに複製</button>' +
+    '<button class="mbtn" id="rg_ping">' + ic('loop') + '往復にする</button>' +
+    '<button class="mbtn warn" id="rg_del">' + ic('trash') + '削除</button>' +
     '</div>' +
-    '<div class="mrow rng"><span class="rlab">ホールド一括</span><input type="range" id="rgHold" min="1" max="' + HOLD_MAX + '" step="1" value="1"><b class="rval" id="rgHoldVal">×1</b><button class="mbtn sm" id="rgHoldGo">適用</button></div>' +
+    '<div class="mrow rng"><span class="rlab">ホールド一括</span><input type="range" id="rg_hold" min="1" max="' + hold_max + '" step="1" value="1"><b class="rval" id="rg_hold_val">×1</b><button class="mbtn sm" id="rg_hold_go">適用</button></div>' +
     '<div class="mbody dim">往復＝1,2,3 → 1,2,3,2 みたいにピンポンさせるよ。</div>' +
-    '<div class="mrow end"><button class="mbtn" id="rgClose">とじる</button></div>',
+    '<div class="mrow end"><button class="mbtn" id="rg_close">とじる</button></div>',
     1
   )
   const num = (id: string) => clamp(Math.round(Number((box.querySelector('#' + id) as HTMLInputElement).value) || 1), 1, g.doc.frames.length)
-  const getAB = (): [number, number] => {
-    let a = num('rgFrom') - 1
-    let b = num('rgTo') - 1
+  const get_ab = (): [number, number] => {
+    let a = num('rg_from') - 1
+    let b = num('rg_to') - 1
     if (a > b) {
       const t = a
       a = b
@@ -73,8 +73,8 @@ export function modal_range(): void {
     toast(message)
   }
   const b2 = (id: string, fn: () => void) => (box.querySelector('#' + id) as HTMLElement).addEventListener('click', fn)
-  b2('rgRev', () => {
-    const [a, b] = getAB()
+  b2('rg_rev', () => {
+    const [a, b] = get_ab()
     if (a === b) {
       toast('2コマ以上のはんいでつかってね')
       return
@@ -82,28 +82,28 @@ export function modal_range(): void {
     if (dispatch('frame.reverse_range', { a, b }) < 0) return
     finish('逆順にしました')
   })
-  b2('rgDup', () => {
-    const [a, b] = getAB()
-    if (dispatch('frame.duplicate_range', { a, b, pingPong: 0 }) < 0) {
+  b2('rg_dup', () => {
+    const [a, b] = get_ab()
+    if (dispatch('frame.duplicate_range', { a, b, ping_pong: 0 }) < 0) {
       toast('これ以上コマを増やせないよ')
       return
     }
     finish('複製しました')
   })
-  b2('rgPing', () => {
-    const [a, b] = getAB()
+  b2('rg_ping', () => {
+    const [a, b] = get_ab()
     if (b - a < 2) {
       toast('3コマ以上のはんいでつかってね')
       return
     }
-    if (dispatch('frame.duplicate_range', { a, b, pingPong: 1 }) < 0) {
+    if (dispatch('frame.duplicate_range', { a, b, ping_pong: 1 }) < 0) {
       toast('これ以上コマを増やせないよ')
       return
     }
     finish('往復にしました')
   })
-  b2('rgDel', () => {
-    const [a, b] = getAB()
+  b2('rg_del', () => {
+    const [a, b] = get_ab()
     if (b - a + 1 >= st().doc.frames.length) {
       toast('全部のコマは消せないよ')
       return
@@ -114,13 +114,13 @@ export function modal_range(): void {
       toast('消しました')
     })
   })
-  const hr = box.querySelector('#rgHold') as HTMLInputElement
-  hr.addEventListener('input', () => ((box.querySelector('#rgHoldVal') as HTMLElement).textContent = '×' + hr.value))
-  b2('rgHoldGo', () => {
-    const [a, b] = getAB()
+  const hr = box.querySelector('#rg_hold') as HTMLInputElement
+  hr.addEventListener('input', () => ((box.querySelector('#rg_hold_val') as HTMLElement).textContent = '×' + hr.value))
+  b2('rg_hold_go', () => {
+    const [a, b] = get_ab()
     if (dispatch('frame.set_hold_range', { a, b, hold: Number(hr.value) }) < 0) return
     toast('ホールドをそろえました（もどす不可）')
   })
-  b2('rgClose', modal_close)
+  b2('rg_close', modal_close)
 }
 

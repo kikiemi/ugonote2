@@ -1,106 +1,110 @@
 import { q, toast } from '../dom'
-import { T_ERASER, T_FILL, T_PEN, T_PIXEL } from '../h'
+import { t_eraser, t_fill, t_paste, t_pen, t_pixel } from '../h'
 import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
 import { st } from '../state/store'
-import { tool_has_options } from '../sync'
-import { drawer_set, ctx_hide, pop_close, pop_is_open, pop_open, pop_toggle, rail_sheet, tool_page_show } from './overlay'
+import { tool_has_options, tool_page_show } from './tool_options'
+import { drawer_set, ctx_hide, pop_close, pop_is_open, pop_open, pop_toggle, rail_sheet } from './overlay'
 import { do_redo, do_undo, stage_down, stage_interrupt, tool_pick } from './stage_input'
 
 import { view_fit_if_stale } from './viewport'
+import { toolbox_open } from './toolbox'
 
 export function dock_events(): void {
+  q('studio_quick').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('button')
+    if (!b) return
+    if (b.dataset.quickColor) dispatch('pen.set_color', b.dataset.quickColor)
+    if (b.dataset.quickSize) dispatch('pen.set_size', Number(b.dataset.quickSize))
+  })
   const pick_or_options = (id: string, tool: number): void => {
     const button = q(id)
     if (st().pen.tool === tool && tool_has_options(tool)) {
-      tool_page_show(tool === T_PEN ? 'brush' : tool === T_ERASER ? 'size' : 'pattern')
-      pop_toggle('popTool', button)
+      tool_page_show(tool === t_pen ? 'brush' : tool === t_eraser ? 'size' : 'pattern')
+      pop_toggle('pop_tool', button)
       return
     }
     pop_close()
     rail_sheet(0)
     tool_pick(tool)
   }
-  for (const button of q('dockRow').querySelectorAll<HTMLElement>('[data-dock-tool]')) button.addEventListener('click', () => pick_or_options(button.id, Number(button.dataset.dockTool)))
-  q('sbT').addEventListener('click', () => dispatch('sel.transform', null))
-  q('sbC').addEventListener('click', () => dispatch('sel.copy', null))
-  q('sbX').addEventListener('click', () => dispatch('sel.cut', null))
-  q('sbQ').addEventListener('click', () => dispatch('sel.clear', null))
-  q('dockEraser').addEventListener('click', () => pick_or_options('dockEraser', T_ERASER))
-  q('dockMain').addEventListener('click', () => pick_or_options('dockMain', T_PEN))
-  q('dockFill').addEventListener('click', () => pick_or_options('dockFill', T_FILL))
-  q('dockColor').addEventListener('click', () => pop_toggle('popColor', q('dockColor')))
-  q('adjustGrid').addEventListener('click', () => dispatch('view.toggle_grid', null))
-  q('gridChoices').addEventListener('click', e => {
-    const button = (e.target as HTMLElement).closest<HTMLElement>('[data-grid-size]')
-    if (button) dispatch('view.set_grid_size', Number(button.dataset.gridSize))
-  })
-  for (const id of ['gridStepRange', 'gridStepNum']) q<HTMLInputElement>(id).addEventListener('input', e => dispatch('view.set_grid_size', Number((e.target as HTMLInputElement).value)))
-  q('pixelChoices').addEventListener('click', e => {
+  for (const button of q('dock_row').querySelectorAll<HTMLElement>('[data-dock-tool]')) button.addEventListener('click', () => pick_or_options(button.id, Number(button.dataset.dockTool)))
+  q('sb_paint_mode').addEventListener('click', () => dispatch('pen.set_paint_over', st().pen.paint_over ? 0 : 1))
+  q('sb_fill').addEventListener('click', () => dispatch('sel.paint', null))
+  q('sb_invert').addEventListener('click', () => dispatch('sel.invert', null))
+  q('sb_register_paint').addEventListener('click', () => dispatch('sel.register_paint', null))
+  q('sb_t').addEventListener('click', () => dispatch('sel.transform', null))
+  for (const id of ['sb_p', 'dock_paste']) q(id).addEventListener('click', () => tool_pick(t_paste, 0))
+  q('sb_c').addEventListener('click', () => dispatch('sel.copy', null))
+  q('sb_x').addEventListener('click', () => dispatch('sel.cut', null))
+  q('sb_q').addEventListener('click', () => dispatch('sel.clear', null))
+  q('dock_eraser').addEventListener('click', () => pick_or_options('dock_eraser', t_eraser))
+  q('dock_main').addEventListener('click', () => pick_or_options('dock_main', t_pen))
+  q('dock_fill').addEventListener('click', () => pick_or_options('dock_fill', t_fill))
+  q('dock_color').addEventListener('click', () => pop_toggle('pop_color', q('dock_color')))
+  q('pixel_choices').addEventListener('click', e => {
     const button = (e.target as HTMLElement).closest<HTMLElement>('[data-pixel-count]')
     if (button) dispatch('pen.set_pxn', Number(button.dataset.pixelCount))
   })
-  q('adjustPixel').addEventListener('click', () => { pop_close(); tool_pick(T_PIXEL) })
-  q('dockSize').addEventListener('click', () => { tool_page_show('size'); pop_toggle('popTool', q('dockSize')) })
-  q('dockGrid').addEventListener('click', () => { tool_page_show('grid'); pop_toggle('popTool', q('dockGrid')) })
-  q('dockMore').addEventListener('click', () => rail_sheet(q('rail').classList.contains('on') ? 0 : 1))
-  q('toolboxClose').addEventListener('click', () => rail_sheet(0))
-  q('liveLayerTabs').addEventListener('click', e => {
+  q('adjust_pixel').addEventListener('click', () => { pop_close(); tool_pick(t_pixel) })
+  q('dock_settings').addEventListener('click', () => { tool_page_show('tool'); pop_toggle('pop_tool', q('dock_settings')) })
+  q('dock_grid').addEventListener('click', () => toolbox_open('blk_grid'))
+  q('dock_pattern').addEventListener('click', () => {
+    if (![t_pen,t_eraser,t_fill].includes(st().pen.tool)) tool_pick(t_pen)
+    tool_page_show('pattern')
+    pop_toggle('pop_tool', q('dock_pattern'))
+  })
+  q('dock_features').addEventListener('click', () => toolbox_open('features'))
+  q('dock_more').addEventListener('click', () => { if (q('rail').classList.contains('on')) rail_sheet(0); else toolbox_open() })
+  q('toolbox_close').addEventListener('click', () => rail_sheet(0))
+  q('live_layer_tabs').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-live-layer]')
     if (!b) return
     const layer = Number(b.dataset.liveLayer)
-    if (layer === st().pen.layer) pop_toggle('popLayer', b)
+    if (layer === st().pen.layer) pop_toggle('pop_layer', b)
     else dispatch('pen.set_layer', layer)
   })
 
 }
 
 export function quick_events(): void {
-  q('viewBtn').addEventListener('click', () => pop_toggle('popView', q('viewBtn')))
-  q('layerBtn').addEventListener('click', () => pop_toggle('popLayer', q('layerBtn')))
-  q('tfBtn').addEventListener('click', () => {
+  q('view_btn').addEventListener('click', () => pop_toggle('pop_view', q('view_btn')))
+  q('layer_btn').addEventListener('click', () => pop_toggle('pop_layer', q('layer_btn')))
+  q('tf_btn').addEventListener('click', () => {
     const g = st()
-    q<HTMLInputElement>('tfDx').min = String(-g.doc.w)
-    q<HTMLInputElement>('tfDx').max = String(g.doc.w)
-    q<HTMLInputElement>('tfDy').min = String(-g.doc.h)
-    q<HTMLInputElement>('tfDy').max = String(g.doc.h)
-    pop_toggle('popTf', q('tfBtn'))
+    q<HTMLInputElement>('tf_dx').min = String(-g.doc.w)
+    q<HTMLInputElement>('tf_dx').max = String(g.doc.w)
+    q<HTMLInputElement>('tf_dy').min = String(-g.doc.h)
+    q<HTMLInputElement>('tf_dy').max = String(g.doc.h)
+    pop_toggle('pop_tf', q('tf_btn'))
   })
-  q('onionBtn').addEventListener('click', () => pop_toggle('popOnion', q('onionBtn')))
-  q('onionChoices').addEventListener('click', e => {
-    const button = (e.target as HTMLElement).closest<HTMLElement>('[data-onion-count]')
-    if (button) dispatch('view.set_onion_count', Number(button.dataset.onionCount))
-  })
-  for (const [id, key] of [['onionPrev', 'oprev'], ['onionNext', 'onext'], ['onionSkip', 'oskip']] as const) {
-    q(id).addEventListener('click', () => dispatch('view.toggle_onion_direction', key))
-  }
-  q('gridBtn').addEventListener('click', () => {
+  q('onion_btn').addEventListener('click', () => toolbox_open('toolbox_onion'))
+  q('view_onion_btn').addEventListener('click', () => toolbox_open('toolbox_onion'))
+  q('grid_btn').addEventListener('click', () => {
     dispatch('view.toggle_grid', null)
     sfx_play('tap')
   })
-  q('vflipBtn').addEventListener('click', () => {
+  q('vflip_btn').addEventListener('click', () => {
     dispatch('view.toggle_flip', null)
     sfx_play('tap')
   })
-  q('fitBtn').addEventListener('click', () => {
+  q('fit_btn').addEventListener('click', () => {
     pop_close()
     rail_sheet(0)
     dispatch('view.fit', null)
     sfx_play('tap')
   })
-  q<HTMLInputElement>('onionCount').addEventListener('input', e => {
-    dispatch('view.set_onion_count', Number((e.target as HTMLInputElement).value))
-  })
+
 }
 
 export function flobar_events(): void {
-  q('floRotL').addEventListener('click', () => dispatch('flo.rot', -1))
-  q('floRotR').addEventListener('click', () => dispatch('flo.rot', 1))
-  q('floFlipH').addEventListener('click', () => dispatch('flo.flip', 0))
-  q('floFlipV').addEventListener('click', () => dispatch('flo.flip', 1))
-  q('floReset').addEventListener('click', () => dispatch('flo.reset', null))
-  q('floOk').addEventListener('click', () => dispatch('flo.confirm', null))
-  q('floNo').addEventListener('click', () => dispatch('flo.cancel', null))
+  q('flo_rot_l').addEventListener('click', () => dispatch('flo.rot', -1))
+  q('flo_rot_r').addEventListener('click', () => dispatch('flo.rot', 1))
+  q('flo_flip_h').addEventListener('click', () => dispatch('flo.flip', 0))
+  q('flo_flip_v').addEventListener('click', () => dispatch('flo.flip', 1))
+  q('flo_reset').addEventListener('click', () => dispatch('flo.reset', null))
+  q('flo_ok').addEventListener('click', () => dispatch('flo.confirm', null))
+  q('flo_no').addEventListener('click', () => dispatch('flo.cancel', null))
 }
 
 export function workspace_focus_set(focused: boolean): void {
@@ -109,9 +113,9 @@ export function workspace_focus_set(focused: boolean): void {
   rail_sheet(0)
   ctx_hide()
   document.body.dataset.focus = focused ? '1' : '0'
-  q('focusBtn').setAttribute('aria-pressed', String(focused))
-  q('focusBtn').setAttribute('title', focused ? '道具を戻す' : '道具を隠して集中する')
-  q('focusBtn').querySelector('span')!.textContent = focused ? '道具を戻す' : '集中'
+  q('focus_btn').setAttribute('aria-pressed', String(focused))
+  q('focus_btn').setAttribute('title', focused ? '道具を戻す' : '道具を隠して集中する')
+  q('focus_btn').querySelector('span')!.textContent = focused ? '道具を戻す' : '集中'
   view_fit_if_stale()
   if (focused) toast('2本指でタップ、またはEscで道具を戻せます')
 }
@@ -149,18 +153,17 @@ export function focus_gesture_mount(wrap: HTMLElement): void {
 }
 
 export function header_events(): void {
-  q('focusBtn').addEventListener('click', () => workspace_focus_set(document.body.dataset.focus !== '1'))
-  q('dockFocus').addEventListener('click', () => workspace_focus_set(true))
-  q('dockPaper').addEventListener('click', () => pop_toggle('popPaper', q('dockPaper')))
-  q('paperColorBtn').addEventListener('click', () => pop_open('popPaper', q('paperColorBtn')))
+  q('focus_btn').addEventListener('click', () => workspace_focus_set(document.body.dataset.focus !== '1'))
+  q('dock_focus').addEventListener('click', () => workspace_focus_set(true))
+  q('dock_paper').addEventListener('click', () => pop_toggle('pop_paper', q('dock_paper')))
+  q('paper_color_btn').addEventListener('click', () => pop_open('pop_paper', q('paper_color_btn')))
 
-  q('menuFocus').addEventListener('click', () => { drawer_set(0); workspace_focus_set(true) })
-  q('menuBtn').addEventListener('click', () => drawer_set(q('drawer').classList.contains('on') ? 0 : 1))
-  q('appSettingsBtn').addEventListener('click', () => { drawer_set(0); pop_open('popSettings', q('focusBtn')) })
-  q('drawerClose').addEventListener('click', () => drawer_set(0))
+  q('menu_focus').addEventListener('click', () => { drawer_set(0); workspace_focus_set(true) })
+  q('menu_btn').addEventListener('click', () => drawer_set(q('drawer').classList.contains('on') ? 0 : 1))
+  q('drawer_close').addEventListener('click', () => drawer_set(0))
   q('scrim').addEventListener('click', () => drawer_set(0))
-  q('undoBtn').addEventListener('click', do_undo)
-  q('redoBtn').addEventListener('click', do_redo)
+  q('undo_btn').addEventListener('click', do_undo)
+  q('redo_btn').addEventListener('click', do_redo)
   const ti = q<HTMLInputElement>('title')
   ti.addEventListener('input', () => {
     dispatch('doc.set_name', ti.value)
@@ -168,12 +171,12 @@ export function header_events(): void {
   ti.addEventListener('keydown', e => {
     if (e.key === 'Enter') ti.blur()
   })
-  const menuTitle = q<HTMLInputElement>('menuTitle')
-  menuTitle.addEventListener('input', () => dispatch('doc.set_name', menuTitle.value))
+  const menu_title = q<HTMLInputElement>('menu_title')
+  menu_title.addEventListener('input', () => dispatch('doc.set_name', menu_title.value))
 }
 
 export function pop_chrome_events(): void {
-  q('popTool').addEventListener('click', e => {
+  q('pop_tool').addEventListener('click', e => {
     const button = (e.target as HTMLElement).closest<HTMLElement>('button[data-tool-page]')
     if (button) tool_page_show(button.dataset.toolPage)
   })
@@ -183,12 +186,17 @@ export function pop_chrome_events(): void {
     pop_close()
     rail_sheet(0)
   }
-  q('popScrim').addEventListener('pointerdown', e => {
-    const draw = document.body.dataset.drawingMenu === '1'
-    close_all(e)
-    if (draw) stage_down(e)
+  q('pop_scrim').addEventListener('pointerdown', e => {
+    if (document.body.dataset.drawingMenu === '1') {
+      e.preventDefault()
+      e.stopPropagation()
+      stage_down(e)
+    } else close_all(e)
   })
-  q('popScrim').addEventListener('click', close_all)
+  q('pop_scrim').addEventListener('click', e => {
+    if (document.body.dataset.drawingMenu === '1') e.preventDefault()
+    else close_all(e)
+  })
   const pops = document.querySelectorAll('.pop .popx')
   for (let i = 0; i < pops.length; i++) {
     const close = pops[i] as HTMLElement
@@ -201,11 +209,11 @@ export function outside_close(): void {
     'pointerdown',
     e => {
       const t = e.target as HTMLElement
-      if (!q('ctxMenu').classList.contains('hide') && !t.closest('#ctxMenu, #tlMoreBtn')) ctx_hide()
+      if (!q('ctx_menu').classList.contains('hide') && !t.closest('#ctx_menu, #tl_more_btn')) ctx_hide()
       if (!pop_is_open()) return
-      if (t.closest('.pop, #popScrim')) return
-      if (t.closest('#stageWrap')) return
-      if (t.closest('#rail, #quick, #tlBar, #framePanel, #dock, #hd, #layerStack, #liveLayerTabs')) return
+      if (t.closest('.pop, #pop_scrim')) return
+      if (t.closest('#stage_wrap')) return
+      if (t.closest('#rail, #quick, #tl_bar, #frame_panel, #dock, #hd, #layer_stack, #live_layer_tabs')) return
       pop_close()
     },
     { capture: true }

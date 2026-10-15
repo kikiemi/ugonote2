@@ -1,14 +1,14 @@
-const KWZ_B32 = 'cwmfjordvegbalksnthpyxquiz012345'
-const NINTENDO_EPOCH_UNIX = 946684800
+const kwz_b32 = 'cwmfjordvegbalksnthpyxquiz012345'
+const nintendo_epoch_unix = 946684800
 
-export function nintendo_ts_from_unix(unixSec: number): number {
-  const t = Math.floor(unixSec) - NINTENDO_EPOCH_UNIX
+export function nintendo_ts_from_unix(unix_sec: number): number {
+  const t = Math.floor(unix_sec) - nintendo_epoch_unix
   if (t < 0) return 0
   return t >>> 0
 }
 
 export function unix_from_nintendo_ts(t: number): number {
-  return (t >>> 0) + NINTENDO_EPOCH_UNIX
+  return (t >>> 0) + nintendo_epoch_unix
 }
 
 function b32_encode(src: Uint8Array): string {
@@ -19,11 +19,11 @@ function b32_encode(src: Uint8Array): string {
     value = (value << 8) | src[i]
     bits += 8
     while (bits >= 5) {
-      out += KWZ_B32[(value >>> (bits - 5)) & 31]
+      out += kwz_b32[(value >>> (bits - 5)) & 31]
       bits -= 5
     }
   }
-  if (bits > 0) out += KWZ_B32[(value << (5 - bits)) & 31]
+  if (bits > 0) out += kwz_b32[(value << (5 - bits)) & 31]
   return out
 }
 
@@ -33,7 +33,7 @@ function b32_decode(src: string): Uint8Array {
   let bits = 0
   let p = 0
   for (let i = 0; i < src.length; i++) {
-    const v = KWZ_B32.indexOf(src[i])
+    const v = kwz_b32.indexOf(src[i])
     if (v < 0) return new Uint8Array(0)
     value = (value << 5) | v
     bits += 5
@@ -58,25 +58,25 @@ export function bytes_to_hex(b: Uint8Array): string {
   return s.toUpperCase()
 }
 
-export function kwz_filename_make(fsidHex: string, createdUnix: number, editedUnix: number): string {
+export function kwz_filename_make(fsid_hex: string, created_unix: number, edited_unix: number): string {
   const bytes = new Uint8Array(17)
-  const id = hex_to_bytes(fsidHex)
+  const id = hex_to_bytes(fsid_hex)
   for (let i = 0; i < 9 && i < id.length; i++) bytes[i] = id[i]
   const dv = new DataView(bytes.buffer)
-  dv.setUint32(9, nintendo_ts_from_unix(createdUnix), true)
-  dv.setUint32(13, nintendo_ts_from_unix(editedUnix), true)
+  dv.setUint32(9, nintendo_ts_from_unix(created_unix), true)
+  dv.setUint32(13, nintendo_ts_from_unix(edited_unix), true)
   return b32_encode(bytes)
 }
 
-export function kwz_filename_parse(name: string): { fsidHex: string, createdUnix: number, editedUnix: number } | null {
+export function kwz_filename_parse(name: string): { fsid_hex: string, created_unix: number, edited_unix: number } | null {
   if (!/^[cwmfjordvegbalksnthpyxquiz012345]{28}$/.test(name)) return null
   const bytes = b32_decode(name)
   if (bytes.length < 17) return null
   const dv = new DataView(bytes.buffer)
   return {
-    fsidHex: bytes_to_hex(bytes.subarray(0, 9)),
-    createdUnix: unix_from_nintendo_ts(dv.getUint32(9, true)),
-    editedUnix: unix_from_nintendo_ts(dv.getUint32(13, true)),
+    fsid_hex: bytes_to_hex(bytes.subarray(0, 9)),
+    created_unix: unix_from_nintendo_ts(dv.getUint32(9, true)),
+    edited_unix: unix_from_nintendo_ts(dv.getUint32(13, true)),
   }
 }
 
@@ -92,13 +92,13 @@ export function ppm_filename_format(mac3hex: string, rand13: string, edits: numb
   return m + '_' + r + '_' + String(n).padStart(3, '0')
 }
 
-const PPM_CD = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const ppm_cd = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export function ppm_filename_check_digit(name24: string): string {
   let sum = parseInt(name24.slice(0, 2), 16)
   if (!Number.isFinite(sum)) sum = 0
   for (let i = 1; i < 16; i++) sum = (sum + name24.charCodeAt(i)) & 0xff
-  return PPM_CD[sum % 36]
+  return ppm_cd[sum % 36]
 }
 
 export function ppm_filename_local(name24: string): string {
@@ -135,10 +135,10 @@ export function ppm_region_of(fsid16hex: string): string {
   return '?'
 }
 
-export function kwz_region_of(fsidFormatted: string): string {
+export function kwz_region_of(fsid_formatted: string): string {
   const re = /^(00|10|12|14)[0-9a-f]{2}-[0-9a-f]{4}-[0-9a-f]{3}0-[0-9a-f]{4}[0159][0-9a-f]$/
-  if (!re.test(fsidFormatted)) return '?'
-  const c = fsidFormatted.charAt(19)
+  if (!re.test(fsid_formatted)) return '?'
+  const c = fsid_formatted.charAt(19)
   if (c === '0' || c === '1') return 'JP'
   if (c === '5') return 'US'
   if (c === '9') return 'EU'
