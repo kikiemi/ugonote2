@@ -1,0 +1,1639 @@
+.off {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.pbtn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 26px;
+  background: var(--acc_soft);
+  color: var(--acc_d);
+  font-size: 14px;
+}
+
+.pbtn.primary,
+.pbtn.on {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+  border-color: var(--acc);
+}
+
+.pbtn.on .ic {
+  color: rgb(255, 255, 255);
+}
+
+/* パネルを閉じる丸い ✕ ボタン。 */
+.popx {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 50%;
+  background: var(--acc_soft);
+  color: var(--acc_d);
+}
+
+.popx .ic {
+  width: 22px;
+  height: 22px;
+}
+
+.pbtn.warn {
+  color: var(--warn);
+}
+
+#drawing_bay {
+  display: contents;
+}
+
+body[data-drawing-layout="split"] #drawing_bay {
+  display: flex;
+  position: absolute;
+  right: var(--drawing_bay_right,138px);
+  top: max(8px,env(safe-area-inset-top));
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  width: clamp(272px, 34vw, 360px);
+  min-height: 0px;
+  z-index: 27;
+}
+
+body[data-drawing-layout="full"] #drawing_bay {
+  display: flex;
+  position: absolute;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 40;
+  background: var(--bg2);
+  min-height: 0px;
+  background-image: var(--desk_grid);
+}
+
+#pop_scrim {
+  position: fixed;
+  inset: 0px;
+  z-index: 25;
+  background: rgba(56, 61, 53, 0.25);
+  display: none;
+}
+
+#pop_scrim.on {
+  display: block;
+}
+
+.pop.on {
+  display: flex;
+}
+
+.pop_head,
+.toolbox_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.pop_head b,
+.toolbox_head b {
+  font-size: 16px;
+  color: var(--acc_d);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pop_head .ic,
+.toolbox_head .ic {
+  color: var(--acc);
+}
+
+.pop_body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  min-height: 0px;
+  padding: 4px 16px 16px;
+}
+
+.pbk {
+  padding: 9px 0px 12px;
+}
+
+.pbk.off {
+  display: none;
+}
+
+.plab {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tx);
+}
+
+.phint {
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 7px;
+}
+
+.prow b {
+  font-size: 13px;
+  min-width: 25px;
+  text-align: right;
+}
+
+.palgrid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0px, 1fr));
+  gap: 7px;
+  margin: 12px 0px;
+}
+
+.palc {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line2);
+  border-radius: 50%;
+}
+
+.palc.on {
+  outline: 3px solid var(--acc);
+  outline-offset: 2px;
+}
+
+#hex_in {
+  width: 100px;
+}
+
+.mkgrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0px, 1fr));
+  gap: 8px;
+  margin: 12px 0px;
+}
+
+.mkb {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgb(255, 255, 255);
+  padding: 5px;
+}
+
+.mkb img {
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+}
+
+#pop_tool,
+#pop_color {
+  width: min(440px, calc(100vw - 16px));
+  height: auto;
+  max-height: calc(100dvh - 16px);
+  border: 0px;
+  outline: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--bg2);
+  margin: 0;
+}
+
+/* ペンの一覧は横にすべらせず、5列で折り返して全部見せる (右の端でペンが切れないように)。 */
+#pop_tool .brushgrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: visible;
+  padding-bottom: 4px;
+}
+
+#pop_tool .brushb canvas {
+  width: 100%;
+}
+
+.stroke_sample {
+  flex: 0 0 auto;
+  margin: 0px 20px 8px;
+  border-bottom: 1px solid var(--line2);
+  background: var(--bg2);
+}
+
+.sample_caption span {
+  font-size: 13px;
+}
+
+.stroke_sample canvas {
+  display: block;
+  width: 100%;
+  height: 70px;
+  object-fit: contain;
+}
+
+#tool_options .pbk,
+.sheet_body .pbk {
+  padding: 8px 0px 12px;
+}
+
+#tool_options .plab,
+.sheet_body .plab {
+  color: var(--acc_d);
+  font-size: 14px;
+}
+
+#tool_options [data-options-page="detail"],
+#tool_options[data-tool-detail="1"] .pbk {
+  display: none;
+}
+
+#tool_options[data-tool-detail="1"] [data-options-page="detail"]:not(.off) {
+  display: block;
+}
+
+#tool_options .pbk.off {
+  display: none;
+}
+
+.tool_page_tabs .ic {
+  width: 19px;
+  height: 19px;
+  color: var(--acc);
+}
+
+.pen_handle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brushb canvas {
+  width: 64px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.brushb > span:last-child {
+  padding: 4px 6px;
+  border-radius: 16px;
+  min-height: 26px;
+  white-space: nowrap;
+}
+
+.brushb.on .pen_handle {
+  transform: translateY(-4px);
+}
+
+.brushb.on > span:last-child {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+.szrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 7px;
+  padding: 3px;
+  margin: 10px 0px;
+}
+
+.patgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 2px;
+}
+
+.custom_paint {
+  position: relative;
+}
+
+.paint_badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  background: var(--bg2);
+  color: var(--tx);
+  border-radius: 50%;
+  min-width: 16px;
+  font-size: 12px;
+}
+
+.patb {
+  width: 64px;
+  height: 64px;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 10px;
+}
+
+.patb small {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.patb.on {
+  outline: 2px solid var(--acc);
+  background: var(--acc_soft);
+}
+
+.rtools {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0px, 1fr));
+  gap: 8px;
+}
+
+.rsep {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--acc_d);
+  padding: 10px 0px 2px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rsep::after {
+  content: "";
+  height: 1px;
+  background: var(--line2);
+  flex: 1 1 0%;
+}
+
+.tool_heading {
+  min-width: 0;
+}
+
+/* 道具箱の道具。ほかのパネルのタイル (.act) と同じ形。 */
+/* 道具箱の図形は1行だけ。のこりは「その他」から (ui/rail_shapes.ts)。 */
+#rail .rb.rshape_more {
+  display: none;
+}
+
+/* 図形のページは、図形がたくさんならぶので小さめのタイルにする。 */
+#shape_choices {
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 6px;
+}
+
+#shape_choices .act {
+  min-height: 52px;
+  gap: 3px;
+  padding: 5px 2px;
+  font-size: 11px;
+}
+
+/* マイマークは図形の一覧と区切って、間をあける。 */
+#shape_marks {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
+}
+
+#shape_marks .mkgrid {
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  margin: 8px 0px 0px;
+}
+
+/* 高さを決めておく (はばに合わせた正方形だと、高さが半端な点になって、ページにスクロールバーが出るため)。 */
+#shape_marks .mkb {
+  aspect-ratio: auto;
+  height: 52px;
+}
+
+.rb {
+  position: relative;
+  min-width: 0px;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 2px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--tx);
+}
+
+.rb > .ic {
+  width: 28px;
+  height: 28px;
+  color: var(--acc);
+}
+
+.rb .rlbl {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rb.on {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc_soft);
+  color: var(--acc_d);
+}
+
+.rb.off {
+  display: none;
+}
+
+.ink_sample {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 8px 0px 24px;
+}
+
+.ink_sample > span {
+  width: 64px;
+  height: 64px;
+  border: 5px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.ink_sample div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--acc_d);
+}
+
+.ink_sample div span {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+#layer_rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px;
+}
+
+.lrow.on {
+  border-color: var(--acc);
+  background: var(--acc_soft);
+}
+
+.lpick {
+  flex: 1 1 0%;
+  min-width: 0px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.lbtn {
+  width: 40px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.lbtn.off {
+  visibility: hidden;
+}
+
+.lrow input[type="range"] {
+  width: 60px;
+  min-width: 40px;
+  flex: 0 0 auto;
+}
+
+.psw.on {
+  outline: 2px solid var(--acc);
+}
+
+#onion_cv {
+  pointer-events: none;
+}
+
+#drawing_bay #pop_tool,
+#drawing_bay #pop_color {
+  z-index: 27;
+}
+
+/* 右メニューにも重ねて画面いっぱいに出すとき。 */
+#drawing_bay #pop_tool[data-cover="1"],
+#drawing_bay #pop_color[data-cover="1"] {
+  z-index: 30;
+}
+
+#pop_tool .stroke_sample {
+  margin: 0px 12px 4px;
+}
+
+#pop_tool .stroke_sample canvas {
+  height: 30px;
+}
+
+.sample_caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--acc_d);
+  font-size: 12px;
+  padding: 4px 0px;
+}
+
+/* 道具の設定と同じ形のパネル (sheet.ts)。レイヤーと便利機能の画面で使う。 */
+.mbox.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100%);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.mbox.sheet.wide {
+  width: min(560px, 100%);
+}
+
+.sheet_preview {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line2);
+}
+
+.sheet_preview canvas {
+  max-width: 100%;
+  max-height: 32dvh;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sheet_caption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc_d);
+}
+
+.sheet_body .prow > .plab:first-child {
+  flex: 0 0 5.5em;
+}
+
+.sheet_body .prow select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sheet_body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 4px 12px 12px;
+  border: 0;
+  outline: 0;
+  border-radius: 0;
+}
+
+.sheet_actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.sheet_note {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+#tool_options {
+  flex: 1 1 0%;
+  touch-action: pan-x pan-y;
+  padding: 0px 12px 12px;
+}
+
+.brushgrid {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scroll-snap-type: x;
+  padding: 10px 4px 14px;
+  margin-top: 6px;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--acc_soft) transparent;
+}
+
+.brushb {
+  position: relative;
+  flex: 0 0 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border: 0px;
+  border-radius: 0px;
+  background: none;
+  font-size: 12px;
+  scroll-snap-align: start;
+  color: var(--tx);
+  flex-basis: 70px;
+  min-height: 112px;
+  gap: 4px;
+}
+
+.pen_handle {
+  display: block;
+  width: 42px;
+  flex: 0 0 auto;
+  transition: transform 0.12s;
+  height: 56px;
+}
+
+/* 実機のペン先・ケシゴムの形・ペイントのペン先。横に流さず、タイル (.act) と同じ形で全部見せる。 */
+.native_pen_grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  overflow: visible;
+  padding: 10px 0 0;
+}
+
+.native_pen_grid .brushb {
+  min-width: 0;
+  min-height: 72px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 2px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+}
+
+.native_pen_grid .brushb > span:last-child {
+  min-height: 0;
+  padding: 0;
+  font-weight: 700;
+}
+
+.native_pen_grid .brushb.on {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc_soft);
+}
+
+.native_pen_grid .brushb.on > span:last-child {
+  background: none;
+  color: var(--acc_d);
+}
+
+/* 道具の設定から色へ飛ぶボタンと、色の画面から設定へもどるボタン。 */
+.pop_color_jump,
+.pop_back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  margin-left: auto;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 26px;
+  background: var(--bg2);
+  color: var(--acc_d);
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.pop_back {
+  margin-left: 0;
+  padding: 0 10px 0 6px;
+}
+
+.pop_color_jump .chip {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+  border-radius: 7px;
+}
+
+#pop_tool #native_pen_grid canvas {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+.native_font {
+  font-size: 28px;
+  line-height: 28px;
+}
+
+.szb {
+  flex: 0 0 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 66px;
+  flex-basis: 44px;
+  flex-direction: column;
+  gap: 3px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 22px;
+  background: none;
+  color: var(--tx);
+}
+
+.size_ink {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line2);
+  border-radius: 50%;
+  background: var(--bg2);
+}
+
+.szb small {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.szb.on {
+  outline: 0px;
+  background: none;
+  color: var(--acc_d);
+}
+
+.szb.on .size_ink {
+  border: 2px solid var(--acc);
+  background: var(--acc_soft);
+}
+
+.tool_page_tabs {
+  display: flex;
+  flex: 0 0 auto;
+  background: var(--bg2);
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.tool_page_tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0px;
+  flex: 1 1 0%;
+  color: var(--acc_d);
+  font-weight: 700;
+  min-height: 44px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 8px;
+  background: none;
+  font-size: 11px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 0px;
+}
+
+.tool_page_tabs button[aria-pressed="true"] {
+  outline-color: var(--acc);
+  background: var(--acc_soft);
+  outline: 0px;
+  color: var(--acc_d);
+}
+
+.tool_page_tabs button[aria-pressed="true"] .ic {
+  color: var(--acc);
+}
+
+#pop_color .pop_body {
+  flex: 1 1 0%;
+  padding: 4px 12px 14px;
+}
+
+#pop_color .ink_sample {
+  margin: 8px 0px 16px;
+  gap: 12px;
+}
+
+#pop_color .ink_sample > span {
+  width: 44px;
+  height: 44px;
+}
+
+body[data-drawing-menu="1"] #pop_scrim {
+  background: transparent;
+}
+
+body[data-drawing-menu="1"] #pop_tool.on {
+  display: flex;
+}
+
+body[data-drawing-layout="full"] #onion_btn {
+  display: none;
+}
+
+body[data-drawing-menu="1"] #tool_options {
+  flex: 1 1 0%;
+  min-height: 0px;
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body[data-drawing-menu="1"] #tool_options .pbk {
+  display: none;
+  background: none;
+  border: 0px;
+  padding-top: 8px;
+}
+
+body[data-drawing-menu="1"] #tool_options[data-tool-page="shape"] [data-options-page="shape"]:not(.off),
+body[data-drawing-menu="1"] #tool_options[data-tool-page="brush"] [data-options-page="brush"]:not(.off),
+body[data-drawing-menu="1"] #tool_options[data-tool-page="size"] [data-options-page="size"]:not(.off),
+body[data-drawing-menu="1"] #tool_options[data-tool-page="grid"] [data-options-page="grid"]:not(.off),
+body[data-drawing-menu="1"] #tool_options[data-tool-page="pattern"] [data-options-page="pattern"]:not(.off),
+body[data-drawing-menu="1"] #tool_options[data-tool-page="detail"] [data-options-page="detail"]:not(.off) {
+  display: block;
+}
+
+body[data-drawing-layout="full"] #pop_scrim {
+  display: none;
+}
+
+#pop_wrap {
+  position: fixed;
+  inset: 0px;
+  pointer-events: none;
+  z-index: 29;
+}
+
+.pop {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, -24px + 100vw);
+  max-height: calc(100dvh - 24px);
+  background: var(--bg2);
+  border: 4px solid var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 10px;
+  box-shadow: none;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  pointer-events: auto;
+  background-image: none;
+}
+
+.toolbox_body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  min-height: 0px;
+  padding: 4px 16px 16px;
+  flex: 1 1 0%;
+  background-image: none;
+}
+
+#pop_color .palgrid {
+  grid-template-columns: repeat(auto-fill, 44px);
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0px;
+}
+
+#pop_color .palc {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  aspect-ratio: auto;
+}
+
+#pop_color .palc.on {
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+
+#pop_paper {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, -24px + 100vw);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: var(--bg2);
+}
+
+#pop_paper .pop_body {
+  padding: 12px 16px 16px;
+}
+
+#paper_sw,
+.paper_choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.psw > span {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(136, 136, 136, 0.333);
+  border-radius: 8px;
+}
+
+.psw b {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.psw[aria-pressed="true"] {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc_soft);
+}
+
+#paper_custom_label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+#paper_custom_label[hidden],
+#paper_canvas_custom[hidden] {
+  display: none;
+}
+
+#paper_custom {
+  width: 52px;
+  height: 44px;
+}
+
+#paper_chip {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+}
+
+.prow {
+  display: flex;
+  align-items: center;
+  margin: 8px 0px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.prow input[type="range"] {
+  min-width: 40px;
+}
+
+.prow input[type="text"] {
+  min-width: 0px;
+}
+
+.psw {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--tx);
+  font-size: 12px;
+  width: auto;
+  height: auto;
+  min-width: 44px;
+}
+
+.mixc.on {
+  color: var(--acc);
+}
+
+.new_ratio.on {
+  background: var(--acc_soft);
+  border-color: var(--acc);
+  color: var(--acc_d);
+}
+
+.new_ratio.on .new_paper_shape {
+  border-color: var(--acc);
+}
+
+.new_resolution.on {
+  background: var(--acc_soft);
+  border-color: var(--acc);
+  color: var(--acc_d);
+}
+
+.new_paper.on {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.new_paper.on::after {
+  content: "✓";
+  position: absolute;
+  inset: 0px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  color: var(--acc_d);
+  text-shadow: white 0px 0px 2px;
+}
+
+.fcell.on {
+  border-color: var(--acc);
+  outline: 1px solid var(--acc);
+}
+
+body.canvas_writing #drawing_bay,
+body.canvas_writing #pop_scrim {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 620px) {
+  .stroke_sample {
+    margin: 0px 14px 6px;
+  }
+
+  .stroke_sample canvas {
+    height: 56px;
+  }
+
+  .rtools {
+    grid-template-columns: repeat(3, minmax(0px, 1fr));
+  }
+
+  .lrow {
+    gap: 3px;
+  }
+
+  .lbtn {
+    width: 32px;
+  }
+
+  .lrow input[type="range"] {
+    width: 45px;
+  }
+
+  .palgrid {
+    gap: 5px;
+  }
+
+  #tool_options {
+    padding-left: 14px;
+    padding-right: 14px;
+    padding: 0px 12px 12px;
+  }
+
+  .tool_page_tabs button {
+    border-width: 2px;
+    border: 0px;
+  }
+}
+
+@media (max-width: 480px) {
+  #pop_tool .stroke_sample {
+    display: none;
+  }
+
+  .brushb {
+    flex-basis: 64px;
+    min-height: 106px;
+  }
+
+  .sheet .tool_page_tabs {
+    flex-wrap: wrap;
+  }
+
+  .sheet .tool_page_tabs button {
+    flex: 1 0 40%;
+  }
+
+  #pop_color .ink_sample {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) and (min-height: 600px) {
+  .sheet .tool_page_tabs {
+    flex-wrap: nowrap;
+  }
+
+  .sheet .tool_page_tabs button {
+    flex: 1 0 0px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .sample_caption {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stroke_sample canvas {
+    height: 70px;
+  }
+
+  #pop_tool .tool_page_tabs {
+    padding: 5px 16px;
+    gap: 12px;
+  }
+
+  .rtools {
+    grid-template-columns: repeat(5, minmax(0px, 1fr));
+  }
+
+  .rsep {
+    padding-top: 8px;
+  }
+
+  .rb {
+    min-height: 64px;
+  }
+
+  .stroke_sample .sample_caption {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ink_sample {
+    margin: 4px 0px 14px;
+  }
+
+  .ink_sample > span {
+    width: 48px;
+    height: 48px;
+  }
+
+  #pop_color .pop_body {
+    padding-top: 0px;
+    padding: 4px 12px 14px;
+  }
+
+  body[data-drawing-layout="split"] #drawing_bay {
+    right: 122px;
+    bottom: 70px;
+    width: clamp(248px, 34vw, 320px);
+  }
+
+  #pop_tool .stroke_sample {
+    align-self: stretch;
+    border-bottom: 0px;
+    border-right: 1px solid var(--line2);
+    padding-right: 12px;
+    flex-direction: column;
+    justify-content: center;
+    display: none;
+  }
+
+  #pop_tool .pen_handle {
+    height: 38px;
+  }
+
+  #pop_tool .plab {
+    font-size: 11px;
+  }
+
+  #pop_tool .brushgrid {
+    padding: 4px 0px 8px;
+    margin: 0px;
+  }
+
+  #pop_tool .brushb {
+    min-height: 90px;
+    gap: 2px;
+  }
+
+  #pop_tool .brushb canvas {
+    height: 24px;
+  }
+
+  #pop_tool .brushb > span:last-child {
+    min-height: 22px;
+    padding: 3px 5px;
+  }
+
+  #pop_tool #blk_brush > .plab {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  body[data-drawing-layout="split"] #drawing_bay {
+    bottom: 60px;
+  }
+
+  .pop_head b,
+  .toolbox_head b {
+    font-size: 13px;
+  }
+
+  .pop_head,
+  .toolbox_head {
+    padding: 2px 7px;
+  }
+
+  body[data-drawing-layout="full"] #rail .toolbox_head {
+    min-height: 48px;
+    padding: 2px 12px;
+  }
+}
+
+body[data-wide-tools="1"] #drawing_bay {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: calc(var(--wide_dock_width) + 24px);
+  bottom: 72px;
+  width: min(440px, calc(100vw - var(--wide_dock_width) - 40px));
+  z-index: 27;
+  pointer-events: none;
+  align-items: flex-start;
+}
+
+body[data-desktop="1"][data-tl="1"] #drawing_bay {
+  bottom: calc(var(--tl_space) + 8px);
+}
+
+body[data-wide-tools="1"][data-drawing-menu="1"] #drawing_bay {
+  display: flex;
+}
+
+body[data-wide-tools="1"] #pop_tool:has(#tool_options[data-tool-page="size"]) .stroke_sample {
+  display: none;
+}
+
+body[data-wide-tools="1"] #tool_options,
+body[data-wide-tools="1"] #pop_color .pop_body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg2);
+}
+
+body[data-wide-tools="1"] #pop_tool .tool_page_tabs {
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 8px;
+}
+
+body[data-wide-tools="1"] #pop_tool .tool_page_tabs button {
+  min-height: 44px;
+}
+
+/* 横にならべたパネル (道具の設定・色・レイヤー) は、タブを見出しのすぐ下に出す。高さは中身に合わせるので、下に余白が残らず、ページを切りかえてもタブは動かない。 */
+.sheet[data-side="1"] > .pop_head {
+  order: -2;
+}
+
+.sheet[data-side="1"] > .tool_page_tabs {
+  order: -1;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet[data-side="1"] > #tool_options {
+  padding-bottom: 6px;
+}
+
+/* 縦に入りきらないパネルは、余白とボタンを小さくした詰めた形にする (workspace_layout.ts の sheet_fit)。横には広げない。
+   1: 見出し・タブ・区切りの余白をつめ、線の見本を省き、ペンや色の見本を小さくして1行にならぶ数をふやす。
+   2: それでも入らないとき (横向きのスマホなど)、ボタンと行をもう少し低くする。 */
+.sheet[data-tight~="1"] > .pop_head {
+  padding-block: 2px;
+}
+
+.sheet[data-tight~="1"] > .pop_head .popx {
+  width: 38px;
+  height: 38px;
+}
+
+.sheet[data-tight~="1"] > .tool_page_tabs {
+  padding: 4px 8px;
+}
+
+.sheet[data-tight~="1"] > .tool_page_tabs button {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 36px;
+}
+
+.sheet[data-tight~="1"] > :is(#tool_options, .sheet_body, .pop_body) {
+  padding-bottom: 6px;
+}
+
+.sheet[data-tight~="1"] .opt {
+  padding: 8px 0;
+}
+
+.sheet[data-tight~="1"] .act {
+  min-height: 56px;
+  gap: 3px;
+  padding: 6px 2px;
+}
+
+#pop_tool[data-tight~="1"] .stroke_sample {
+  display: none;
+}
+
+#pop_tool[data-tight~="1"] .brushgrid {
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 4px;
+}
+
+#pop_tool[data-tight~="1"] .brushb {
+  min-height: 84px;
+  gap: 2px;
+}
+
+#pop_tool[data-tight~="1"] .pen_handle {
+  height: 40px;
+}
+
+#pop_color[data-tight~="1"] .palgrid {
+  grid-template-columns: repeat(auto-fill, 36px);
+  gap: 8px;
+}
+
+#pop_color[data-tight~="1"] .palc {
+  width: 36px;
+  height: 36px;
+}
+
+#pop_layer[data-tight~="1"] #layer_rows {
+  gap: 4px;
+}
+
+#pop_layer[data-tight~="1"] .lrow {
+  padding: 4px 6px;
+}
+
+.sheet[data-tight~="2"] .act {
+  min-height: 48px;
+  padding: 4px 2px;
+}
+
+.sheet[data-tight~="2"] .sw {
+  min-height: 40px;
+}
+
+.sheet[data-tight~="2"] .opt_row {
+  min-height: 38px;
+  margin-top: 6px;
+}
+
+.sheet[data-tight~="2"] .seg button {
+  min-height: 36px;
+}
+
+#pop_layer[data-tight~="2"] :is(.lpick, .lbtn) {
+  min-height: 36px;
+  height: 36px;
+}
+
+/* レイヤーのパネルはタブが2つだけなので、いちばん詰めるときは見出しの行のあいだにタブをならべる。 */
+#pop_layer[data-tight~="2"] > .tool_page_tabs {
+  position: absolute;
+  top: 2px;
+  left: 124px;
+  right: 54px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+}
+
+#pop_layer[data-tight~="2"] > .tool_page_tabs button {
+  min-height: 34px;
+}
+
+/* 道具箱も、縦に入りきらないときは同じように詰める (workspace_layout.ts の toolbox_fit)。
+   1: タイルを低くして、幅に入るだけ1行にならべる (PCでは6列、スマホでは5列)。2: 見出し・タブもさらに低くする。 */
+body[data-toolbox-fit~="1"] #rail .rtools {
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 6px;
+}
+
+body[data-toolbox-fit~="1"] #rail .rb {
+  min-height: 60px;
+  gap: 3px;
+  padding: 6px 1px;
+}
+
+body[data-toolbox-fit~="1"] #rail .rsep {
+  padding-top: 6px;
+}
+
+body[data-toolbox-fit~="1"] #rail .rsep:first-child {
+  padding-top: 0;
+}
+
+body[data-toolbox-fit~="1"] #rail .toolbox_actions {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+body[data-toolbox-fit~="1"] #rail .act {
+  min-height: 56px;
+  gap: 3px;
+  padding: 6px 2px;
+}
+
+body[data-toolbox-fit~="1"] #rail .opt {
+  padding: 8px 0;
+}
+
+body[data-toolbox-fit~="1"] #rail .toolbox_body {
+  padding-bottom: 6px;
+}
+
+body[data-toolbox-fit~="2"] #rail .toolbox_head {
+  padding-block: 2px;
+}
+
+body[data-toolbox-fit~="2"] #rail .toolbox_head .popx {
+  width: 38px;
+  height: 38px;
+}
+
+body[data-toolbox-fit~="2"] #rail .toolbox_tabs {
+  padding: 4px 8px;
+}
+
+body[data-toolbox-fit~="2"] #rail .toolbox_tabs button {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 36px;
+}
+
+body[data-toolbox-fit~="2"] #rail .rb {
+  min-height: 52px;
+  padding: 4px 1px;
+}
+
+body[data-toolbox-fit~="2"] #rail .rtools {
+  gap: 4px;
+}
+
+body[data-toolbox-fit~="2"] #rail .rsep {
+  padding-top: 4px;
+  font-size: 12px;
+}
+
+body[data-toolbox-fit~="2"] #rail .act {
+  min-height: 48px;
+  padding: 4px 2px;
+}
+
+/* レイヤーのパネルは、コマ一覧を開いた画面や小さいスマホでも、スクロールなしで下のボタンまで入るよう、列とボタンを少し低くする。 */
+#pop_layer #layer_rows {
+  gap: 6px;
+}
+
+#pop_layer .opt {
+  padding: 10px 0;
+}
+
+#pop_layer .lpick {
+  min-height: 40px;
+}
+
+#pop_layer .lbtn {
+  height: 40px;
+}
+
+#pop_layer .act {
+  min-height: 60px;
+  gap: 4px;
+}
+
+/* スマホで下に入りきらず、上のボタンの列にかぶせて出すとき。 */
+#pop_layer[data-cover="1"] {
+  z-index: 30;
+}
+
+body[data-desktop="1"][data-recordsync="1"] #drawing_bay {
+  display: none;
+}
+
+body[data-phone="0"] #onion_btn {
+  display: none;
+}
+
+#rail {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 16px));
+  height: min(660px, calc(100dvh - 16px));
+  background: var(--bg2);
+  outline: 1px solid var(--line2);
+  border-radius: 8px;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  pointer-events: auto;
+  z-index: 26;
+}
+
+#rail.on {
+  display: flex;
+}
+
+body[data-drawing-layout="full"] #drawing_bay #rail,
+body[data-drawing-layout="split"] #drawing_bay #rail,
+body[data-wide-tools="1"] #drawing_bay #rail {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.rsep:first-child {
+  padding-top: 2px;
+}
+
+.toolbox_actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 599px) {
+  .rtools {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

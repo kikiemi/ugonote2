@@ -1,0 +1,2242 @@
+.hbtn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 14px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  background: var(--bg3);
+  padding: 0px 12px;
+}
+
+.chip {
+  display: block;
+  width: 25px;
+  height: 25px;
+  background: rgb(17, 17, 17);
+  border: 3px solid var(--bg2);
+  border-radius: 9px;
+  outline: 1px solid var(--line2);
+}
+
+.dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: var(--tx);
+  border-radius: 50%;
+}
+
+.tb {
+  font-weight: 700;
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 50px;
+  min-height: 44px;
+  padding: 5px 12px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--acc_soft);
+  color: var(--acc_d);
+  box-shadow: 0 2px 0 var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.sb {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 54px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.sbtns {
+  display: flex;
+  gap: 4px;
+}
+
+#ctx_menu {
+  position: fixed;
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  max-width: calc(-16px + 100vw);
+  background: var(--bg2);
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow_lg);
+  overscroll-behavior: contain;
+}
+
+#ctx_menu.hide {
+  display: none;
+}
+
+.citem {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tbody {
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+#main_row {
+  position: absolute;
+  inset: 0px;
+  min-height: 0px;
+  min-width: 0px;
+}
+
+#stage_wrap {
+  position: absolute;
+  inset: 0px;
+  overflow: hidden;
+  touch-action: none;
+  min-height: 0px;
+  min-width: 0px;
+  background: none;
+}
+
+#flip_wrap {
+  position: absolute;
+  inset: 0px;
+}
+
+body[data-vflip="1"] #flip_wrap {
+  transform: scaleX(-1);
+}
+
+#stage_pan canvas {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  image-rendering: auto;
+}
+
+body[data-mode="dsi"] #stage_pan canvas,
+body[data-mode="3d"] #stage_pan canvas,
+body[data-tool="4"] #stage_pan canvas {
+  image-rendering: pixelated;
+}
+
+body[data-theme="dark"] #stage {
+  mix-blend-mode: normal;
+}
+
+#flo_cv {
+  pointer-events: none;
+}
+
+#zoom_label {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--bg2);
+  font-size: 11px;
+  color: var(--dim);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#zoom_label.on {
+  opacity: 1;
+}
+
+/* もどす・すすむは矢印の形。ほかのボタンと同じ白いふちと線を、形に沿って付ける (影を重ねて線にする)。 */
+#hd {
+  position: absolute;
+  z-index: 10;
+  left: max(12px,env(safe-area-inset-left));
+  top: max(8px,env(safe-area-inset-top));
+  display: flex;
+  gap: 10px;
+  pointer-events: none;
+  filter: drop-shadow(1px 0 0 var(--line)) drop-shadow(-1px 0 0 var(--line)) drop-shadow(0 -1px 0 var(--line)) drop-shadow(0 2px 0 var(--line));
+}
+
+#hd .ic {
+  width: 21px;
+  height: 21px;
+}
+
+.hlab {
+  display: block;
+  font-size: 9px;
+  line-height: 1;
+}
+
+#mobile_tools {
+  position: absolute;
+  z-index: 12;
+  right: max(9px,env(safe-area-inset-right));
+  top: max(8px,env(safe-area-inset-top));
+  width: 116px;
+  pointer-events: none;
+}
+
+#dock_row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 8px;
+}
+
+#dock {
+  pointer-events: none;
+}
+
+.dkb .ic {
+  width: 23px;
+  height: 23px;
+  color: var(--acc);
+}
+
+.dkb.on,
+.dkb[aria-expanded="true"] {
+  background: var(--bg2);
+  outline: 2px solid var(--acc);
+  color: var(--acc_d);
+}
+
+.dkb.on .ic {
+  color: var(--acc_d);
+}
+
+.dkb i.long {
+  font-size: 9px;
+  letter-spacing: -0.04em;
+}
+
+.dkb .chip {
+  width: 25px;
+  height: 25px;
+  border: 0px;
+  outline: 0px;
+  border-radius: 6px;
+}
+
+/* レイヤーの列とその中のスクロールする箱は、ボタンの外の線 (1px) と下の影 (2px) が箱のふちで切れないよう、そのぶん内側をあける。 */
+#layer_stack {
+  position: absolute;
+  z-index: 11;
+  left: max(10px,env(safe-area-inset-left));
+  top: calc(64px + env(safe-area-inset-top));
+  width: 52px;
+  max-height: var(--layer_limit, calc(100% - 142px));
+  overflow: hidden;
+  padding-bottom: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.layer_caption {
+  flex: 0 0 auto;
+  width: 100%;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+#live_layer_tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+  gap: 5px;
+  margin: -2px 0 -3px;
+  padding: 2px 0 3px;
+  pointer-events: none;
+}
+
+.live_layer[aria-pressed="true"] {
+  background: var(--acc_soft);
+  color: var(--acc_d);
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc), 0 2px 0 var(--line);
+}
+
+.live_layer .ic {
+  width: 23px;
+  height: 23px;
+}
+
+#tl {
+  position: absolute;
+  z-index: 10;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: none;
+}
+
+#tl_bar {
+  order: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+  pointer-events: none;
+  background: none;
+}
+
+.tl_group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  flex: 0 0 auto;
+}
+
+.tl_tail {
+  order: 0;
+}
+
+.tl_transport {
+  order: 1;
+}
+
+.tl_group > button {
+  pointer-events: auto;
+}
+
+.tb .ic {
+  width: 21px;
+  height: 21px;
+  color: var(--acc);
+}
+
+.tl_tail #add_btn {
+  min-width: 52px;
+}
+
+.tl_transport #play_btn {
+  display: flex;
+  background: var(--acc_soft);
+  color: var(--acc);
+}
+
+.tl_transport .tb .ic {
+  width: 25px;
+  height: 25px;
+}
+
+#layer_btn {
+  flex-direction: column;
+  gap: 0;
+}
+
+/* スマホでは、レイヤーのボタンが幅ぴったりの箱にならぶので、外の線を内側に引いて、箱のふちで切れないようにする。 */
+body[data-wide-tools="0"] .live_layer {
+  outline-offset: -1px;
+}
+
+#layer_btn small {
+  font-size: 9px;
+  line-height: 1;
+}
+
+#frame_no.long {
+  font-size: 12px;
+}
+
+#frame_no.xlong {
+  font-size: 11px;
+}
+
+#frame_panel {
+  display: none;
+  order: 0;
+  pointer-events: auto;
+  background: var(--bg2);
+  padding: 6px 12px;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-height: 56px;
+  border-top: 1px solid var(--line);
+  position: relative;
+  overflow: visible;
+}
+
+body[data-tl="1"] #frame_panel {
+  display: flex;
+}
+
+#frame_operations .tb {
+  height: 44px;
+  border-radius: 24px;
+  min-width: 44px;
+  padding: 0px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+#fs {
+  order: 1;
+  pointer-events: auto;
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  height: 120px;
+  padding: 17px 12px;
+  --fcw: 152px;
+  --fgap: 12px;
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  background-color: rgb(33, 34, 42);
+  background-image: repeating-linear-gradient(90deg, rgb(255, 255, 255) 0px, rgb(255, 255, 255) 7px, transparent 7px, transparent 17px), repeating-linear-gradient(90deg, rgb(255, 255, 255) 0px, rgb(255, 255, 255) 7px, transparent 7px, transparent 17px);
+  background-size: 100% 6px;
+  background-position: left 5px, left bottom 5px;
+  background-repeat: no-repeat;
+}
+
+body[data-tl="0"] #fs {
+  display: none;
+}
+
+#fs_track {
+  position: relative;
+  height: 86px;
+}
+
+.fcell {
+  position: absolute;
+  top: 0px;
+  width: var(--fcw);
+  height: 86px;
+  border: 3px solid rgb(255, 255, 255);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(255, 255, 255);
+  cursor: pointer;
+  touch-action: pan-x;
+}
+
+.fcell canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* コマ一覧の印。左上にコマ番号、右上にループのはじまり (A)・おわり (B)、左下に鳴らす効果音、右下に表示時間。 */
+.fno,
+.fhold,
+.fse,
+.abm {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0 0 1px var(--line2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.fno {
+  left: 3px;
+  top: 3px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.fcell.on .fno {
+  background: var(--acc);
+  box-shadow: none;
+  color: rgb(255, 255, 255);
+}
+
+.fhold {
+  right: 3px;
+  bottom: 3px;
+  color: var(--acc_d);
+}
+
+.fse {
+  left: 3px;
+  bottom: 3px;
+  padding: 0 3px;
+  color: var(--acc);
+}
+
+.fhold:empty,
+.fse:empty {
+  display: none;
+}
+
+.fse .ic {
+  width: 13px;
+  height: 13px;
+}
+
+.fse i {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: rgb(255, 255, 255);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.fse .d0 {
+  background: #e0443b;
+}
+
+.fse .d1 {
+  background: #2e6be0;
+}
+
+.fse .d2 {
+  background: #20a464;
+}
+
+.fse .d3 {
+  background: #d48824;
+}
+
+.abm {
+  display: none;
+  right: 3px;
+  top: 3px;
+  background: var(--acc);
+  box-shadow: none;
+  color: rgb(255, 255, 255);
+}
+
+.abm.show {
+  display: flex;
+}
+
+.abm .ic {
+  width: 12px;
+  height: 12px;
+}
+
+/* A-B区間のコマは、下にオレンジの帯を引く。 */
+.fcell.inab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--acc);
+}
+
+.fcell.inab .fhold,
+.fcell.inab .fse {
+  bottom: 7px;
+}
+
+.fcell.drop {
+  outline: 3px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.fcell.lift {
+  opacity: 0.35;
+}
+
+#fs_ghost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  width: 152px;
+  height: 86px;
+  opacity: 0.9;
+  border: 3px solid var(--acc);
+  border-radius: 8px;
+  background: rgb(255, 255, 255);
+  overflow: hidden;
+}
+
+#fs_ghost canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#flo_bar {
+  position: absolute;
+  z-index: 15;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg2);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+}
+
+#flo_tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+#flo_actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+#flo_bar.on {
+  display: flex;
+}
+
+#flo_info {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+#sel_bar {
+  max-width: calc(100% - 12px);
+  flex-wrap: wrap;
+  position: absolute;
+  display: none;
+  z-index: 15;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 4px;
+}
+
+#sel_bar.on {
+  display: flex;
+}
+
+.sb.q {
+  color: var(--warn);
+  min-width: 36px;
+}
+
+body[data-drawing-menu="1"] #mobile_tools {
+  z-index: 28;
+}
+
+#app button:focus-visible {
+  outline-offset: 2px;
+  outline: 3px solid var(--acc) !important;
+}
+
+#mobile_tools .dkb,
+#layer_stack .live_layer {
+  touch-action: none;
+}
+
+body[data-pop="pop_layer"] #layer_stack {
+  z-index: 28;
+}
+
+#layer_stack[data-scroll="y"] #live_layer_tabs,
+#layer_stack[data-scroll="y"] .live_layer {
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+#layer_stack[data-scroll="x"] #live_layer_tabs,
+#layer_stack[data-scroll="x"] .live_layer {
+  pointer-events: auto;
+  touch-action: pan-x;
+}
+
+body[data-drawing-layout="full"] #hd,
+body[data-drawing-layout="full"] #layer_stack,
+body[data-drawing-layout="full"] #tl,
+body[data-drawing-layout="full"] #flo_bar {
+  visibility: hidden;
+}
+
+body[data-drawing-layout="full"][data-pop=""] #mobile_tools {
+  display: block;
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  right: calc(8px + env(safe-area-inset-right));
+  width: auto;
+  max-width: 680px;
+  margin: 0px auto;
+  z-index: 44;
+}
+
+body[data-drawing-layout="full"] .dkb {
+  position: relative;
+  min-height: 48px;
+  font-size: 10px;
+  border-width: 2px;
+  padding: 2px;
+  gap: 2px;
+}
+
+body.canvas_writing #mobile_tools,
+body.canvas_writing #layout_choices,
+body.canvas_writing #layer_stack,
+body.canvas_writing #hd,
+body.canvas_writing #tl,
+body.canvas_writing #sel_bar,
+body.canvas_writing #flo_bar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#app {
+  --safe_top: env(safe-area-inset-top);
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  --desk_grid: linear-gradient(rgba(115, 135, 165, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(115, 135, 165, 0.3) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-color: #fff;
+  background-image: var(--desk_grid);
+}
+
+#stage {
+  background: none;
+  mix-blend-mode: multiply;
+  box-shadow: none;
+  outline: none;
+}
+
+body[data-theme="dark"] #app {
+  background-color: rgb(29, 36, 43);
+  background-image: var(--desk_grid);
+  --desk_grid: linear-gradient(rgba(130, 153, 181, 0.28) 1px, transparent 1px), linear-gradient(90deg, rgba(130, 153, 181, 0.28) 1px, transparent 1px);
+}
+
+body[data-theme="dark"] #stage_pan {
+  outline-color: rgb(102, 113, 124);
+}
+
+body[data-free="1"] #app {
+  background-color: var(--bg2);
+  background-image: var(--desk_grid);
+}
+
+body[data-pop="pop_fps"] #tl,
+body[data-pop="pop_hold"] #tl,
+body[data-pop="pop_view"] #tl {
+  z-index: 28;
+}
+
+#stage_pan {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  transform-origin: 0px 0px;
+  background-image: none;
+  background-color: var(--bg2);
+  outline: var(--paper_line,1px) solid #c0c6d0;
+  box-shadow: 0 calc(2 * var(--paper_line,1px)) calc(6 * var(--paper_line,1px)) #394b6412;
+}
+
+body[data-free="1"] #stage_pan {
+  outline: none;
+  box-shadow: none;
+}
+
+.live_layer {
+  pointer-events: auto;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  background: var(--bg4);
+  color: var(--acc);
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 2px 0 var(--line);
+  box-sizing: border-box;
+  text-shadow: none;
+}
+
+.dkb {
+  position: relative;
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 3px solid var(--bg2);
+  outline: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--acc_soft);
+  color: var(--acc_d);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 var(--line);
+  border-width: 3px;
+  box-sizing: border-box;
+}
+
+#tl_bar .tb {
+  border-width: 3px;
+  box-sizing: border-box;
+}
+
+#dock .dkb,
+#layer_stack:not([data-scroll="x"]):not([data-scroll="y"]) .live_layer {
+  touch-action: none;
+}
+
+.tl_tail .tb {
+  flex-direction: column;
+  gap: 2px;
+  min-width: 60px;
+  touch-action: none;
+}
+
+body[data-drawing-layout="full"] #dock_grid {
+  position: static;
+  display: flex;
+  inset: auto;
+  width: auto;
+  height: auto;
+}
+
+body[data-drawing-layout="full"][data-pop=""] #mobile_tools .dkb {
+  position: relative;
+  border-width: 3px;
+  touch-action: pan-y;
+}
+
+.tl_transport .tb {
+  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  padding: 0px;
+  min-height: 44px;
+  touch-action: none;
+}
+
+#frame_no {
+  pointer-events: auto;
+  position: absolute;
+  right: max(14px,env(safe-area-inset-right));
+  bottom: 80px;
+  height: 32px;
+  min-width: 94px;
+  border-radius: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--acc);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 3px 12px;
+  box-shadow: 0 2px 0 var(--line);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-height: 44px;
+  touch-action: none;
+}
+
+#hd .hbtn {
+  position: relative;
+  isolation: isolate;
+  flex-direction: column;
+  gap: 0;
+  pointer-events: auto;
+  width: 48px;
+  height: 46px;
+  min-height: 44px;
+  padding: 0px;
+  border: 0px;
+  border-radius: 0px;
+  touch-action: none;
+  background: var(--bg2);
+  color: var(--acc_d);
+}
+
+#hd .hbtn::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  background: var(--acc_soft);
+  clip-path: inherit;
+}
+
+#hd #undo_btn {
+  clip-path: polygon(20% 0px, 100% 0px, 100% 100%, 20% 100%, 0px 50%);
+}
+
+#hd #redo_btn {
+  clip-path: polygon(0px 0px, 80% 0px, 100% 50%, 80% 100%, 0px 100%);
+}
+
+#hd .hbtn:focus-visible {
+  clip-path: none;
+  border-radius: 8px;
+}
+
+#hd .off {
+  opacity: 0.5;
+}
+
+#tl_close {
+  touch-action: manipulation;
+}
+
+body[data-recordsync="1"] #hd,
+body[data-recordsync="1"] #layer_stack,
+body[data-recordsync="1"] #mobile_tools,
+body[data-recordsync="1"] .tl_tail,
+body[data-recordsync="1"] #frame_no {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#frame_operations {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0px;
+  flex: 1 1 0%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  padding: 3px 2px;
+  scroll-padding-inline: 2px;
+  touch-action: pan-x;
+}
+
+#frame_operations button {
+  touch-action: pan-x;
+}
+
+/* コマの操作は一列にならべ、「コマ操作」のメニューをいつも右はしに置く。 */
+#frame_commands,
+#view_commands {
+  display: contents;
+}
+
+#tl_more_btn {
+  order: 1;
+}
+
+body[data-drawing-layout="full"] #dock_row {
+  grid-template-columns: repeat(6, minmax(0px, 1fr));
+  gap: 10px;
+}
+
+#paper_fit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+body[data-drawing-layout="full"]:not([data-pop=""]) #mobile_tools {
+  display: none;
+}
+
+#sel_bar .sb {
+  flex: 0 0 auto;
+}
+
+#sel_bar #sb_q {
+  margin-left: auto;
+}
+
+/* マイマークの「選択範囲から登録」のあと、範囲をえらんだら押すボタン。 */
+#sel_bar .sb.wait {
+  background: var(--acc);
+  color: #fff;
+}
+
+/* 操作のまとまりごとに区切る (編集 / 塗る / 登録)。 */
+.sb_group {
+  display: flex;
+  gap: 2px;
+  padding: 0 4px;
+  border-left: 1px solid var(--line2);
+}
+
+.sb_group:first-of-type {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.sb_toggle[aria-pressed="true"] {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+/* はりつけはレイヤーのボタンとならべ、コピーした絵の見本を出す。 */
+#paste_btn {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.clip_thumb {
+  width: 30px;
+  height: 18px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--bg2);
+  image-rendering: pixelated;
+}
+
+/* 一列に収まらないときは5つずつ2段にならべ、「解除」はいつも右下に置く (selection_toolbar.ts が data-rows を決める)。 */
+#sel_bar[data-rows="1"] {
+  flex-wrap: nowrap;
+}
+
+#sel_bar.on[data-rows="2"] {
+  display: grid;
+  grid-template-columns: repeat(5, 56px);
+  gap: 2px;
+}
+
+#sel_bar[data-rows="2"] .sb_group {
+  display: contents;
+}
+
+#sel_bar[data-rows="2"] .sb {
+  min-width: 0;
+  padding: 3px 0;
+}
+
+#sel_bar[data-rows="2"] #sb_q {
+  grid-column: 5;
+  margin-left: 0;
+}
+
+/* 変形中のバーも同じ5列。下の段に角度と大きさ、確定・取消。 */
+#flo_bar.on[data-rows="2"] {
+  display: grid;
+  grid-template-columns: repeat(5, 56px);
+  gap: 2px;
+  padding: 4px;
+}
+
+#flo_bar[data-rows="2"] #flo_tools,
+#flo_bar[data-rows="2"] #flo_actions {
+  display: contents;
+}
+
+#flo_bar[data-rows="2"] .fbb {
+  width: auto;
+}
+
+#flo_bar[data-rows="2"] #flo_info {
+  grid-column: 1 / 4;
+  align-self: center;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  #mobile_tools {
+    width: 104px;
+    right: 7px;
+  }
+
+  #dock_row {
+    gap: 6px;
+  }
+
+  .dkb {
+    min-height: 49px;
+    font-size: 10px;
+  }
+
+  /* 色の見本もアイコンと同じ大きさにして、ボタンの段の高さをそろえる。 */
+  .dkb .ic,
+  .dkb .chip {
+    width: 20px;
+    height: 20px;
+  }
+
+  #tl_bar {
+    padding: 9px 8px 6px;
+    gap: 6px;
+    min-height: 70px;
+  }
+
+  .tl_group {
+    gap: 6px;
+  }
+
+  .tl_tail .tb {
+    min-width: 50px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .tl_tail #tl_toggle {
+    min-width: 58px;
+  }
+
+  .tl_tail #add_btn {
+    min-width: 44px;
+  }
+
+  .tl_transport .tb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .tl_transport .tb .ic {
+    width: 23px;
+    height: 23px;
+  }
+
+  #frame_no {
+    bottom: 76px;
+    right: 10px;
+    font-size: 12px;
+    min-width: 76px;
+  }
+
+  #layer_stack {
+    left: 7px;
+    width: 44px;
+  }
+
+  #live_layer_tabs {
+    scrollbar-width: none;
+  }
+
+  .live_layer {
+    width: 44px;
+    min-height: 44px;
+    font-size: 21px;
+  }
+
+  #fs {
+    height: 100px;
+    padding: 16px 10px;
+    --fcw: 116px;
+    --fgap: 10px;
+  }
+
+  .fcell,
+  #fs_track {
+    height: 68px;
+  }
+
+  #fs_ghost {
+    width: 116px;
+    height: 68px;
+  }
+}
+
+@media (orientation: portrait) and (min-width: 600px) {
+  body[data-drawing-layout="full"] #dock_row {
+    grid-template-columns: repeat(7, minmax(0px, 1fr));
+  }
+}
+
+@media (orientation: portrait) and (max-width: 599px) {
+  #layer_stack {
+    position: fixed;
+    top: max(8px,env(safe-area-inset-top));
+    left: 122px;
+    width: calc(100% - 130px);
+    max-height: 49px;
+    transform: none;
+    flex-direction: row;
+    gap: 5px;
+    overflow: auto hidden;
+  }
+
+  #live_layer_tabs {
+    flex-direction: row;
+    gap: 5px;
+    scrollbar-width: none;
+  }
+
+  .layer_caption {
+    display: none;
+  }
+
+  .live_layer {
+    min-height: 44px;
+    width: 44px;
+    font-size: 21px;
+  }
+
+  /* 幅のせまいスマホでは、レイヤーのボタンを少し細くして、横にスクロールしなくても全部ならぶようにする。 */
+  #live_layer_tabs .live_layer {
+    flex: 0 1 44px;
+    min-width: 36px;
+  }
+
+  #mobile_tools {
+    left: max(8px,env(safe-area-inset-left));
+    right: max(8px,env(safe-area-inset-right));
+    top: auto;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  #dock_row {
+    grid-template-columns: repeat(4, minmax(0px, 1fr));
+    gap: 6px;
+  }
+
+  .dkb {
+    min-height: 48px;
+    font-size: 11px;
+  }
+
+  /* コマ番号は上のまんなか。さいしょ・さいごはその左右にならべる。 */
+  #frame_no {
+    position: fixed;
+    right: 50%;
+    transform: translateX(50%);
+    top: calc(60px + env(safe-area-inset-top));
+    bottom: auto;
+    width: 96px;
+    min-width: 86px;
+    font-size: 12px;
+  }
+
+  body[data-tl="1"] #mobile_tools {
+    display: none;
+  }
+
+  body[data-tl="1"] #frame_no {
+    bottom: auto;
+  }
+
+  body[data-drawing-layout="full"][data-pop=""] #mobile_tools {
+    display: block;
+    top: calc(64px + env(safe-area-inset-top));
+    bottom: auto;
+    width: auto;
+    max-width: none;
+  }
+
+  body[data-drawing-layout="full"] #dock_row {
+    grid-template-columns: repeat(3, minmax(0px, 1fr));
+  }
+
+  #dock_grid {
+    position: fixed;
+    left: auto;
+    right: max(8px,env(safe-area-inset-right));
+    top: calc(60px + env(safe-area-inset-top));
+    width: 64px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  #home_btn,
+  #last_btn {
+    position: fixed;
+    top: calc(60px + env(safe-area-inset-top));
+    height: 44px;
+    width: 44px;
+  }
+
+  #home_btn {
+    left: calc(50% - 100px);
+  }
+
+  #last_btn {
+    left: calc(50% + 56px);
+  }
+
+  /* コマ一覧の下の操作は、横にスクロールしないよう5つにしぼって、アイコンの下に名前を置く。ループと区間はコマ操作のメニューから。 */
+  #frame_operations {
+    gap: 6px;
+  }
+
+  #frame_operations .tb {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 52px;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 14px;
+    font-size: 10px;
+  }
+
+  #frame_operations .tb .ic {
+    width: 20px;
+    height: 20px;
+  }
+
+  #fps_unit {
+    font-size: 10px;
+  }
+
+  #loop_btn,
+  #ab_btn {
+    display: none;
+  }
+
+  #paper_fit {
+    inset: calc(104px + env(safe-area-inset-top)) 0 calc(184px + env(safe-area-inset-bottom));
+  }
+
+  body[data-tl="1"] #paper_fit {
+    bottom: 0;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .dkb {
+    font-size: 10px;
+  }
+
+  #hd .hbtn {
+    width: 44px;
+  }
+
+  .live_layer {
+    width: 44px;
+    min-height: 44px;
+  }
+
+  body[data-drawing-layout="full"][data-pop=""] #mobile_tools {
+    bottom: auto;
+    max-width: none;
+    margin: 0px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  #layer_stack {
+    overflow-x: auto;
+  }
+
+  #layer_stack .live_layer {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  body[data-drawing-layout="full"] .dkb {
+  position: relative;
+    min-height: 44px;
+  }
+
+  body[data-drawing-layout="full"][data-pop=""] #mobile_tools {
+    top: calc(52px + env(safe-area-inset-top));
+    max-height: calc(100% - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
+body[data-free="1"] #paper_fit,
+body[data-recordsync="1"] #paper_fit {
+  inset: 0;
+}
+
+body[data-tl="1"] #tl,
+body[data-tl="1"] #tl_bar {
+  background-color: var(--bg2);
+}
+
+.wide_tool {
+  display: none;
+}
+
+body[data-wide-tools="1"] {
+  --wide_dock_width: 132px;
+}
+
+body[data-wide-tools="1"][data-extended-tools="1"] {
+  --wide_dock_width: 204px;
+}
+
+body[data-desktop="1"] #hold_btn {
+  display: flex;
+}
+
+#studio_quick {
+  display: none;
+}
+
+#studio_quick button {
+  pointer-events: auto;
+}
+
+body[data-wide-tools="1"][data-layout="simple"] {
+  --wide_dock_width: 132px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #studio_quick {
+  display: grid;
+  gap: 8px;
+  padding: 10px 6px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--bg);
+}
+
+body[data-wide-tools="1"] .studio_label {
+  color: var(--acc_d);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+}
+
+body[data-wide-tools="1"] #quick_colors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+body[data-wide-tools="1"] #quick_colors button {
+  min-width: 0;
+  min-height: 30px;
+  border: 3px solid var(--bg);
+  background: var(--ink);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--line2);
+}
+
+body[data-wide-tools="1"] #quick_colors button[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--acc);
+}
+
+body[data-wide-tools="1"] #quick_sizes {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body[data-wide-tools="1"] #quick_sizes button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 2px;
+  color: var(--tx);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+body[data-wide-tools="1"] #quick_sizes span {
+  display: block;
+  background: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+body[data-wide-tools="1"] #quick_sizes button[aria-pressed="true"] {
+  background: var(--acc_soft);
+  border-color: var(--acc);
+  color: var(--acc_d);
+}
+
+/* 横向きでは、ループと区間はコマ操作のメニューから。 */
+body[data-workspace="landscape"] #loop_btn,
+body[data-workspace="landscape"] #ab_btn {
+  display: none;
+}
+
+body[data-wide-tools="1"] #mobile_tools {
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  left: auto;
+  bottom: auto;
+  width: var(--wide_dock_width);
+  max-height: calc(100% - var(--tl_space) - 16px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 4px;
+}
+
+body[data-wide-tools="1"] #dock_row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body[data-wide-tools="1"] #mobile_tools .wide_tool {
+  display: flex;
+}
+
+body[data-wide-tools="1"] #mobile_tools .dock_heading {
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 2px -2px;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.2;
+  color: var(--acc_d);
+  pointer-events: none;
+}
+
+body[data-wide-tools="1"] #mobile_tools .dock_heading:first-child {
+  margin-top: 0;
+}
+
+body[data-wide-tools="1"] #mobile_tools .dock_heading::after {
+  content: "";
+  height: 1px;
+  background: var(--line2);
+  flex: 1 1 0%;
+}
+
+body[data-wide-tools="1"] #mobile_tools .desktop_tool {
+  display: none;
+}
+
+body[data-wide-tools="1"][data-extended-tools="1"] #dock_row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body[data-wide-tools="1"][data-extended-tools="1"] #mobile_tools .desktop_tool {
+  display: flex;
+}
+
+body[data-wide-tools="1"] #mobile_tools .dkb {
+  position: relative;
+  min-height: 54px;
+  padding: 4px 2px;
+  font-size: 11px;
+}
+
+body[data-wide-tools="1"] #paper_fit {
+  inset: 64px calc(var(--wide_dock_width) + 24px) 78px 64px;
+}
+
+body[data-desktop="1"][data-tl="1"] #paper_fit {
+  bottom: var(--tl_space);
+}
+
+body[data-desktop="1"] #hd {
+  left: 8px;
+  top: 8px;
+}
+
+body[data-desktop="1"] #tl {
+  right: 0;
+}
+
+/* 広い画面では、コマ番号を下のバーのまんなかに置き、コマ一覧や紙にかぶらないようにする。 */
+body[data-wide-tools="1"] #frame_no {
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+
+body[data-desktop="1"] #tl_bar {
+  height: 72px;
+  min-height: 72px;
+  padding: 8px 12px;
+}
+
+body[data-desktop="1"] .tl_transport {
+  margin-right: 0;
+  gap: 8px;
+}
+
+body[data-desktop="1"] .tl_transport .tb {
+  width: 44px;
+  height: 44px;
+}
+
+body[data-desktop="1"] #fs {
+  height: 88px;
+  padding: 12px;
+  --fcw: 112px;
+  --fgap: 10px;
+}
+
+body[data-desktop="1"] .fcell,
+body[data-desktop="1"] #fs_track {
+  height: 64px;
+}
+
+body[data-desktop="1"] #fs_ghost {
+  width: 112px;
+  height: 64px;
+}
+
+body[data-desktop="1"] #frame_panel {
+  min-height: 52px;
+  padding: 4px 12px;
+}
+
+body[data-desktop="1"][data-recordsync="1"] #mobile_tools {
+  display: none;
+}
+
+body[data-desktop="1"][data-free="1"] #paper_fit {
+  inset: 0;
+}
+
+body[data-desktop="1"][data-recordsync="1"] #paper_fit {
+  inset: 0 0 78px;
+}
+
+@media (max-height: 760px) {
+  body[data-desktop="1"] #dock_row {
+    gap: 6px;
+  }
+
+  body[data-desktop="1"] .dkb {
+  position: relative;
+    min-height: 44px;
+    padding: 2px;
+    gap: 1px;
+    border-width: 2px;
+    font-size: 10px;
+  }
+
+  body[data-desktop="1"] .dkb .ic {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+#layout_choices {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 21;
+  display: none;
+  padding: 3px;
+  gap: 4px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 18px;
+}
+
+#layout_choices button {
+  min-height: 38px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--tx);
+  background: transparent;
+  font-size: 12px;
+}
+
+#layout_choices button[aria-pressed="true"] {
+  color: var(--acc_d);
+  background: var(--acc_soft);
+}
+
+:where(body[data-wide-tools="1"]) #layout_choices:not([hidden]) {
+  display: flex;
+}
+
+body[data-wide-tools="1"][data-layout="simple"] #dock_row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body[data-wide-tools="1"][data-layout="simple"] #mobile_tools .desktop_tool {
+  display: none;
+}
+
+/* スタジオは色・ふとさの欄も並ぶので、ボタンを少し低くして全部が収まるようにする。 */
+body[data-wide-tools="1"][data-layout="studio"] #mobile_tools .dkb {
+  min-height: 44px;
+  gap: 1px;
+  padding: 2px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #mobile_tools .dkb i {
+  line-height: 1.1;
+}
+
+/* スタジオの右メニューは道具のすぐ下に色・ふとさの欄をつづけ、コマ一覧の上で止める。入りきらないときは道具の列だけをスクロールする。 */
+body[data-wide-tools="1"][data-layout="studio"] #mobile_tools {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #dock {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 選んだ道具のオレンジのふち (2px) や外の線・影が、スクロールする箱のふちで切れないよう、内側をあけて外側へ同じだけ広げる。 */
+body[data-wide-tools="1"][data-layout="studio"] #dock_row {
+  flex: 0 1 auto;
+  grid-auto-rows: max-content;
+  align-content: start;
+  margin: -3px;
+  padding: 3px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  pointer-events: auto;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #studio_quick {
+  flex: 0 0 auto;
+}
+
+/* スタジオは見出しを省いて道具を3列、色とふとさを1行ずつにして、コマ一覧を開いてもスクロールなしで全部入るようにする。 */
+body[data-wide-tools="1"][data-layout="studio"] #dock_row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #mobile_tools .dock_heading {
+  display: none;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #quick_colors {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #quick_colors button {
+  min-height: 24px;
+  border-width: 2px;
+  border-radius: 7px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #quick_sizes {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+body[data-wide-tools="1"][data-layout="studio"] #quick_sizes button {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 40px;
+  font-size: 10px;
+}
+
+/* 右メニューがコマ一覧の上に入りきらないときは、ボタンを低くする (1)。それでも入らなければ見出しを省き、ふとさのボタンも低くする (2)。
+   スクロールで下のボタンが切れて見えなくならないように (workspace_layout.ts の dock_fit)。 */
+body[data-wide-tools="1"][data-dock-fit="1"] #mobile_tools .dkb,
+body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dkb {
+  min-height: 42px;
+  gap: 0;
+  padding: 2px;
+}
+
+body[data-wide-tools="1"][data-dock-fit="1"] #dock_row,
+body[data-wide-tools="1"][data-dock-fit="2"] #dock_row {
+  gap: 5px;
+}
+
+body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dock_heading {
+  display: none;
+}
+
+body[data-wide-tools="1"][data-dock-fit="2"] #quick_sizes button {
+  min-height: 32px;
+}
+
+body[data-recordsync="1"] #layout_choices,
+body[data-edit-context="selection"] #layout_choices,
+body[data-edit-context="transform"] #layout_choices,
+body[data-drawing-menu="1"] #layout_choices,
+body[data-pop]:not([data-pop=""]) #layout_choices {
+  display: none;
+}
+
+#mobile_tools .move_tool {
+  display: none;
+}
+
+body[data-phone="0"] #mobile_tools .move_tool {
+  display: flex;
+}
+
+/* 横向きのスマホは、紙をなるべく大きく出すため、ボタンを左右の列と紙の下の1行に集める。
+   左の列: メニュー・コマ一覧・追加、いまのレイヤー (・はりつけ)。右の列: 道具と、その下にもどす・すすむ。紙の下: コマ番号と再生。 */
+body[data-workspace="landscape"] #hd {
+  left: auto;
+  right: calc(8px + env(safe-area-inset-right));
+  top: calc(204px + env(safe-area-inset-top));
+  width: 104px;
+  justify-content: space-between;
+  gap: 0px;
+}
+
+body[data-workspace="landscape"] #hd .hbtn {
+  height: 44px;
+}
+
+/* コマ一覧を開いているときは、道具を出さないので、もどす・すすむは右上に置く。 */
+body[data-workspace="landscape"][data-tl="1"] #hd {
+  top: max(8px, env(safe-area-inset-top));
+}
+
+/* レイヤーは、いまのレイヤー1つにたたんで左の列に置く。押すと、ほかのレイヤーと「レイヤー」を1つの小さな箱にならべ、
+   左の列のボタンの上に重ねて出す (紙にはかぶせない)。--layer_end はたたんだマスの下の端で、箱はそこから上へのびる。 */
+body[data-workspace="landscape"] #layer_stack {
+  --layer_top: calc(152px + env(safe-area-inset-top));
+  --layer_end: calc(196px + env(safe-area-inset-top));
+  --layer_row: 30px;
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left));
+  top: var(--layer_top);
+  bottom: auto;
+  width: auto;
+  max-height: none;
+  transform: none;
+  display: grid;
+  gap: 5px;
+  padding: 0px;
+  overflow: visible;
+}
+
+body[data-workspace="landscape"] #live_layer_tabs {
+  flex-direction: column;
+  gap: 0px;
+  margin: 0px;
+  padding: 0px;
+  overflow: visible;
+}
+
+body[data-workspace="landscape"] #layer_stack .live_layer {
+  position: relative;
+  width: 60px;
+  min-width: 60px;
+  height: 44px;
+  min-height: 44px;
+}
+
+/* コマ一覧を開いているときは、メニューの列の右の上の行に置き、ならべるときもその行の中で横にならべる。 */
+body[data-workspace="landscape"][data-tl="1"] #layer_stack {
+  left: calc(76px + env(safe-area-inset-left));
+  top: max(8px, env(safe-area-inset-top));
+  grid-auto-flow: column;
+}
+
+body[data-workspace="landscape"][data-tl="1"] #live_layer_tabs {
+  flex-direction: row;
+}
+
+body[data-workspace="landscape"]:not([data-pop="pop_layer"]) #layer_stack:not([data-open="1"]) #live_layer_tabs .live_layer:not([aria-pressed="true"]),
+body[data-workspace="landscape"]:not([data-pop="pop_layer"]) #layer_stack:not(.one_sheet):not([data-open="1"]) #layer_btn,
+body[data-workspace="landscape"][data-pop="pop_layer"] #paste_btn,
+body[data-workspace="landscape"] #layer_stack[data-open="1"] #paste_btn {
+  display: none;
+}
+
+/* たたんでいるときは、右メニューの開くボタンと同じく、右上に印を付ける。 */
+body[data-workspace="landscape"]:not([data-pop="pop_layer"]) #layer_stack:not([data-open="1"]) #live_layer_tabs .live_layer[aria-pressed="true"]::after {
+  content: "\25BE";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--acc_d);
+  pointer-events: none;
+}
+
+body[data-workspace="landscape"][data-pop="pop_layer"] #layer_stack,
+body[data-workspace="landscape"] #layer_stack[data-open="1"] {
+  top: auto;
+  bottom: calc(100% - var(--layer_end));
+  gap: 0px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--bg2);
+  outline: 1px solid var(--line);
+  box-shadow: 0 2px 0 var(--line), 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+body[data-workspace="landscape"][data-tl="1"][data-pop="pop_layer"] #layer_stack,
+body[data-workspace="landscape"][data-tl="1"] #layer_stack[data-open="1"] {
+  top: max(8px, env(safe-area-inset-top));
+  bottom: auto;
+}
+
+body[data-workspace="landscape"][data-pop="pop_layer"] #layer_stack .live_layer,
+body[data-workspace="landscape"] #layer_stack[data-open="1"] .live_layer {
+  width: 54px;
+  min-width: 54px;
+  height: var(--layer_row);
+  min-height: var(--layer_row);
+  border: 0px;
+  outline: 0px;
+  border-radius: 10px;
+  box-shadow: none;
+  background: none;
+  font-size: 18px;
+}
+
+body[data-workspace="landscape"][data-tl="1"][data-pop="pop_layer"] #layer_stack .live_layer,
+body[data-workspace="landscape"][data-tl="1"] #layer_stack[data-open="1"] .live_layer {
+  width: 40px;
+  min-width: 40px;
+  height: 38px;
+  min-height: 38px;
+}
+
+body[data-workspace="landscape"][data-pop="pop_layer"] #layer_stack .live_layer[aria-pressed="true"],
+body[data-workspace="landscape"] #layer_stack[data-open="1"] .live_layer[aria-pressed="true"] {
+  background: var(--acc_soft);
+  box-shadow: inset 0 0 0 1px var(--acc);
+}
+
+body[data-workspace="landscape"][data-pop="pop_layer"] #layer_btn .ic,
+body[data-workspace="landscape"] #layer_stack[data-open="1"] #layer_btn .ic {
+  width: 16px;
+  height: 16px;
+}
+
+body[data-workspace="landscape"][data-pop="pop_layer"] #layer_btn small,
+body[data-workspace="landscape"] #layer_stack[data-open="1"] #layer_btn small {
+  font-size: 8px;
+}
+
+body[data-workspace="landscape"] .layer_caption {
+  display: none;
+}
+
+/* 再生のバーの中身は、どれも画面に直に置く。コマ一覧を開いているときだけ、コマ番号と再生の行のぶんの高さを残す。 */
+body[data-workspace="landscape"] #tl_bar {
+  height: 0px;
+  min-height: 0px;
+  padding: 0px;
+}
+
+body[data-workspace="landscape"][data-tl="1"] #tl_bar {
+  height: 52px;
+  min-height: 52px;
+}
+
+body[data-workspace="landscape"] .tl_tail {
+  --shortcut_height: 44px;
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left));
+  top: max(8px,env(safe-area-inset-top));
+  flex-direction: column;
+  gap: 4px;
+}
+
+body[data-workspace="landscape"] .tl_tail .tb,
+body[data-workspace="landscape"] .tl_tail #tl_toggle,
+body[data-workspace="landscape"] .tl_tail #add_btn {
+  width: 60px;
+  min-width: 60px;
+  min-height: var(--shortcut_height);
+  height: var(--shortcut_height);
+  padding: 3px;
+  font-size: 10px;
+}
+
+/* 紙の下のまんなかに、コマ番号と、さいしょ・前・再生・次・さいごを1行にならべる (コマ一覧を開いても同じ場所)。
+   行の幅は、コマ番号 72 + 丸いボタン 44×5 + すきま 5×5 = 317px。 */
+body[data-workspace="landscape"] .tl_transport {
+  position: fixed;
+  top: auto;
+  left: calc(76px + env(safe-area-inset-left));
+  right: calc(116px + env(safe-area-inset-right));
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 72px repeat(5, 44px);
+  grid-template-areas: "no home prev play next last";
+  justify-content: center;
+  gap: 5px;
+  transform: none;
+}
+
+body[data-workspace="landscape"] .tl_transport .tb {
+  width: 44px;
+  height: 44px;
+  touch-action: none;
+}
+
+/* コマ一覧を開いているときは、画面の下の帯のまんなかにそろえる。 */
+body[data-workspace="landscape"][data-tl="1"] .tl_transport {
+  right: calc(76px + env(safe-area-inset-right));
+}
+
+body[data-workspace="landscape"] #home_btn {
+  grid-area: home;
+}
+
+body[data-workspace="landscape"] #prev_btn {
+  grid-area: prev;
+}
+
+body[data-workspace="landscape"] #play_btn {
+  grid-area: play;
+}
+
+body[data-workspace="landscape"] #next_btn {
+  grid-area: next;
+}
+
+body[data-workspace="landscape"] #last_btn {
+  grid-area: last;
+}
+
+body[data-workspace="landscape"] #mobile_tools {
+  width: 104px;
+  right: calc(8px + env(safe-area-inset-right));
+  top: max(8px,env(safe-area-inset-top));
+}
+
+body[data-workspace="landscape"] #dock_row {
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 5px;
+}
+
+body[data-workspace="landscape"] .dkb {
+  position: relative;
+  min-height: 44px;
+  height: 44px;
+  border-width: 3px;
+  gap: 0px;
+  padding: 1px;
+}
+
+body[data-workspace="landscape"] .dkb .ic,
+body[data-workspace="landscape"] .dkb .chip {
+  width: 19px;
+  height: 19px;
+}
+
+body[data-workspace="landscape"] .dkb i {
+  font-size: 10px;
+  line-height: 12px;
+}
+
+/* 5文字の名前 (模様ブラシ・ぬりつぶし) は、横向きのせまいボタンのふちにかからないよう字間を詰める。 */
+body[data-workspace="landscape"] .dkb i.long {
+  font-size: 9px;
+  letter-spacing: -0.08em;
+}
+
+/* コマ番号は、まんなかにそろえた再生の行の左はしのマスに重ねる。 */
+body[data-workspace="landscape"] #frame_no {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  left: calc(76px + env(safe-area-inset-left) + (100% - 509px - env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+  transform: none;
+  width: 72px;
+  min-width: 0px;
+  height: 44px;
+  padding: 0px 4px;
+  font-size: 12px;
+}
+
+body[data-workspace="landscape"][data-tl="1"] #frame_no {
+  left: calc(76px + env(safe-area-inset-left) + (100% - 469px - env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+}
+
+body[data-workspace="landscape"][data-drawing-layout="full"] #dock_row {
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+}
+
+body[data-workspace="landscape"][data-tl="1"] #mobile_tools {
+  display: none;
+}
+
+body[data-workspace="landscape"][data-tl="0"] #tl {
+  padding-bottom: 0px;
+}
+
+body[data-workspace="landscape"] #dock_grid {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left));
+  top: calc(170px + env(safe-area-inset-top));
+  width: 60px;
+  height: 44px;
+}
+
+body[data-workspace="landscape"][data-tl="1"] #dock_grid {
+  display: none;
+}
+
+body[data-workspace="landscape"][data-drawing-layout="full"][data-pop=""] #mobile_tools {
+  left: calc(8px + env(safe-area-inset-left));
+  right: auto;
+  top: calc(64px + env(safe-area-inset-top));
+  width: 112px;
+  max-height: calc(100% - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+
+/* 紙は、左右の列のあいだの、コマ番号と再生の行より上を使う。コマ一覧を開いているときは、上の行とコマ一覧のあいだ。 */
+body[data-workspace="landscape"] #paper_fit {
+  inset: max(8px,env(safe-area-inset-top)) calc(116px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(76px + env(safe-area-inset-left));
+}
+
+body[data-workspace="landscape"][data-tl="1"] #paper_fit {
+  inset: calc(52px + env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 0 calc(76px + env(safe-area-inset-left));
+}
+
+/* 幅が足りない画面では、さいしょ・さいごを省く (コマ番号を押すと番号で移動できる)。行の幅は 72 + 44×3 + 5×3 = 219px。 */
+@media (max-width: 508px) {
+  body[data-workspace="landscape"] #home_btn,
+  body[data-workspace="landscape"] #last_btn {
+    display: none;
+  }
+
+  body[data-workspace="landscape"] .tl_transport {
+    grid-template-columns: 72px repeat(3, 44px);
+    grid-template-areas: "no prev play next";
+  }
+
+  body[data-workspace="landscape"] #frame_no {
+    left: calc(76px + env(safe-area-inset-left) + (100% - 411px - env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+  }
+
+  body[data-workspace="landscape"][data-tl="1"] #frame_no {
+    left: calc(76px + env(safe-area-inset-left) + (100% - 371px - env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+  }
+}
+
+/* コマ一覧を開いていて高さが足りないときは、メニューの列のボタンを少し低くして、コマ一覧にかからないようにする。 */
+@media (max-height: 312px) {
+  body[data-workspace="landscape"][data-tl="1"] .tl_tail {
+    --shortcut_height: 40px;
+  }
+}
+
+body[data-workspace="landscape"] #frame_panel {
+  height: 48px;
+  min-height: 48px;
+  padding: 2px max(6px, env(safe-area-inset-right)) 2px max(6px, env(safe-area-inset-left));
+  gap: 6px;
+}
+
+/* 横向きのスマホでは帯が低いので、ボタンの外の線と影のぶんだけ外へ広げて、スクロールする箱のふちで切れないようにする。 */
+body[data-workspace="landscape"] #frame_operations {
+  gap: 6px;
+  margin: -2px 0 -3px;
+  padding: 2px 2px 3px;
+}
+
+body[data-workspace="landscape"] #frame_operations .tb {
+  padding: 0 8px;
+}
+
+body[data-workspace="landscape"] #tl_close {
+  height: 44px;
+}
+
+body[data-workspace="landscape"] #fs {
+  height: 64px;
+  --fcw: 80px;
+  --fgap: 8px;
+  padding: 10px max(8px, env(safe-area-inset-right)) 10px max(8px, env(safe-area-inset-left));
+  background-size: 100% 4px;
+  background-position: left 3px, left bottom 3px;
+}
+
+body[data-workspace="landscape"] .fcell,
+body[data-workspace="landscape"] #fs_track {
+  height: 44px;
+}
+
+body[data-workspace="landscape"] #fs_ghost {
+  width: 80px;
+  height: 44px;
+}
+
+body[data-toolbox="1"][data-drawing-layout="full"] #mobile_tools {
+  display: none;
+}
+
+#dock_settings {
+  display: none;
+}
+
+/* スマホでは、ペン・模様ブラシ・けしごむ・ぬる・全体・前の絵・色・道具箱の順にならべる (色と道具箱をうしろへ)。 */
+body[data-wide-tools="0"] #dock_color,
+body[data-wide-tools="0"] #dock_more {
+  order: 1;
+}
+
+body[data-wide-tools="1"] #mobile_tools #dock_settings {
+  display: flex;
+}

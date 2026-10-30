@@ -1,0 +1,332 @@
+/* パネルの中の部品。道具の設定・道具箱・便利機能の画面で、同じ見た目にそろえる。 */
+
+/* まとまり。見出しと中身を、うすい線で区切る。 */
+.opt {
+  padding: 14px 0;
+}
+
+.opt + .opt {
+  border-top: 1px solid var(--line);
+}
+
+.opt_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--acc_d);
+  font-size: 14px;
+}
+
+.opt_head output,
+.opt_row output {
+  color: var(--acc_d);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 名前・つまみ・数字を一行にならべる。 */
+.opt_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 10px;
+}
+
+.opt_row > .plab {
+  flex: 0 0 5.5em;
+}
+
+.opt_row input[type="color"] {
+  flex: 0 0 44px;
+  height: 44px;
+  padding: 4px;
+}
+
+.opt_row.info {
+  min-height: 32px;
+  margin-top: 6px;
+}
+
+.opt_row input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.opt_row output {
+  min-width: 0;
+  margin-left: auto;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.opt_row input[type="range"] + output {
+  flex: 0 0 3.2em;
+}
+
+.opt > select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.opt_row select,
+.opt_row .mtxt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.opt_row .unit {
+  color: var(--dim);
+  font-weight: 700;
+}
+
+.opt_row .pbtn {
+  min-width: 8.5em;
+  margin-left: auto;
+}
+
+.opt_row select + .pbtn {
+  min-width: 0;
+}
+
+/* ひとつえらぶボタン。えらんだものはオレンジのふち。 */
+.seg {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+}
+
+.seg button {
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg2);
+  color: var(--tx);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.seg button[aria-pressed="true"] {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc_soft);
+  color: var(--acc_d);
+}
+
+.seg button:disabled {
+  opacity: 0.45;
+}
+
+/* 数が多いときは3列で折り返す。 */
+.seg.wrap {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.seg + .seg,
+.sw + .seg,
+.opt_row + .seg {
+  margin-top: 10px;
+}
+
+/* オン・オフの行。 */
+.sw {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+  color: var(--tx);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.sw > .ic {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  color: var(--acc);
+}
+
+.sw > span {
+  flex: 1 1 auto;
+}
+
+.sw[aria-pressed="true"] .toggle_knob {
+  background: var(--acc);
+}
+
+.sw[aria-pressed="true"] .toggle_knob::before {
+  left: 24px;
+}
+
+/* 押すとすぐ絵や画面が変わるタイル。 */
+.acts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+#layer_rows + .acts {
+  margin-top: 10px;
+}
+
+.acts.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.act {
+  min-width: 0;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--tx);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.act > .ic {
+  width: 26px;
+  height: 26px;
+  color: var(--acc);
+}
+
+.act.big {
+  min-height: 108px;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.act.big > .ic {
+  width: 34px;
+  height: 34px;
+}
+
+.act.on,
+.act[aria-pressed="true"] {
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
+  background: var(--acc_soft);
+  color: var(--acc_d);
+}
+
+/* シートの中にならべる大きいボタン (書き出しの形式など)。 */
+.sheet_body .menu_actions {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 0;
+}
+
+/* ほかの画面へ進む一行のボタン。 */
+.link_row {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--tx);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.link_row > span:first-of-type {
+  flex: 1 1 auto;
+}
+
+.link_row > .ic {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--acc);
+}
+
+.link_row > .ic:last-child {
+  width: 16px;
+  height: 16px;
+  color: var(--dim);
+}
+
+.menu_page > .opt + .opt {
+  margin-top: 0;
+}
+
+.seg + .palgrid {
+  margin-top: 12px;
+}
+
+/* 透かす向き。画面で重ねる色と同じ印を付ける。 */
+.onion_directions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.onion_dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e0443b;
+}
+
+#onion_next .onion_dot {
+  background: #2e6be0;
+}
+
+/* 押すと決まる大事なタイル (かくてい など)。 */
+.act.primary {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+.act.primary > .ic {
+  color: rgb(255, 255, 255);
+}
+
+/* 見出しの右に、いまの値を出す。 */
+.pop_head output {
+  margin-left: auto;
+  color: var(--acc_d);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 「うごかす」は紙を見ながら使うので、小さくまとめる。スマホでは右メニューを隠し、そこに出す。 */
+#pop_tf .pop_body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+#pop_tf .act {
+  min-height: 56px;
+}
+
+body[data-phone="1"][data-pop="pop_tf"] #mobile_tools {
+  visibility: hidden;
+}

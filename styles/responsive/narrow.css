@@ -1,0 +1,47 @@
+@media (max-width: 380px) {
+  .soundAssignment {
+    padding: 12px;
+  }
+  .soundAssignment .mixhead,
+  .soundAssignment .mixrow {
+    grid-template-columns: 48px repeat(4, minmax(44px, 1fr));
+    gap: 3px;
+    padding: 4px;
+  }
+  .soundAssignment .mixFrame canvas {
+    width: 40px;
+    height: 28px;
+  }
+  .soundAssignment .mhead {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 350px) {
+  .newNoteHead {
+    padding: 14px 14px 10px;
+  }
+  .newNoteBody {
+    padding: 12px 14px;
+  }
+  .newRatios {
+    gap: 5px;
+  }
+  .newRatio {
+    min-height: 68px;
+  }
+  .newNoteActions {
+    padding: 10px 14px;
+  }
+  #drawer:not([data-page="home"]) #menuHeading {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  #menuCrumb {
+    font-size: 10px;
+  }
+  .menuLocation {
+    flex: 1 1 0%;
+  }
+}
+

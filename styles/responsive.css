@@ -1,0 +1,9 @@
+@import "./responsive/preferences.css";
+@import "./responsive/compact.css";
+@import "./responsive/portrait.css";
+@import "./responsive/landscape.css";
+@import "./responsive/narrow.css";
+
+body[data-free="1"] #paperFit,
+body[data-focus="1"] #paperFit,
+body[data-recordsync="1"] #paperFit { inset: 0; }
