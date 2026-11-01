@@ -37,6 +37,7 @@ export function tr_line(value: string): string {
     .replace(/^(\d+)コマ目・音(\d+)を追加$/, 'Frame $1 · add sound $2')
     .replace(/^(\d+)コマ目・音(\d+)を鳴らす・タップで外す$/, 'Frame $1 · sound $2 on · tap to remove')
     .replace(/^(\d+)枚$/, '$1 frames')
+    .replace(/^(\d+)コマ分、動かしました$/, 'Moved across $1 frames')
     .replace(/^([\d.]+)\/秒$/, '$1/s')
     .replace(/^あと(\d+)コマ追加できます（合計 最大(\d+)コマ）$/, 'You can add $1 frames (maximum $2 in total)')
     .replace(/^(\d+)マス$/, '$1 cells')

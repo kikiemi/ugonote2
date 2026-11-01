@@ -13,6 +13,7 @@ import { file_save, modal_export } from './ui/export_ui'
 import { rec_kind, rec_toggle, recsync_toggle, recsync_stop } from './ui/recording'
 import { flipnote_maker_pick } from './ui/flipnote_maker'
 import { modal_aid_between, modal_aid_loop, modal_aid_smooth } from './ui/aid_panel'
+import { modal_aid_path } from './ui/path_panel'
 import { modal_animation_assist } from './ui/animation_assist'
 import { modal_addmany, modal_close, modal_confirm, modal_goto, modal_is_open } from './ui/modal'
 import { snd_assign_preset, snd_clear, snd_load_begin, snd_load_bytes, snd_vol_set } from './ui/sound_io'
@@ -88,6 +89,7 @@ export function panels_mount(): void {
   bind('aid_smooth_btn', modal_aid_smooth)
   bind('aid_between_btn', modal_aid_between)
   bind('aid_loop_btn', modal_aid_loop)
+  bind('aid_path_btn', modal_aid_path)
   bind('effect_btn', modal_effect)
   bind('trans_btn', modal_transition)
   bind('mode_btn', modal_mode)

@@ -30,7 +30,7 @@ const rate_max = 6
 type aid_pair_t = { ids: number[], layers: aid_layer_t[], moved: number[] }
 
 // 動画から読みこんだ絵など、点を読めない絵か。
-function pk_locked(pk: deep_ro_t<rle_t> | null): number {
+export function pk_locked(pk: deep_ro_t<rle_t> | null): number {
   return pk && pixel_source_is(pk as rle_t) ? 1 : 0
 }
 
@@ -43,7 +43,7 @@ function pk_same(a: deep_ro_t<rle_t> | null, b: deep_ro_t<rle_t> | null): number
 }
 
 // ノーマルモードだけで使える。
-function aid_allowed(): number {
+export function aid_allowed(): number {
   if (st().doc.mode === mode_normal) return 1
   toast('AI制作支援はノーマルモード専用です')
   return 0
@@ -105,7 +105,7 @@ function aid_sheet(icon: string, title: string, body: string, label: string, go:
 }
 
 // ひとつえらぶボタンの列。value は選んでいる値、pick は押したときに呼ぶ。
-function aid_seg(box: HTMLElement, attr: string, value: number, pick: (value: number) => void): void {
+export function aid_seg(box: HTMLElement, attr: string, value: number, pick: (value: number) => void): void {
   const buttons = box.querySelectorAll<HTMLElement>('[data-' + attr + ']')
   const show = (now: number): void => {
     for (const button of buttons) button.setAttribute('aria-pressed', String(button.getAttribute('data-' + attr) === String(now)))
@@ -285,7 +285,7 @@ async function smooth_work(rate: number): Promise<void> {
     toast('コマ上限をこえるため作れません')
     return
   }
-  if (dispatch('frame.smooth_apply', { frames: list, fps: g.doc.fps * rate }) < 0) {
+  if (dispatch('frame.note_apply', { frames: list, fps: g.doc.fps * rate }) < 0) {
     toast('コマを追加できませんでした')
     return
   }

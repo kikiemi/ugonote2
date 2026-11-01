@@ -109,7 +109,7 @@ export type cmds_t = {
   'frame.append_bulk': { frames: frame_t[], set_cur: number }
   'frame.replace_current_bulk': { frames: frame_t[] }
   'frame.insert_steps': { at: number, frames: frame_t[] }
-  'frame.smooth_apply': { frames: frame_t[], fps: number }
+  'frame.note_apply': { frames: frame_t[], fps: number }
   'frame.delete_range': { a: number, b: number }
   'frame.reverse_range': { a: number, b: number }
   'frame.duplicate_range': { a: number, b: number, ping_pong: number }
@@ -354,8 +354,8 @@ export const frame_commands = {
     return 0
   },
 
-  // コマ全体と再生の速さを置きかえる (動きをなめらかにする)。1回の「もどす」で全部もどる。
-  'frame.smooth_apply': (g: globals_t, p: { frames: frame_t[], fps: number }): number => {
+  // コマ全体と再生の速さを置きかえる。1回の「もどす」で全部もどる。
+  'frame.note_apply': (g: globals_t, p: { frames: frame_t[], fps: number }): number => {
     if (!Array.isArray(p.frames) || !p.frames.length || !mode_speeds(g.doc.mode).includes(p.fps)) return err_bad
     if (p.frames.length > frame_limit(g)) return err_full
     stop_if_playing(g)
@@ -723,7 +723,7 @@ export const frame_effects: Partial<Record<keyof cmds_t, number>> = {
   'frame.append_bulk': d_all,
   'frame.replace_current_bulk': d_all,
   'frame.insert_steps': d_all,
-  'frame.smooth_apply': d_all,
+  'frame.note_apply': d_all,
   'frame.delete_range': d_all,
   'frame.reverse_range': d_frame,
   'frame.duplicate_range': d_frame,
@@ -754,7 +754,7 @@ export const frame_effects: Partial<Record<keyof cmds_t, number>> = {
 
 export const frame_touch = new Set<keyof cmds_t>([
   'frame.add', 'frame.dup', 'frame.del', 'frame.paste', 'frame.move', 'frame.add_many',
-  'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.insert_steps', 'frame.smooth_apply', 'frame.delete_range',
+  'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.insert_steps', 'frame.note_apply', 'frame.delete_range',
   'frame.reverse_range', 'frame.duplicate_range', 'frame.commit_pixels', 'history.undo', 'history.redo',
   'layer.toggle_visible', 'layer.reorder_swap', 'layer.set_alpha', 'layer.clear', 'layer.clear_at', 'layer.copy_to', 'layer.merge_down', 'layer.add', 'layer.delete',
   'doc.set_name', 'doc.set_paper', 'doc.set_fps_idx', 'doc.toggle_loop', 'doc.set_loop_a', 'doc.set_loop_b',

@@ -39,6 +39,7 @@ export function sheet_open(s: sheet_t): HTMLElement {
   const box = modal_open(sheet_html(s), 1)
   box.classList.add('sheet')
   if (s.wide) box.classList.add('wide')
+  if (s.cls) box.classList.add(s.cls)
   sheet_bind(box, modal_close)
   sheet_settle(box)
   return box

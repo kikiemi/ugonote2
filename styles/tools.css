@@ -1888,3 +1888,131 @@ body[data-features-fit="2"] [data-toolbox-panel="features"] .action_glyph {
 body[data-features-fit="2"] [data-toolbox-panel="features"] .action_copy small {
   display: none;
 }
+
+/* みちすじの画面。指でなぞるので、絵をできるだけ大きくする (path_panel.ts)。 */
+.path_sheet .pop_head {
+  gap: 8px;
+  padding: 4px 8px 4px 12px;
+}
+
+.path_sheet .tool_heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.path_sheet #mp_go {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 2px 16px;
+}
+
+.path_sheet .sheet_preview {
+  gap: 4px;
+  padding: 8px 12px 4px;
+}
+
+.path_sheet .sheet_preview canvas {
+  flex: 0 0 auto;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 4px;
+  outline: 1px solid var(--line2);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.path_sheet .sheet_caption {
+  min-height: 1.35em;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.path_sheet .sheet_body {
+  padding: 8px 12px;
+}
+
+.path_sheet .opt {
+  padding: 0;
+}
+
+.path_sheet .opt > * + * {
+  margin-top: 6px;
+}
+
+.path_sheet .seg button {
+  min-height: 36px;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.path_sheet .sw {
+  min-height: 36px;
+  font-size: 14px;
+}
+
+.path_sheet .opt_row {
+  min-height: 36px;
+}
+
+.path_sheet .plab {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+}
+
+.path_sheet .opt_row > .seg {
+  flex: 1 1 0px;
+  min-width: 0;
+}
+
+.path_sheet .mbody {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.path_sheet #mp_layer {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  max-height: 84px;
+  overflow-y: auto;
+}
+
+.path_sheet #mp_layers {
+  margin-top: 8px;
+}
+
+.path_sheet .tool_page_tabs {
+  flex-wrap: nowrap;
+}
+
+.path_sheet .tool_page_tabs button {
+  flex: 1 0 0px;
+  flex-direction: row;
+  gap: 4px;
+  min-height: 38px;
+}
+
+/* 横向きで背が低いときは、絵と操作を左右にならべる。 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .mbox.sheet.path_sheet {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    max-width: 880px;
+  }
+
+  .path_sheet > .sheet_preview {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    justify-content: center;
+    border-right: 1px solid var(--line2);
+    border-bottom: 0;
+  }
+
+  .path_sheet > :not(.sheet_preview) {
+    grid-column: 2;
+  }
+}

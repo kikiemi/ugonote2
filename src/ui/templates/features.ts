@@ -22,6 +22,7 @@ export function convenience_html(): string {
       ${menu_action('aid_smooth_btn', 'spark', '動きをなめらかにする', '全部のコマのあいだをAIでうめる')}
       ${menu_action('aid_between_btn', 'film', '中割りをつくる', 'いまのコマと次のコマのあいだを作る')}
       ${menu_action('aid_loop_btn', 'loop', 'ループをつなぐ', 'さいごと最初のコマをつなぐ')}
+      ${menu_action('aid_path_btn', 'route', 'みちすじで動かす', 'なぞった道にそって絵を動かす')}
     </div>
   </section>`
 }

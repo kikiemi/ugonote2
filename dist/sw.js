@@ -1,5 +1,5 @@
 const cache_prefix = 'ugonote2-'
-const cache_name = cache_prefix + 'ui101'
+const cache_name = cache_prefix + 'ui102'
 const core_assets = [
   './',
   './index.html',

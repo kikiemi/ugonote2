@@ -1,9 +1,9 @@
 import { close_html, ic } from '../../dom'
 
 export type sheet_page_t = { id: string, icon: string, label: string, body: string }
-export type sheet_t = { icon: string, title: string, preview?: string, pages: sheet_page_t[], actions?: string, wide?: number }
+export type sheet_t = { icon: string, title: string, head?: string, preview?: string, pages: sheet_page_t[], actions?: string, wide?: number, cls?: string }
 
-// 道具の設定と同じ形のパネル。見出しと「とじる」、見本、ページ、操作ボタン、ページを切りかえる下のタブ。
+// 道具の設定と同じ形のパネル。見出しと「とじる」、見本、ページ、操作ボタン、ページを切りかえる下のタブ。head は見出しの行に置くボタン。
 export function sheet_html(s: sheet_t): string {
   const pages = s.pages.map((p, i) => `<section class="sheet_page" data-sheet-page="${p.id}"${i ? ' hidden' : ''}>${p.body}</section>`).join('')
   const tabs = s.pages.length > 1
@@ -11,6 +11,7 @@ export function sheet_html(s: sheet_t): string {
     : ''
   return `<div class="pop_head">
       <div class="tool_heading"><b>${ic(s.icon)}<span>${s.title}</span></b></div>
+      ${s.head || ''}
       ${close_html('とじる', ' data-sheet-close')}
     </div>
     ${s.preview ? `<div class="sheet_preview">${s.preview}</div>` : ''}
