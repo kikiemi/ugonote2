@@ -67,7 +67,7 @@ function r_tools(): void {
   q('custom_color_options').hidden = m !== mode_normal
   q('pal_tabs').hidden = m !== mode_normal
   // ノーマルモードだけの機能は、うごメモ系モードでは出さない。
-  for (const id of ['mark_btn', 'effect_btn', 'trans_btn', 'shape_marks']) q(id).hidden = m !== mode_normal
+  for (const id of ['mark_btn', 'effect_btn', 'trans_btn', 'shape_marks', 'aid_tools']) q(id).hidden = m !== mode_normal
   const lock = m !== mode_normal
   q('canvas_size_row').hidden = lock
   const popts = mode_paper_opts(m)

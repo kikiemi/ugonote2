@@ -1,8 +1,8 @@
 import { animfx_cache_clear } from '../../animfx'
 import { doc_frame_order, doc_cache_clear, doc_frame_clone, doc_frame_new, doc_frame_snap, doc_frame_insert, doc_frame_delete, doc_frame_move, doc_goto, doc_pack_live, doc_pack_layer, doc_unpack_live, doc_loop_insert, doc_loop_delete, doc_loop_move } from '../../doc'
 import { live_write, live_drop, live_accept, live_canvas } from '../../engine'
-import { d_all, d_stage, d_thumb, d_timeline, d_frameinfo, d_layer, d_tools, d_play, d_sound, d_page, l_draw_default, l_draw_max, l_n, hold_max, err_bad, err_noop, err_full, mode_normal, mode_3_d, type frame_t, type note_meta_t, type rle_t } from '../../h'
-import { hist_grp, hist_frame_ins, hist_frame_del, hist_frame_move, hist_se, hist_pix, rect_grab, hist_undo, hist_redo, hist_clear, hist_layer_alpha, hist_frame_cursor, hist_paper } from '../../hist'
+import { d_all, d_stage, d_thumb, d_timeline, d_frameinfo, d_layer, d_tools, d_play, d_sound, d_page, l_draw_max, l_n, hold_max, err_bad, err_noop, err_full, mode_normal, mode_3_d, type frame_t, type note_meta_t, type rle_t } from '../../h'
+import { hist_grp, hist_frame_ins, hist_frame_del, hist_frame_move, hist_se, hist_pix, rect_grab, hist_undo, hist_redo, hist_clear, hist_layer_alpha, hist_frame_cursor, hist_note, hist_paper } from '../../hist'
 import { canvas_make, clamp, hex_rgb } from '../../lib'
 import { kwz_flag_advanced, mode_allows_layer_alpha, mode_frame_limit, mode_one_sheet, mode_speeds, mode_order, mode_paper_opts, sheet_layer } from '../../mode'
 import { thumb_clear } from '../../thumb'
@@ -108,6 +108,8 @@ export type cmds_t = {
   'frame.insert_bulk': { at: number, frames: frame_t[], set_cur: number }
   'frame.append_bulk': { frames: frame_t[], set_cur: number }
   'frame.replace_current_bulk': { frames: frame_t[] }
+  'frame.insert_steps': { at: number, frames: frame_t[] }
+  'frame.smooth_apply': { frames: frame_t[], fps: number }
   'frame.delete_range': { a: number, b: number }
   'frame.reverse_range': { a: number, b: number }
   'frame.duplicate_range': { a: number, b: number, ping_pong: number }
@@ -328,6 +330,44 @@ export const frame_commands = {
     return 0
   },
 
+  // 作ったコマをまとめて入れる。1回の「もどす」で全部消える。
+  'frame.insert_steps': (g: globals_t, p: { at: number, frames: frame_t[] }): number => {
+    if (!Number.isFinite(p.at) || !Array.isArray(p.frames)) return err_bad
+    if (!p.frames.length) return err_noop
+    if (frame_room(g) < p.frames.length) return err_full
+    stop_if_playing(g)
+    doc_pack_live(g)
+    const before_id = g.doc.frames[g.doc.cur].id
+    const grp = hist_grp()
+    const first = clamp(Math.round(p.at), 0, g.doc.frames.length)
+    for (let k = 0; k < p.frames.length; k++) {
+      const at = first + k
+      g.doc.frames.splice(at, 0, p.frames[k])
+      doc_loop_insert(g, at)
+      g.doc.cur = at
+      hist_frame_ins(g, grp, at)
+    }
+    hist_frame_cursor(g, grp, before_id, g.doc.frames[g.doc.cur].id)
+    thumb_clear()
+    animfx_cache_clear()
+    doc_unpack_live(g)
+    return 0
+  },
+
+  // コマ全体と再生の速さを置きかえる (動きをなめらかにする)。1回の「もどす」で全部もどる。
+  'frame.smooth_apply': (g: globals_t, p: { frames: frame_t[], fps: number }): number => {
+    if (!Array.isArray(p.frames) || !p.frames.length || !mode_speeds(g.doc.mode).includes(p.fps)) return err_bad
+    if (p.frames.length > frame_limit(g)) return err_full
+    stop_if_playing(g)
+    doc_pack_live(g)
+    hist_note(g, p.frames, p.fps)
+    thumb_clear()
+    doc_cache_clear()
+    animfx_cache_clear()
+    doc_unpack_live(g)
+    return 0
+  },
+
   'frame.delete_range': (g: globals_t, p: { a: number, b: number }): number => {
     if (!Number.isFinite(p.a) || !Number.isFinite(p.b)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
@@ -531,7 +571,7 @@ export const frame_commands = {
     }
     stop_if_playing(g)
     let layer = 0
-    for (let candidate = l_draw_default + 1; candidate <= l_draw_max; candidate++) {
+    for (let candidate = 1; candidate <= l_draw_max; candidate++) {
       if (g.doc.lord.indexOf(candidate) < 0) {
         layer = candidate
         break
@@ -555,9 +595,10 @@ export const frame_commands = {
   },
 
   'layer.delete': (g: globals_t, layer: number): number => {
-    if (g.doc.mode !== mode_normal || !Number.isInteger(layer) || layer <= l_draw_default || layer > l_draw_max) return err_bad
+    if (g.doc.mode !== mode_normal || !Number.isInteger(layer) || layer < 1 || layer > l_draw_max) return err_bad
     const index = g.doc.lord.indexOf(layer)
-    if (index < 0) return err_bad
+    // さいごの1枚は消さない。
+    if (index < 0 || g.doc.lord.length < 2) return err_bad
     stop_if_playing(g)
     for (const frame of g.doc.frames) frame.pk[layer] = null
     live_drop(layer)
@@ -681,6 +722,8 @@ export const frame_effects: Partial<Record<keyof cmds_t, number>> = {
   'frame.insert_bulk': d_all,
   'frame.append_bulk': d_all,
   'frame.replace_current_bulk': d_all,
+  'frame.insert_steps': d_all,
+  'frame.smooth_apply': d_all,
   'frame.delete_range': d_all,
   'frame.reverse_range': d_frame,
   'frame.duplicate_range': d_frame,
@@ -711,7 +754,7 @@ export const frame_effects: Partial<Record<keyof cmds_t, number>> = {
 
 export const frame_touch = new Set<keyof cmds_t>([
   'frame.add', 'frame.dup', 'frame.del', 'frame.paste', 'frame.move', 'frame.add_many',
-  'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.delete_range',
+  'frame.se_toggle', 'frame.set_hold_range', 'frame.insert_bulk', 'frame.append_bulk', 'frame.replace_current_bulk', 'frame.insert_steps', 'frame.smooth_apply', 'frame.delete_range',
   'frame.reverse_range', 'frame.duplicate_range', 'frame.commit_pixels', 'history.undo', 'history.redo',
   'layer.toggle_visible', 'layer.reorder_swap', 'layer.set_alpha', 'layer.clear', 'layer.clear_at', 'layer.copy_to', 'layer.merge_down', 'layer.add', 'layer.delete',
   'doc.set_name', 'doc.set_paper', 'doc.set_fps_idx', 'doc.toggle_loop', 'doc.set_loop_a', 'doc.set_loop_b',

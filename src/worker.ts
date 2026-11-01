@@ -12,6 +12,7 @@ import { ppm_build, type ppm_frame_t } from './codec/ppm'
 import { flip_image_convert, type flip_image_input_t, type flip_image_result_t } from './flipnote/image'
 import { fmt_build_blob, type proj_snap_t } from './fmt'
 import { smooth_pack, smooth_pack_ai, type smooth_job_t } from './flipnote/smooth'
+import { aid_run, type aid_input_t } from './aid/job'
 import { ai_open, type ai_net_t } from './flipnote/ai_lines'
 
 type kwz_msg_t = {
@@ -51,7 +52,9 @@ type export_frames_msg_t = { kind: 'export-frames', id: number, input: frame_exp
 type smooth_msg_t = { kind: 'smooth', id: number, job: smooth_job_t }
 // AI の線の重み。最初に1回だけ受けとって、WebGPU の準備をしておく。
 type smooth_ai_msg_t = { kind: 'smooth-ai', id: number, weights: ArrayBuffer }
-type in_msg_t = smooth_msg_t | smooth_ai_msg_t | export_frames_msg_t | encode_video_msg_t | resize_msg_t | video_msg_t | kwz_msg_t | ppm_msg_t | ugn2_msg_t | flip_image_msg_t | thumbnail_msg_t
+// AI制作支援の仕事。
+type aid_msg_t = { kind: 'aid', id: number, input: aid_input_t }
+type in_msg_t = smooth_msg_t | smooth_ai_msg_t | aid_msg_t | export_frames_msg_t | encode_video_msg_t | resize_msg_t | video_msg_t | kwz_msg_t | ppm_msg_t | ugn2_msg_t | flip_image_msg_t | thumbnail_msg_t
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -88,6 +91,13 @@ self.onmessage = async (event: MessageEvent<in_msg_t>) => {
       return
     }
     pixel_source_bind((message as in_msg_t & { sources?: pixel_source_record_t[] }).sources || [])
+    if (message.kind === 'aid') {
+      const aid = await aid_run(message.input, progress => worker_post({ id: message.id, ok: 1, progress }))
+      const transfers = new Set<ArrayBuffer>()
+      for (const packed of aid.packs) if (packed) transfers.add(packed.buffer as ArrayBuffer)
+      worker_post({ id: message.id, ok: 1, aid }, [...transfers])
+      return
+    }
     if (message.kind === 'export-frames') {
       const blob = await frame_export(message.input, progress => worker_post({ id: message.id, ok: 1, progress }))
       worker_post({ id: message.id, ok: 1, blob })

@@ -695,16 +695,9 @@ body[data-pop="pop_layer"] #layer_stack {
   z-index: 28;
 }
 
-#layer_stack[data-scroll="y"] #live_layer_tabs,
-#layer_stack[data-scroll="y"] .live_layer {
-  pointer-events: auto;
-  touch-action: pan-y;
-}
-
-#layer_stack[data-scroll="x"] #live_layer_tabs,
-#layer_stack[data-scroll="x"] .live_layer {
-  pointer-events: auto;
-  touch-action: pan-x;
+/* 入りきらないレイヤーをまとめた「+n」。 */
+#layer_more {
+  font-size: 15px;
 }
 
 body[data-drawing-layout="full"] #hd,
@@ -851,8 +844,7 @@ body[data-free="1"] #stage_pan {
   box-sizing: border-box;
 }
 
-#dock .dkb,
-#layer_stack:not([data-scroll="x"]):not([data-scroll="y"]) .live_layer {
+#dock .dkb {
   touch-action: none;
 }
 

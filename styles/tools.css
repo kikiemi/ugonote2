@@ -1365,7 +1365,8 @@ body[data-wide-tools="1"] #pop_tool .tool_page_tabs button {
 
 /* 縦に入りきらないパネルは、余白とボタンを小さくした詰めた形にする (workspace_layout.ts の sheet_fit)。横には広げない。
    1: 見出し・タブ・区切りの余白をつめ、線の見本を省き、ペンや色の見本を小さくして1行にならぶ数をふやす。
-   2: それでも入らないとき (横向きのスマホなど)、ボタンと行をもう少し低くする。 */
+   2: それでも入らないとき (横向きのスマホなど)、ボタンと行をもう少し低くする。
+   3: スマホで右メニューやコマのバーの上に入りきらないとき。ペンの絵を省いて線の見本と名前だけにし、切りかえは2列にならべる。 */
 .sheet[data-tight~="1"] > .pop_head {
   padding-block: 2px;
 }
@@ -1456,6 +1457,183 @@ body[data-wide-tools="1"] #pop_tool .tool_page_tabs button {
 #pop_layer[data-tight~="2"] :is(.lpick, .lbtn) {
   min-height: 36px;
   height: 36px;
+}
+
+.sheet[data-tight~="3"] > .tool_page_tabs {
+  flex-wrap: nowrap;
+}
+
+.sheet[data-tight~="3"] > .tool_page_tabs button {
+  flex: 1 1 0px;
+}
+
+#pop_tool[data-tight~="3"] #tool_options {
+  padding: 2px 12px 4px;
+}
+
+#pop_tool[data-tight~="3"] #tool_options .pbk {
+  padding: 2px 0;
+  margin: 0;
+}
+
+#pop_tool[data-tight~="3"] .pen_handle {
+  display: none;
+}
+
+#pop_tool[data-tight~="3"] .patgrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px 2px;
+}
+
+#pop_tool[data-tight~="3"] .patb {
+  width: auto;
+  height: 50px;
+  gap: 2px;
+}
+
+#pop_tool[data-tight~="3"] #blk_brush > .plab {
+  display: none;
+}
+
+#pop_tool[data-tight~="3"] .brushb {
+  min-height: 48px;
+}
+
+#pop_tool[data-tight~="3"] .brushb canvas {
+  height: 20px;
+}
+
+#pop_tool[data-tight~="3"] #blk_sym {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#pop_tool[data-tight~="3"] .szrow {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 2px;
+  margin: 4px 0;
+}
+
+#pop_tool[data-tight~="3"] .szb {
+  min-width: 0;
+  height: 44px;
+  gap: 1px;
+}
+
+#pop_tool[data-tight~="3"] .size_ink {
+  width: 28px;
+  height: 28px;
+}
+
+#pop_tool[data-tight~="3"] .prow {
+  margin: 2px 0;
+}
+
+#pop_tool[data-tight~="3"] .sw {
+  min-height: 36px;
+}
+
+#pop_tool[data-tight~="3"] .opt_row {
+  height: 34px;
+  min-height: 0;
+  margin-top: 2px;
+}
+
+#pop_color[data-tight~="3"] .opt {
+  padding: 2px 0;
+}
+
+#pop_color[data-tight~="3"] .palgrid {
+  grid-template-columns: repeat(auto-fill, 28px);
+  gap: 4px;
+}
+
+#pop_color[data-tight~="3"] .palc {
+  width: 28px;
+  height: 28px;
+}
+
+#pop_color[data-tight~="3"] .link_row {
+  min-height: 34px;
+}
+
+#pop_color[data-tight~="3"] .seg button {
+  min-height: 30px;
+}
+
+#pop_color[data-tight~="3"] .opt_row {
+  min-height: 0;
+  margin-top: 4px;
+}
+
+#pop_layer .lrow.folded {
+  display: none;
+}
+
+/* 入りきらないレイヤーをまとめた「上に n 枚」「下に n 枚」。 */
+.layer_fold {
+  width: 100%;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 2px 0;
+  border: 1px dashed var(--line2);
+  border-radius: 8px;
+  color: var(--acc_d);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.layer_fold:disabled {
+  opacity: 0.4;
+}
+
+.layer_fold .ic {
+  width: 14px;
+  height: 14px;
+}
+
+#pop_layer[data-tight~="3"] .opt {
+  padding: 2px 0;
+}
+
+#pop_layer[data-tight~="3"] .opt_head {
+  display: none;
+}
+
+#pop_layer[data-tight~="3"] #layer_rows {
+  gap: 2px;
+}
+
+#pop_layer[data-tight~="3"] .lrow {
+  min-height: 0;
+  padding: 1px 6px;
+}
+
+#pop_layer[data-tight~="3"] :is(.lpick, .lbtn) {
+  min-height: 30px;
+  height: 30px;
+}
+
+#pop_layer[data-tight~="3"] .lal {
+  height: 26px;
+  margin-block: 0;
+}
+
+#pop_layer[data-tight~="3"] .act {
+  min-height: 36px;
+  flex-direction: row;
+  padding: 2px 4px;
+}
+
+#pop_layer[data-tight~="3"] .act > .ic {
+  width: 18px;
+  height: 18px;
 }
 
 /* レイヤーのパネルはタブが2つだけなので、いちばん詰めるときは見出しの行のあいだにタブをならべる。 */
@@ -1636,4 +1814,77 @@ body[data-wide-tools="1"] #drawing_bay #rail {
   .rtools {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* 便利機能の一覧。行は「アイコン・名前・ひとこと」。広い画面では2列にならべる。
+   入りきらないときは2列にし (1)、それでも入らなければひとことを省く (2)。workspace_layout.ts の features_fit。 */
+[data-toolbox-panel="features"] .opt {
+  padding: 4px 0;
+}
+
+[data-toolbox-panel="features"] .opt_head {
+  margin: 0 0 4px;
+}
+
+[data-toolbox-panel="features"] .menu_actions {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  gap: 4px;
+}
+
+[data-toolbox-panel="features"] .menu_action {
+  min-height: 44px;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+[data-toolbox-panel="features"] .menu_action.on {
+  border-color: var(--acc);
+  background: var(--acc_soft);
+}
+
+[data-toolbox-panel="features"] .action_glyph {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+[data-toolbox-panel="features"] .action_glyph .ic {
+  width: 22px;
+  height: 22px;
+}
+
+[data-toolbox-panel="features"] .action_copy b {
+  font-size: 14px;
+}
+
+[data-toolbox-panel="features"] .action_copy small {
+  margin-top: 1px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+body:not([data-features-fit=""]) [data-toolbox-panel="features"] .opt {
+  padding: 4px 0;
+}
+
+body[data-features-fit="1"] [data-toolbox-panel="features"] .menu_actions,
+body[data-features-fit="2"] [data-toolbox-panel="features"] .menu_actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body[data-features-fit="1"] [data-toolbox-panel="features"] .menu_action,
+body[data-features-fit="2"] [data-toolbox-panel="features"] .menu_action {
+  gap: 6px;
+  padding: 3px 6px;
+}
+
+body[data-features-fit="1"] [data-toolbox-panel="features"] .action_glyph,
+body[data-features-fit="2"] [data-toolbox-panel="features"] .action_glyph {
+  width: 28px;
+  height: 28px;
+}
+
+body[data-features-fit="2"] [data-toolbox-panel="features"] .action_copy small {
+  display: none;
 }

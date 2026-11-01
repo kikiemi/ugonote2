@@ -57,6 +57,7 @@ export function dock_events(): void {
     else toolbox_open()
   })
   q('toolbox_close').addEventListener('click', () => rail_sheet(0))
+  q('layer_more').addEventListener('click', () => pop_toggle('pop_layer', q('layer_btn')))
   q('live_layer_tabs').addEventListener('click', e => {
     const button = (e.target as HTMLElement).closest<HTMLElement>('[data-live-layer]')
     if (!button) return

@@ -137,6 +137,7 @@ export const op_se = 4
 export const op_layer_alpha = 5
 export const op_frame_cursor = 6
 export const op_paper = 7
+export const op_note = 8
 
 export const pal_std = 0
 export const pal_ppm = 1
@@ -422,6 +423,8 @@ export type snd_st_t = {
 }
 
 export type hist_ent_t = {
+  // op_note: もどす先のコマ全体と再生の速さと A-B 区間。
+  note?: { frames: frame_t[], fps: number, loop_a: number, loop_b: number }
   paper?: { before: string, after: string, frames: (string | undefined)[] }
   op: number
   grp: number

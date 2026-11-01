@@ -3,6 +3,7 @@ import { clamp } from '../lib'
 import { pref_layout } from '../prefs'
 import { d_sel, d_timeline } from '../h'
 import { dirty, st } from '../state/store'
+import { layer_rows_limit } from './layer_panel'
 import { overlay_state } from './overlay_state'
 import { workspace_media, workspace_layout_choice, type workspace_profile_t } from './workspace_policy'
 
@@ -70,6 +71,9 @@ function sheet_page_views(panel: HTMLElement, body: HTMLElement): (() => void)[]
   return [...pages.map(show), show(shown)]
 }
 
+// レイヤーのパネルに、少なくとも出す行の数。
+const layer_rows_least = 2
+
 // 高さを決める条件 (道具・モード・画面の大きさ・出ているページなど)。変わらないあいだは測りなおさない
 // (色やふとさを選ぶたびにページを裏で切りかえて測ると、スライダーを動かしている最中にも走ってしまう)。
 const sheet_heights = new Map<string, { key: string, height: number }>()
@@ -78,7 +82,7 @@ function sheet_key(panel: HTMLElement): string {
   const g = st()
   const p = g.pen
   const tabs = [...panel.querySelectorAll<HTMLElement>('[data-tool-page], [data-sheet-tab]')].filter(tab => !tab.hidden).map(tab => tab.dataset.toolPage || tab.dataset.sheetTab).join(',')
-  return [p.tool, g.doc.mode, panel.style.width, innerWidth, innerHeight, tabs, p.native_tip >= 8, p.native_eraser >= 8, p.custom.length, p.pal_mode, g.doc.lord.length, panel.dataset.sample, panel.dataset.tight].join('|')
+  return [p.tool, g.doc.mode, panel.style.width, innerWidth, innerHeight, tabs, p.native_tip >= 8, p.native_eraser >= 8, p.custom.length, p.pal_mode, g.doc.lord.length, panel.dataset.sample, panel.dataset.tight, panel.dataset.rows].join('|')
 }
 
 // いちばん高いページを出したときのパネルの高さ。
@@ -91,12 +95,22 @@ function sheet_natural(panel: HTMLElement): number {
   return height
 }
 
-// 縦に入りきらないときは、余白とボタンを小さくした詰めた形にする (1、それでも入らなければ 1 2)。横には広げない。
+// 縦に入りきらないときは、余白とボタンを小さくした詰めた形にする (1、それでも入らなければ 1 2、さらに 1 2 3)。横には広げない。
+// レイヤーのパネルは、それでも入らなければ、レイヤーの行を減らして、のこりを「ほか n 枚」にまとめる。
 function sheet_fit(panel: HTMLElement, space: number): number {
   let natural = sheet_natural(panel)
-  for (const level of ['1', '1 2']) {
+  for (const level of ['1', '1 2', '1 2 3']) {
     if (natural <= space) break
     panel.dataset.tight = level
+    natural = sheet_natural(panel)
+  }
+  if (panel.id !== 'pop_layer' || natural <= space) return natural
+  const rows = panel.querySelectorAll<HTMLElement>('.lrow')
+  let limit = rows.length - 1
+  while (limit > layer_rows_least && natural > space) {
+    limit = Math.max(layer_rows_least, limit - Math.max(1, Math.ceil((natural - space) / rows[0].offsetHeight)))
+    panel.dataset.rows = String(limit)
+    layer_rows_limit(limit)
     natural = sheet_natural(panel)
   }
   return natural
@@ -120,6 +134,12 @@ function sheet_measure(panel: HTMLElement): number {
   return height
 }
 
+// 画面の下に右メニューの列があるとき (スマホの縦向き)、row より下でパネルが使えるいちばん下の位置。列がなければ bottom。
+function dock_floor(row: DOMRect, bottom: number): number {
+  const dock = q('mobile_tools').getBoundingClientRect()
+  return dock.width > dock.height && dock.top > row.bottom ? dock.top - 8 : bottom
+}
+
 function anchored_panel_layout(panel: HTMLElement, anchor: HTMLElement, beside: number): void {
   const rect = anchor.getBoundingClientRect()
   const safe = getComputedStyle(q('app'))
@@ -140,6 +160,10 @@ function anchored_panel_layout(panel: HTMLElement, anchor: HTMLElement, beside: 
   panel.dataset.cover = ''
   panel.dataset.side = ''
   panel.dataset.tight = ''
+  if (panel.id === 'pop_layer') {
+    panel.dataset.rows = ''
+    layer_rows_limit(0)
+  }
   panel.style.maxHeight = bottom - top + 'px'
   panel.style.overflowY = fixed ? 'hidden' : 'auto'
   panel.style.transform = 'none'
@@ -171,8 +195,10 @@ function anchored_panel_layout(panel: HTMLElement, anchor: HTMLElement, beside: 
     return
   }
   const row = group.width > group.height ? group : rect
+  // 上のボタンから開く画面も、下の右メニューやコマのバーにかぶせない。
+  const floor = fixed ? dock_floor(row, bottom) : bottom
   const above = Math.max(0, row.top - top - 8)
-  const below = Math.max(0, bottom - row.bottom - 8)
+  const below = Math.max(0, floor - row.bottom - 8)
   const wanted = fixed ? Math.min(Math.max(above, below), sheet_fit(panel, Math.max(above, below))) : panel.offsetHeight
   const use_above = above >= wanted || above >= below
   const space = use_above ? above : below
@@ -189,9 +215,10 @@ function anchored_panel_layout(panel: HTMLElement, anchor: HTMLElement, beside: 
   }
   if (fixed) {
     // ボタンの下に出すときも、入りきらなければ上の端まで使い (ボタンの列にかぶせる)、中をスクロールしなくてすむようにする。
+    // 右メニューの上までで足りないときだけ、画面の下まで使う。
     const natural = sheet_natural(panel)
     const cover = natural > space
-    const room = cover ? bottom - top : space
+    const room = !cover ? space : natural > floor - top ? bottom - top : floor - top
     panel.dataset.cover = cover ? '1' : ''
     panel.style.height = Math.min(natural, room) + 'px'
     panel.style.maxHeight = room + 'px'
@@ -270,7 +297,17 @@ function toolbox_fit(open: boolean): void {
     if (!tall()) break
     body.dataset.toolboxFit = level
   }
+  features_fit(box, pages)
   pages.forEach((page, i) => { page.hidden = shown[i] })
+}
+
+// 便利機能の一覧は1列で「名前とひとこと」を見せ、入らなければ2列にし (1)、それでも入らなければひとことを省く (2)。
+function features_fit(box: HTMLElement, pages: HTMLElement[]): void {
+  for (const page of pages) page.hidden = page.dataset.toolboxPanel !== 'features'
+  for (const level of ['', '1', '2']) {
+    document.body.dataset.featuresFit = level
+    if (box.scrollHeight <= box.clientHeight + 1) return
+  }
 }
 
 // 横向きでならべたレイヤーの箱が左の列のボタンに重なるときは、そのボタンを隠す (箱のふちから半端にのぞかないように)。
@@ -301,19 +338,31 @@ function layer_stack_layout(): void {
     }
     stack.style.setProperty('--layer_limit', Math.max(0, bottom - area.top) + 'px')
   }
-  const overflow = horizontal ? tabs.scrollWidth > tabs.clientWidth + 1 : tabs.scrollHeight > tabs.clientHeight + 1
-  stack.dataset.scroll = overflow ? horizontal ? 'x' : 'y' : ''
-  const selected = tabs.querySelector<HTMLElement>('[aria-pressed="true"]')
-  if (!overflow || !selected) return
-  const visible = tabs.getBoundingClientRect()
-  const active = selected.getBoundingClientRect()
-  if (horizontal) {
-    if (active.left < visible.left) tabs.scrollLeft += active.left - visible.left
-    else if (active.right > visible.right) tabs.scrollLeft += active.right - visible.right
-  } else {
-    if (active.top < visible.top) tabs.scrollTop += active.top - visible.top
-    else if (active.bottom > visible.bottom) tabs.scrollTop += active.bottom - visible.bottom
+  layer_tabs_fit(tabs, horizontal)
+}
+
+// レイヤーのタブが入りきらないときは、選んでいるタブのまわりだけ出し、のこりは「+n」のボタンにまとめる
+// (スクロールしなくてよいように。+n を押すとレイヤーのパネルが開く)。
+function layer_tabs_fit(tabs: HTMLElement, horizontal: boolean): void {
+  const more = q('layer_more')
+  const list = tabs.querySelectorAll<HTMLElement>('[data-live-layer]')
+  more.hidden = true
+  let selected = 0
+  for (let i = 0; i < list.length; i++) {
+    list[i].hidden = false
+    if (list[i].getAttribute('aria-pressed') === 'true') selected = i
   }
+  if (!list.length) return
+  const over = horizontal ? tabs.scrollWidth > tabs.clientWidth + 1 : tabs.scrollHeight > tabs.clientHeight + 1
+  if (!over) return
+  more.hidden = false
+  const room = horizontal ? tabs.clientWidth : tabs.clientHeight
+  const size = horizontal ? parseFloat(getComputedStyle(list[0]).minWidth) : list[selected].offsetHeight
+  const gap = parseFloat(getComputedStyle(tabs).gap) || 0
+  const shown = clamp(Math.floor((room + gap) / (size + gap)), 1, list.length)
+  const first = clamp(selected - (shown >> 1), 0, list.length - shown)
+  for (let i = 0; i < list.length; i++) list[i].hidden = i < first || i >= first + shown
+  more.textContent = '+' + (list.length - shown)
 }
 
 export function workspace_context_layout(m: HTMLElement, anchor: HTMLElement): void {

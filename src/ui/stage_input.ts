@@ -221,8 +221,6 @@ function control_on_board(e: PointerEvent): boolean {
   if (document.body.dataset.drawingLayout === 'full') return false
   const commands = (e.target as HTMLElement).closest<HTMLElement>('#frame_operations')
   if (e.pointerType === 'touch' && commands && commands.scrollWidth > commands.clientWidth + 1) return false
-  const stack = (e.target as HTMLElement).closest<HTMLElement>('#layer_stack')
-  if (e.pointerType === 'touch' && stack?.dataset.scroll) return false
   if (!(e.target as HTMLElement).closest('#quick, #layer_stack, #live_layer_tabs, #dock, #hd, #tl_bar, #frame_panel')) return false
   const r = q('stage_wrap').getBoundingClientRect()
   if (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom) return false

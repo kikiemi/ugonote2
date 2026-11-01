@@ -1,7 +1,7 @@
 import { report_warning } from './diagnostics'
 import { lang_set, lang_saved } from './lang'
 import { esc, q, toast } from './dom'
-import { d_all, d_sound, l_draw_default, l_p, mode_normal, reso_size } from './h'
+import { d_all, d_sound, l_p, mode_normal, reso_size } from './h'
 import { file_pick } from './lib'
 import { layer_name, mode_allows_layer_alpha } from './mode'
 import { pref_theme_toggle, pref_uisfx_toggle, pref_hide_controls_toggle } from './prefs'
@@ -12,6 +12,7 @@ import { region_add } from './sync'
 import { file_save, modal_export } from './ui/export_ui'
 import { rec_kind, rec_toggle, recsync_toggle, recsync_stop } from './ui/recording'
 import { flipnote_maker_pick } from './ui/flipnote_maker'
+import { modal_aid_between, modal_aid_loop, modal_aid_smooth } from './ui/aid_panel'
 import { modal_animation_assist } from './ui/animation_assist'
 import { modal_addmany, modal_close, modal_confirm, modal_goto, modal_is_open } from './ui/modal'
 import { snd_assign_preset, snd_clear, snd_load_begin, snd_load_bytes, snd_vol_set } from './ui/sound_io'
@@ -84,6 +85,9 @@ export function panels_mount(): void {
   bind('mixer_btn', () => modal_mixer())
   bind('flip_image_btn', flipnote_maker_pick)
   bind('motion_assist_btn', modal_animation_assist)
+  bind('aid_smooth_btn', modal_aid_smooth)
+  bind('aid_between_btn', modal_aid_between)
+  bind('aid_loop_btn', modal_aid_loop)
   bind('effect_btn', modal_effect)
   bind('trans_btn', modal_transition)
   bind('mode_btn', modal_mode)
@@ -98,7 +102,7 @@ export function panels_mount(): void {
   bind('ladd_btn', () => dispatch('layer.add', null))
   bind('ldel_btn', () => {
     const layer = st().pen.layer
-    if (st().doc.mode !== mode_normal || layer <= l_draw_default) return
+    if (st().doc.mode !== mode_normal || st().doc.lord.length < 2) return
     modal_confirm('レイヤーを削除', 'レイヤー' + esc(layer_name(layer)) + 'を全コマから削除する？', '削除', () => dispatch('layer.delete', layer))
   })
   bind('add_many_btn', modal_addmany)

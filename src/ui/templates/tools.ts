@@ -176,7 +176,9 @@ export function layer_pop(): string {
           <div class="seg"><button id="penbox_normal" aria-pressed="false">普通・1枚の紙</button><button id="penbox_advanced" aria-pressed="false">上級・3枚</button></div>
         </section>
         <section class="opt">
+          <button class="layer_fold" id="layer_fold_up" hidden>${ic('up')}<span></span></button>
           <div id="layer_rows"></div>
+          <button class="layer_fold" id="layer_fold_down" hidden>${ic('down')}<span></span></button>
           <div class="acts" id="layer_edit">${action_tile('ladd_btn', 'plus', 'レイヤー追加')}${action_tile('ldel_btn', 'trash', 'レイヤー削除')}</div>
         </section>
         <section class="opt">

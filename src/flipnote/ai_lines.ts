@@ -86,14 +86,14 @@ fn shuffle(@builtin(global_invocation_id) id: vec3<u32>) {
 `
 
 // WebGPU のバッファの使い方 (GPUBufferUsage と GPUMapMode の値)。
-const map_read = 0x1
-const copy_src = 0x4
-const copy_dst = 0x8
-const use_uniform = 0x40
-const use_storage = 0x80
+export const map_read = 0x1
+export const copy_src = 0x4
+export const copy_dst = 0x8
+export const use_uniform = 0x40
+export const use_storage = 0x80
 
 // 16 ビットの浮動小数 (重みのファイルの形) を数にする。
-function half(bits: number): number {
+export function half_float(bits: number): number {
   const sign = bits & 0x8000 ? -1 : 1
   const exp = (bits >> 10) & 31
   const frac = bits & 1023
@@ -106,7 +106,7 @@ function half(bits: number): number {
 export async function ai_open(blob: ArrayBuffer): Promise<ai_net_t> {
   const bits = new Uint16Array(blob)
   const data = new Float32Array(bits.length)
-  for (let i = 0; i < bits.length; i++) data[i] = half(bits[i])
+  for (let i = 0; i < bits.length; i++) data[i] = half_float(bits[i])
   const at: at_t = []
   let p = 0
   for (let k = 0; k < layer_count; k++) {

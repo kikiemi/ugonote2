@@ -118,7 +118,7 @@ export function editor_html(): string {
       ${selection_html()}
       ${transform_html()}
     </div>
-    <aside id="layer_stack" aria-label="描くレイヤー"><span class="layer_caption">レイヤー</span><div id="live_layer_tabs" role="group" aria-label="描くレイヤー"></div><button id="layer_btn" class="live_layer" title="レイヤーの設定・追加" aria-label="レイヤーの設定・追加" aria-haspopup="dialog" aria-controls="pop_layer" aria-expanded="false">${ic('layers')}<small>レイヤー</small><b id="layer_tag" hidden></b></button><button id="paste_btn" class="live_layer" title="コピーした絵をはりつけ (Ctrl+V)" aria-label="はりつけ" hidden><canvas class="clip_thumb" width="36" height="22" aria-hidden="true"></canvas><small>はりつけ</small></button></aside>
+    <aside id="layer_stack" aria-label="描くレイヤー"><span class="layer_caption">レイヤー</span><div id="live_layer_tabs" role="group" aria-label="描くレイヤー"></div><button id="layer_more" class="live_layer" title="ほかのレイヤー" aria-label="ほかのレイヤー" aria-haspopup="dialog" aria-controls="pop_layer" hidden></button><button id="layer_btn" class="live_layer" title="レイヤーの設定・追加" aria-label="レイヤーの設定・追加" aria-haspopup="dialog" aria-controls="pop_layer" aria-expanded="false">${ic('layers')}<small>レイヤー</small><b id="layer_tag" hidden></b></button><button id="paste_btn" class="live_layer" title="コピーした絵をはりつけ (Ctrl+V)" aria-label="はりつけ" hidden><canvas class="clip_thumb" width="36" height="22" aria-hidden="true"></canvas><small>はりつけ</small></button></aside>
   </div>
   <header id="hd" aria-label="取り消し・やり直し">
     <button class="hbtn" id="undo_btn" title="もどす・取り消し (Ctrl+Z)" aria-label="もどす・取り消し">${ic('prev')}<span class="hlab">${lang === 'en' ? 'Undo' : 'もどす'}</span></button>

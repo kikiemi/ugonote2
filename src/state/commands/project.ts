@@ -93,6 +93,15 @@ function mode_normalize(g: globals_t): void {
     g.pen.pat_mem = g.pen.pat_mem.map(p => p === pat_custom ? 0 : p)
   }
   const inks = mode_ink(mode)
+  // うごメモ系のモードは3枚のレイヤーで描くので、ノーマルモードで消したレイヤーをもどす。
+  if (mode !== mode_normal) {
+    for (let layer = 1; layer <= l_draw_default; layer++) {
+      if (g.doc.lord.indexOf(layer) >= 0) continue
+      g.doc.lord.push(layer)
+      g.doc.lvis[layer] = 1
+      g.doc.lalpha[layer] = 255
+    }
+  }
   const active_layers = mode_order(mode, g.doc.lord)
   if (active_layers.indexOf(g.pen.layer) < 0) g.pen.layer = active_layers[0] || 1
   if (!mode_allows_runtime_anim(mode)) {
@@ -223,7 +232,8 @@ function normalize_vis(src: ArrayLike<number> | null | undefined): Uint8Array {
   return out
 }
 
-function normalize_order(src: readonly number[] | null | undefined): number[] {
+// レイヤーの順をととのえる。ノーマルモードで消したレイヤーはもどさない (1枚もなければ、はじめの3枚にする)。
+function normalize_order(src: readonly number[] | null | undefined, mode: number): number[] {
   const out: number[] = []
   if (src) {
     for (const value of src) {
@@ -232,6 +242,7 @@ function normalize_order(src: readonly number[] | null | undefined): number[] {
       out.push(layer)
     }
   }
+  if (mode === mode_normal && out.length) return out
   for (let layer = 1; layer <= l_draw_default; layer++) if (out.indexOf(layer) < 0) out.push(layer)
   return out
 }
@@ -303,7 +314,7 @@ export const project_commands = {
     g.doc.paper = normalize_hex(d.paper, '#FFFFFF')
     g.doc.lvis = normalize_vis(d.lvis)
     g.doc.lalpha = normalize_u8(d.lalpha, l_n, 255)
-    g.doc.lord = normalize_order(d.lord)
+    g.doc.lord = normalize_order(d.lord, mode)
     g.doc.mode = mode
     g.doc.anim = animfx_normalize(d.anim)
     mode_normalize(g)

@@ -13,6 +13,7 @@ import { shape_memory } from './tool_defs'
 import { rail_shapes_render } from './rail_shapes'
 import { mark_wait_start } from './selection_toolbar'
 import { frame_move_commit, frame_move_reset, frame_move_start, frame_move_target, frame_move_turn } from './frame_move'
+import { layer_rows_move } from './layer_panel'
 import { pop_close, pop_is_open, pop_open, pop_toggle } from './overlay'
 import { sheet_bind } from './sheet'
 import { tool_pick } from './stage_input'
@@ -225,6 +226,8 @@ export function tf_pop_events(): void {
 
 export function layer_pop_events(): void {
   sheet_bind(q('pop_layer'))
+  q('layer_fold_up').addEventListener('click', () => layer_rows_move(-1))
+  q('layer_fold_down').addEventListener('click', () => layer_rows_move(1))
   const rows = q('layer_rows')
   rows.addEventListener('click', e => {
     const eye = (e.target as HTMLElement).closest('.leye') as HTMLElement | null

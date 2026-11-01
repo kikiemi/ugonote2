@@ -10,7 +10,10 @@ import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
 import { st } from '../state/store'
 import { modal_close, modal_progress, modal_set_cleanup } from './modal'
+import { ease_even } from '../aid/between'
+import { aid_between_run } from './aid_panel'
 import { sheet_open } from './sheet'
+import { range_row } from './templates/parts'
 import { tr_line } from '../lang'
 
 type motion_def_t = { id: number, label: string, detail: string }
@@ -159,10 +162,6 @@ function preview_size(): { w: number, h: number } {
   const g = st()
   const scale = Math.min(360 / g.doc.w, 230 / g.doc.h, 1)
   return { w: Math.max(160, Math.round(g.doc.w * scale)), h: Math.max(100, Math.round(g.doc.h * scale)) }
-}
-
-function range_row(id: string, label: string, min: number, max: number, step: number): string {
-  return `<div class="opt_row"><label class="plab" for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output id="${id}_v"></output></div>`
 }
 
 // うごきアシスト。見本を見ながら、ゆらぎ・動き・コマにする の3ページで設定する。
@@ -354,6 +353,8 @@ export function modal_animation_assist(): void {
   query(box, '#aa_between').addEventListener('click', () => {
     const count = Number(between_count.value)
     modal_close()
-    between_frames(count)
+    // ノーマルモードでは、絵の動きを読んで作る。
+    if (runtime) aid_between_run(g.doc.cur, g.doc.cur + 1, g.doc.cur + 1, count, ease_even)
+    else between_frames(count)
   })
 }

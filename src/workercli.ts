@@ -11,12 +11,13 @@ import type { render_plan_t } from './render'
 import { kwz_build, type kwz_frame_t } from './codec/kwz'
 import type { flip_meta_t } from './codec/kwzdec'
 import { ppm_build, type ppm_frame_t } from './codec/ppm'
+import { aid_run, type aid_input_t, type aid_output_t } from './aid/job'
 import { report_error, report_warning } from './diagnostics'
 import { flip_image_convert, type flip_image_input_t, type flip_image_result_t } from './flipnote/image'
 import { fmt_build_blob, type loaded_project_t, type proj_snap_t } from './fmt'
 import { app_asset } from './runtime'
 
-type worker_result_t = { sources?: pixel_source_record_t[], id: number, ok: number, bytes?: Uint8Array, image?: flip_image_result_t, pixels?: Uint8ClampedArray, error?: string, progress?: number, project?: loaded_project_t, fallback?: number, unavailable?: number, frames?: frame_t[], blob?: Blob, audio?: { pcm: Float32Array | null, sound?: import('./audio_mix').audio_mix_t } }
+type worker_result_t = { sources?: pixel_source_record_t[], id: number, ok: number, bytes?: Uint8Array, image?: flip_image_result_t, pixels?: Uint8ClampedArray, error?: string, progress?: number, project?: loaded_project_t, fallback?: number, unavailable?: number, frames?: frame_t[], aid?: aid_output_t, blob?: Blob, audio?: { pcm: Float32Array | null, sound?: import('./audio_mix').audio_mix_t } }
 type pending_callback_t = (result: worker_result_t) => void
 
 let worker: Worker | null = null
@@ -219,6 +220,28 @@ export function rebuild_canvas_async(input: canvas_rebuild_input_t, progress: (v
       else reject(new Error(result.error || 'キャンバスを作り変えられませんでした'))
     }, undefined, progress)
     if (!posted) fallback()
+  })
+}
+
+let aid_gpu: Promise<number> | null = null
+
+// WebGPU を使えるか。
+async function aid_gpu_check(): Promise<number> {
+  if (!navigator.gpu) return 0
+  return navigator.gpu.requestAdapter().then(adapter => adapter ? 1 : 0, () => 0)
+}
+
+// GPU で動かすときは待ち時間のほとんどが GPU の中なので、画面の側で動かす (Worker の中で WebGPU を使えないブラウザでも GPU で動くように)。
+// GPU がなければ、画面を止めないよう Worker で動かす。
+export async function aid_run_async(input: aid_input_t, progress: (value: number) => void): Promise<aid_output_t> {
+  if (!aid_gpu) aid_gpu = aid_gpu_check()
+  if (await aid_gpu) return aid_run(input, progress)
+  return new Promise((resolve, reject) => {
+    const posted = post_worker({ kind: 'aid', input }, result => {
+      if (result.ok && result.aid) resolve(result.aid)
+      else reject(new Error(result.error || 'AIの処理ができませんでした'))
+    }, undefined, progress)
+    if (!posted) void aid_run(input, progress).then(resolve, reject)
   })
 }
 

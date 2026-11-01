@@ -127,13 +127,16 @@ export function modal_confirm(title: string, body: string, ok_label: string, cb:
   })
 }
 
-export function modal_progress(title: string): { set: (p: number) => void, close: () => void, note: (s: string) => void } {
+// 進み具合の画面。stop を渡すと「やめる」のボタンを出す。
+export function modal_progress(title: string, stop?: () => void): { set: (p: number) => void, close: () => void, note: (s: string) => void } {
   const box = modal_open(
     '<div class="mhead">' + ic('gear') + '<span>' + esc(title) + '</span></div>' +
     '<div class="pbar"><div class="pfill" id="p_fill"></div></div>' +
-    '<p class="mbody dim" id="p_note">準備中…</p>',
+    '<p class="mbody dim" id="p_note">準備中…</p>' +
+    (stop ? '<div class="mrow end"><button class="pbtn" id="p_stop">やめる</button></div>' : ''),
     0
   )
+  if (stop) query(box, '#p_stop').addEventListener('click', stop)
   const fill = box.querySelector('#p_fill') as HTMLElement
   const note = box.querySelector('#p_note') as HTMLElement
   return {

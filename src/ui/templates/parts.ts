@@ -17,6 +17,11 @@ export function menu_action(id: string, icon: string, title: string, hint: strin
   return `<button class="menu_action${extra ? ' ' + extra : ''}" id="${id}"><span class="action_glyph">${ic(icon)}</span><span class="action_copy"><b>${title}</b><small>${hint}</small></span></button>`
 }
 
+// スライダーの行。id + '_v' に値を出す。
+export function range_row(id: string, label: string, min: number, max: number, step: number): string {
+  return `<div class="opt_row"><label class="plab" for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output id="${id}_v"></output></div>`
+}
+
 // ひとつえらぶボタンの列。list は [値, 名前]。
 export function choices(id: string, attr: string, list: [string, string][]): string {
   return `<div class="seg" id="${id}">${list.map(([value, label]) => `<button data-${attr}="${value}" aria-pressed="false">${label}</button>`).join('')}</div>`
