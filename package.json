@@ -4,6 +4,8 @@
   "description": "ブラウザで動くパラパラまんがエディタ（うごくノート2）",
   "type": "module",
   "scripts": {
+    "prebuild:min": "node build_single.mjs --pre",
+    "prebuild:site": "node build_single.mjs --pre",
     "build": "node build.mjs",
     "build:min": "node build.mjs --min",
     "watch": "node build.mjs --watch",
