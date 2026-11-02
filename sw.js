@@ -1,5 +1,5 @@
 const cache_prefix = 'ugonote2-'
-const cache_name = cache_prefix + 'ui102'
+const cache_name = cache_prefix + 'v1'
 const core_assets = [
   './',
   './index.html',
@@ -9,8 +9,8 @@ const core_assets = [
   './assets/memo.woff2',
   './assets/font-LICENSE.txt',
   './assets/library_licenses.txt',
-  './app.js',
-  './worker.js',
+  './dist/app.js',
+  './dist/worker.js',
   './manifest.webmanifest',
   './icon.svg',
   './assets/icon-192.png',
@@ -25,7 +25,7 @@ function report_warning(context, error) {
 async function install_cache() {
   try {
     const cache = await caches.open(cache_name)
-    await cache.addAll(core_assets)
+    await cache.addAll(core_assets).catch(error => report_warning('オフライン用ファイルの準備に失敗しました', error))
     await self.skipWaiting()
   } catch (error) {
     report_warning('オフライン用ファイルの準備に失敗しました', error)
@@ -34,14 +34,7 @@ async function install_cache() {
 }
 
 async function activate_cache() {
-  try {
-    const names = await caches.keys()
-    await Promise.all(names.filter(name => (name.startsWith(cache_prefix) || name.startsWith('ug2-')) && name !== cache_name).map(name => caches.delete(name)))
-    await self.clients.claim()
-  } catch (error) {
-    report_warning('古いキャッシュの整理に失敗しました', error)
-    throw error
-  }
+  await self.clients.claim()
 }
 
 async function cache_response(request, response) {
@@ -53,20 +46,16 @@ async function cache_response(request, response) {
   }
 }
 
-async function network_first(request) {
+async function cache_first(request) {
+  const cached = await caches.match(request)
+  if (cached) return cached
   try {
     const response = await fetch(request)
     if (response.ok) void cache_response(request, response.clone())
     return response
   } catch (error) {
-    const cached = await caches.match(request)
-    if (cached) return cached
-    if (request.mode === 'navigate') {
-      const shell = await caches.match('./index.html')
-      if (shell) return shell
-    }
     report_warning('ネットワーク取得にもキャッシュ取得にも失敗しました', error)
-    throw error
+    return new Response('', { status: 200, headers: { 'Content-Type': 'text/plain' } })
   }
 }
 
@@ -82,5 +71,5 @@ self.addEventListener('fetch', event => {
   const request = event.request
   if (request.method !== 'GET') return
   if (new URL(request.url).origin !== location.origin) return
-  event.respondWith(network_first(request))
+  event.respondWith(cache_first(request))
 })
