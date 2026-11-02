@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { transform } from 'esbuild'
+import './build-single.mjs'
 const read = path => readFile(new URL(path, import.meta.url), 'utf8')
 const bytes = path => readFile(new URL(path, import.meta.url))
 const [index, base, app, worker, font, dot_font, memo_font, font_license, library_licenses, ai_lines, ai_motion] = await Promise.all([
