@@ -15,15 +15,15 @@ import { flipnote_maker_pick } from './ui/flipnote_maker'
 import { modal_aid_between, modal_aid_loop, modal_aid_smooth } from './ui/aid_panel'
 import { modal_aid_path } from './ui/path_panel'
 import { modal_animation_assist } from './ui/animation_assist'
-import { modal_addmany, modal_close, modal_confirm, modal_goto, modal_is_open } from './ui/modal'
+import { modal_close, modal_confirm, modal_is_open } from './ui/modal'
 import { snd_assign_preset, snd_clear, snd_load_begin, snd_load_bytes, snd_vol_set } from './ui/sound_io'
 
 import { modal_mixer } from './ui/sound_panel'
 import { modal_slots, fixed_4_3_res, modal_new } from './ui/project_panel'
-import { photo_import, video_import, file_open_any, flip_import_ui } from './ui/import_panel'
+import { photo_import, file_open_any } from './ui/import_panel'
 import { apply_canvas } from './ui/canvas_panel'
 import { zip_import } from './ui/zip_import'
-import { op_layer_clear, op_layer_copy, modal_range } from './ui/frame_panel'
+import { op_layer_clear, op_layer_copy } from './ui/frame_panel'
 import { modal_effect, modal_transition } from './ui/effect_panel'
 import { modal_mode } from './ui/mode_panel'
 import { pop_close } from './ui/overlay'
@@ -37,11 +37,11 @@ function sound_file_load(kind: string, label: string): void {
     const ticket = snd_load_begin(kind)
     file.arrayBuffer().then(
       buffer => snd_load_bytes(kind, buffer, file.name.slice(0, 24), error => {
-        if (error <= 0) toast(error === 0 ? label + 'を読み込みました' : '読めない形式みたい…')
+        if (error <= 0) toast(error === 0 ? label + 'を読み込みました' : 'この形式は読めませんでした')
       }, ticket),
       error => {
         report_warning('音声ファイルを読み出せませんでした', error)
-        toast('読めない形式みたい…')
+        toast('この形式は読めませんでした')
       }
     )
   })
@@ -53,17 +53,15 @@ export function panels_mount(): void {
   bind('slots_btn', modal_slots)
   bind('menu_open', file_open_any)
   bind('open_btn', file_open_any)
-  bind('open_flip_btn', flip_import_ui)
   bind('save_file_btn', file_save)
   bind('export_btn', () => modal_export())
   bind('photo_btn', photo_import)
-  bind('photo_quick_btn', photo_import)
   bind('dock_image', photo_import)
   bind('photo_layer_btn', photo_import)
   bind('photo_draft_btn', () => {
     const g = st()
     if (!mode_allows_layer_alpha(g.doc.mode)) {
-      toast('このモードでは写真の透明度を変えられないよ')
+      toast('このモードでは写真の透明度を変えられません')
       return
     }
     if (!g.doc.lvis[l_p]) dispatch('layer.toggle_visible', l_p)
@@ -74,15 +72,13 @@ export function panels_mount(): void {
   })
   bind('photo_clear_btn', () => {
     if (dispatch('layer.clear_at', l_p) < 0) {
-      toast('このコマに写真はないよ')
+      toast('このコマに写真はありません')
       return
     }
     toast('写真レイヤーを消しました')
     sfx_play('del')
   })
-  bind('video_btn', video_import)
   bind('zip_in_btn', zip_import)
-  bind('flip_in_btn', flip_import_ui)
   bind('mixer_btn', () => modal_mixer())
   bind('flip_image_btn', flipnote_maker_pick)
   bind('motion_assist_btn', modal_animation_assist)
@@ -92,7 +88,7 @@ export function panels_mount(): void {
   bind('aid_path_btn', modal_aid_path)
   bind('effect_btn', modal_effect)
   bind('trans_btn', modal_transition)
-  bind('mode_btn', modal_mode)
+  bind('project_mode', modal_mode)
   bind('sync_rec_btn', recsync_toggle)
   bind('record_stop', recsync_stop)
   bind('size_apply', apply_canvas)
@@ -105,11 +101,8 @@ export function panels_mount(): void {
   bind('ldel_btn', () => {
     const layer = st().pen.layer
     if (st().doc.mode !== mode_normal || st().doc.lord.length < 2) return
-    modal_confirm('レイヤーを削除', 'レイヤー' + esc(layer_name(layer)) + 'を全コマから削除する？', '削除', () => dispatch('layer.delete', layer))
+    modal_confirm('レイヤーを削除', 'レイヤー' + esc(layer_name(layer)) + 'を全コマから削除しますか？', '削除', () => dispatch('layer.delete', layer))
   })
-  bind('add_many_btn', modal_addmany)
-  bind('range_btn', modal_range)
-  bind('goto_btn', modal_goto)
   bind('theme_btn', () => {
     pref_theme_toggle()
     dirty(d_all)

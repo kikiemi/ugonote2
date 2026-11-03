@@ -56,11 +56,9 @@ function r_tools(): void {
   document.body.dataset.tool = String(g.pen.tool)
   q('undo_btn').classList.toggle('off', !hist_can_undo())
   q('redo_btn').classList.toggle('off', !hist_can_redo())
-  for (const id of ['dock_settings', 'tool_settings_btn']) {
-    const button = q<HTMLButtonElement>(id)
-    button.disabled = !tool_has_options(g.pen.tool)
-    button.title = tr_line(button.disabled ? 'この道具には追加の設定はありません' : '選んだ道具の設定')
-  }
+  const settings = q<HTMLButtonElement>('dock_settings')
+  settings.disabled = !tool_has_options(g.pen.tool)
+  settings.title = tr_line(settings.disabled ? 'この道具には追加の設定はありません' : '選んだ道具の設定')
   // 色を使う道具だけ、設定の上に「色」を出す (けしごむは色を使わない)。
   q('tool_color_btn').hidden = g.pen.tool === t_eraser
   tool_page_show(undefined, false)
@@ -113,7 +111,6 @@ function r_pen(): void {
   }
   for (const b of quick.querySelectorAll<HTMLElement>('button')) b.setAttribute('aria-pressed', String(b.dataset.quickColor === p.color))
   pen_palette_render(p, g.doc.mode)
-  q('color_chip').style.background = p.color
   q('tool_color_chip').style.background = p.color
   const wrap = q('pop_tool')
   const szb = wrap.querySelectorAll('.szb')
@@ -284,7 +281,7 @@ function r_settings(): void {
 function r_chrome(): void {
   const g = st()
   document.body.dataset.mode = g.doc.mode === mode_dsi ? 'dsi' : g.doc.mode === mode_3_d ? '3d' : ''
-  for (const id of ['mode_name', 'project_mode_name']) q(id).textContent = mode_name(g.doc.mode)
+  q('project_mode_name').textContent = mode_name(g.doc.mode)
   const assist = q('motion_assist_btn')
   const runtime = mode_allows_runtime_anim(g.doc.mode)
   const animated = runtime ? animfx_active(g.doc.anim) : 0
@@ -297,7 +294,6 @@ function r_chrome(): void {
   pressed(q('theme_btn'), !!pref_theme())
   q('theme_btn').querySelector('.ic')?.remove()
   q('theme_btn').insertAdjacentHTML('afterbegin', ic(pref_theme() ? 'sun' : 'moon'))
-  q('vflip_btn').classList.toggle('on', !!g.view.flip)
   const ti = q<HTMLInputElement>('title')
   if (document.activeElement !== ti && ti.value !== g.doc.name) ti.value = g.doc.name
   const menu_title = q<HTMLInputElement>('menu_title')
@@ -335,7 +331,6 @@ function r_grid_ui(): void {
   const g = st()
   document.body.dataset.grid = String(g.view.grid ? 1 : 0)
   const pixel = g.pen.tool === t_pixel
-  pressed(q('grid_btn'), !!g.view.grid)
   q('adjust_grid').setAttribute('aria-pressed', String(!!g.view.grid))
   const input = q<HTMLInputElement>('grid_step_num')
   input.disabled = pixel

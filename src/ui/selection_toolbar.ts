@@ -126,7 +126,7 @@ export function selection_toolbar_events(): void {
   on('sb_register_paint', () => dispatch('sel.register_paint', null))
   on('sb_mark', () => {
     mark_capture_from_selection('マーク', ok => {
-      toast(ok ? 'マークに登録しました' : 'いまのレイヤーの、えらんだ所に絵がありません（レイヤーを切りかえてね）')
+      toast(ok ? 'マークに登録しました' : 'いまのレイヤーの、えらんだ所に絵がありません（レイヤーを切りかえてください）')
       if (!ok) return
       sfx_play('save')
       if (!mark_wait.on) return

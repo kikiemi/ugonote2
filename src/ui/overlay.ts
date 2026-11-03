@@ -59,7 +59,7 @@ export function pop_open(id: string, anchor: HTMLElement): void {
 }
 
 // 道具の設定は、開いたボタンの種類 (道具・道具設定・図形) が同じときだけ、もう一度押すと閉じる。
-const pop_tool_groups: Record<string, string> = { dock_settings: 'settings', tool_settings_btn: 'settings', dock_shape: 'shape', tl_shape_more: 'shape' }
+const pop_tool_groups: Record<string, string> = { dock_settings: 'settings', dock_shape: 'shape', tl_shape_more: 'shape' }
 
 export function pop_toggle(id: string, anchor: HTMLElement): void {
   const group = (button: HTMLElement | null): string => pop_tool_groups[button?.id || ''] || 'tool'

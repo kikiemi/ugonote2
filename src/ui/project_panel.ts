@@ -69,18 +69,18 @@ export function modal_slots(): void {
       if (action === 'save') {
         const index = Number(key.slice(4))
         store_save_slot(index, ok => {
-          toast(ok ? 'スロットに保存しました' : '保存に失敗…')
+          toast(ok ? 'スロットに保存しました' : '保存できませんでした')
           if (ok) sfx_play('save')
           modal_slots()
         })
         return
       }
       if (action === 'load') {
-        modal_confirm('読み込み', 'いまのノートは自動保存ぶんだけ残るよ。<br>スロットを開く？', '開く', () => {
+        modal_confirm('読み込み', 'いまのノートは、自動保存した分だけ残ります。<br>スロットを開きますか？', '開く', () => {
           if (anim_playing()) anim_stop()
           store_load_key(key, error => {
             if (error !== 0) {
-              toast('読み込めなかった…')
+              toast('読み込めませんでした')
               return
             }
             toast('読み込みました')
@@ -90,9 +90,9 @@ export function modal_slots(): void {
         return
       }
       if (action === 'del') {
-        modal_confirm('削除', 'このスロットを消す？（もどせないよ）', '消す', () => {
+        modal_confirm('削除', 'このスロットを消しますか？（もどせません）', '消す', () => {
           store_delete(key, ok => {
-            if (!ok) toast('削除できなかった…')
+            if (!ok) toast('削除できませんでした')
             modal_slots()
           })
         })
@@ -127,7 +127,7 @@ export function modal_new(start_free = false, on_done?: () => void): void {
     qualities += '<button class="new_resolution" data-q="' + resos[i].id + '" aria-pressed="false">' + resos[i].label + '</button>'
   }
   for (let i = 0; i < paper_std.length; i++) {
-    papers += '<button class="new_paper" data-p="' + paper_std[i] + '" aria-label="紙のいろ ' + (i + 1) + ' ' + paper_std[i] + '" aria-pressed="false" style="background:' + paper_std[i] + '"></button>'
+    papers += '<button class="new_paper" data-p="' + paper_std[i] + '" aria-label="紙の色 ' + (i + 1) + ' ' + paper_std[i] + '" aria-pressed="false" style="background:' + paper_std[i] + '"></button>'
   }
   const box = modal_open(
     '<div class="new_note_head"><div class="mhead">' + ic('file') + '<span>新しい作品</span></div></div>' +
@@ -135,7 +135,7 @@ export function modal_new(start_free = false, on_done?: () => void): void {
     '<div class="msub">紙のかたち</div><div id="m_r" class="new_ratios">' + ratios +
     '<button class="new_ratio new_free" data-r="free" aria-pressed="false">' + ic('fit') + '<span><b>画面全体</b><small>フリーサイズ</small></span></button></div>' +
     '<div id="m_quality"><div class="new_quality_head"><span class="msub">絵の大きさ</span><small id="m_size_note"></small></div><div id="m_q" class="new_resolutions">' + qualities + '</div></div>' +
-    '<div class="msub">紙のいろ</div><div id="m_p" class="new_papers">' + papers + '</div>' +
+    '<div class="msub">紙の色</div><div id="m_p" class="new_papers">' + papers + '</div>' +
     (on_done ? '' : '<p class="new_note_notice">自動保存は新しい作品に切り替わります。<br>今の作品を残す場合は、先に保存してください。</p>') + '</div>' +
     '<div class="new_note_actions"><button class="pbtn" id="m_no">やめる</button><button class="pbtn primary" id="m_ok">つくる</button></div>', 1
   )

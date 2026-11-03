@@ -422,9 +422,12 @@ export type snd_st_t = {
   se_vol: number
 }
 
+// コマ全体の状態。コマのならび、再生の速さ、A-B 区間、レイヤーのならび・表示・濃さ。
+export type note_state_t = { frames: frame_t[], fps: number, loop_a: number, loop_b: number, lord: number[], lvis: Uint8Array, lalpha: Uint8Array }
+
 export type hist_ent_t = {
-  // op_note: もどす先のコマ全体と再生の速さと A-B 区間。
-  note?: { frames: frame_t[], fps: number, loop_a: number, loop_b: number }
+  // op_note: もどす先のコマ全体の状態。
+  note?: note_state_t
   paper?: { before: string, after: string, frames: (string | undefined)[] }
   op: number
   grp: number

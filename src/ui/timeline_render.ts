@@ -136,10 +136,18 @@ function tl_scroll_to_head(): void {
   if (Math.abs(fs.scrollLeft - to) > 1) fs.scrollLeft = to
 }
 
+// 画面の大きさでコマの幅が変わり (低いPCの画面など)、ならべなおしがいるとき 1。
+export function timeline_step_changed(): number {
+  return tl_step() !== timeline_cell_step ? 1 : 0
+}
+
 export function r_timeline(): void {
   const g = st()
   const n = g.doc.frames.length
-  timeline_cell_step = tl_step()
+  const step = tl_step()
+  // コマの幅が変わったら、ならべてあるコマも全部置きなおす。
+  if (step !== timeline_cell_step) for (const cell of tl_pool) cell.dataset.i = ''
+  timeline_cell_step = step
   fs_track().style.width = Math.max(0, n * timeline_cell_step - 7) + 'px'
   tl_window(1)
   tl_scroll_to_head()

@@ -54,12 +54,12 @@ export function transition_insert(kind: number, steps: number): void {
   const n = g.doc.frames.length
   const i = g.doc.cur
   if (i >= n - 1) {
-    toast('最後のコマの後ろにはトランジションを作れないよ（次のコマが必要）')
+    toast('最後のコマの後ろにはトランジションを作れません（次のコマが必要です）')
     return
   }
   steps = clamp(steps, 1, 24)
   if (n + steps > mode_frame_limit(g.doc.mode)) {
-    toast('コマ数の上限を超えちゃう')
+    toast('コマ数の上限を超えてしまいます')
     return
   }
   dispatch('frame.sync_live', null)
@@ -78,6 +78,6 @@ export function transition_insert(kind: number, steps: number): void {
     fresh.push(fr)
   }
   dispatch('frame.insert_bulk', { at: i + 1, frames: fresh, set_cur: i })
-  toast(steps + '枚のトランジションを挿入しました（もどす不可）')
+  toast(steps + '枚のトランジションを入れました')
   sfx_play('paper')
 }

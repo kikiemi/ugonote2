@@ -14,7 +14,7 @@ const steps: step_t[] = [
   { id: 'stage_wrap', title: '描くところ', body: 'ふちの内側が作品の用紙です。指・ペン・マウスで描けます。2本指で拡大・移動、全体で元の表示に戻せます。' },
   { id: 'rail_tools', title: 'どうぐをえらぶ', body: 'ペン・模様ブラシ・範囲・投げ縄・ドットは道具一覧から選べます。「画像」で写真も取り込めます。「道具箱」の「絵の変形」に反転・回転・拡大縮小、「表示」に方眼・透かし、「便利機能」にうごきアシストなどがあります。' },
   { id: 'tool_settings_btn', title: 'ペンの設定', body: '選択中の道具をもう一度押すか、道具箱の「道具設定」で種類・太さを選びます。右上の「色」で色も変えられます。「線・効果」に縁取りがあります。小さい画面で描画中に操作を隠す設定は「せってい」で変更できます。' },
-  { id: 'color_btn', title: 'いろと紙', body: '色見本を押して描く色を選びます。「紙のいろ」は用紙の色。「＋とうろく」で自分の色を残せます。' },
+  { id: 'color_btn', title: '色と紙', body: '色見本を押して描く色を選びます。「紙の色」は用紙の色。「＋とうろく」で自分の色を残せます。' },
   { id: 'layer_btn', title: '重ねて描く', body: 'A・Bなどのレイヤーを押して描く紙を切り替えます。「レイヤー」で写真・透かし具合・追加を設定。うごメモモードでは実機の枚数になります。' },
   { id: 'onion_btn', title: '前の絵を透かす', body: 'コマ一覧の「みえかた」で前後の絵を透かせます。スマホ縦向きでは「前の絵」からも開けます。' },
   { id: 'fs', title: 'コマ一覧', body: 'コマを押して切り替え、長押しでつかんで並べ替えます。コピー・消すは上のボタンから。右端の「とじる」で一覧を閉じます。' },
@@ -104,7 +104,7 @@ function render(): void {
     '<div class="trow">' +
     '<button class="pbtn sm" id="t_end">おわる</button><span class="tspacer"></span>' +
     (cur > 0 ? '<button class="pbtn sm" id="t_prev">まえへ</button>' : '') +
-    '<button class="pbtn sm primary" id="t_next">' + (cur === steps.length - 1 ? 'はじめる！' : 'つぎへ') + '</button>' +
+    '<button class="pbtn sm primary" id="t_next">' + (cur === steps.length - 1 ? 'はじめる' : 'つぎへ') + '</button>' +
     '</div></div>')
   query(root, '#t_end').addEventListener('click', tut_end)
   const prev = root.querySelector('#t_prev') as HTMLElement | null
@@ -146,12 +146,11 @@ export function tut_start(): void {
 
 export function tut_mount(): void {
   q('tut_btn').addEventListener('click', tut_start)
-  q('tut_btn2').addEventListener('click', tut_start)
   q('menu_help').addEventListener('click', tut_start)
 }
 
 export function tut_offer(): void {
   if (storage_get('ug2_tut')) return
   storage_set('ug2_tut', '1')
-  modal_confirm('はじめまして！', '作品ができました。<br>今の画面で「つかいかた」を見る？<br>あとからメニューの「使い方」でも見られます。', '見る！', tut_start, 'help')
+  modal_confirm('はじめまして！', '作品ができました。<br>今の画面で「つかいかた」を見ますか？<br>あとからメニューの「使い方」でも見られます。', '見る', tut_start, 'help')
 }

@@ -28,6 +28,7 @@ export function rail(): string {
     if (d.t === shape_tool_list[shape_tool_list.length - 1]) s += `<button class="rb hasopts" id="tl_shape_more" title="ほかの図形・マイマーク" aria-haspopup="dialog" aria-pressed="false">${ic('dots')}<i class="rlbl">その他</i></button>`
   }
   s += `<button class="rb" id="tf_btn" title="うごかす（スライド・かいてん・かくだい）">${ic('move')}<i class="rlbl">うごかす</i></button>`
+  s += `<button class="rb" id="mark_btn" title="マーク(スタンプ)">${ic('mark')}<i class="rlbl">マーク</i></button>`
   return `<div class="toolbox_head">
       <div class="tool_heading"><b>${ic('tools')}道具箱</b></div>
       ${close_html('とじる', ' id="toolbox_close"')}
@@ -38,11 +39,6 @@ export function rail(): string {
       <section class="toolbox_page" data-toolbox-panel="view" hidden>${toolbox_settings_html('view')}</section>
       <section class="toolbox_page" data-toolbox-panel="tools">
         <div class="rtools" id="rail_tools">${s}</div>
-        <div class="toolbox_actions">
-          <button class="rb rswatch" id="color_btn" title="いろ"><span class="chip" id="color_chip"></span><i class="rlbl">いろ</i></button>
-          <button class="rb" id="tool_settings_btn" title="選んだ道具の設定" aria-haspopup="dialog" aria-controls="pop_tool" aria-expanded="false">${ic('gear')}<i class="rlbl">道具設定</i></button>
-          <button class="rb" id="mark_btn" title="マーク(スタンプ)">${ic('mark')}<i class="rlbl">マーク</i></button>
-        </div>
       </section>
     </div>
     <nav class="tool_page_tabs toolbox_tabs" aria-label="編集パネルの項目">
@@ -112,15 +108,15 @@ export function tool_pop(): string {
   </div>
   <div class="pbk" id="blk_native_eraser" data-options-page="size">${native_eraser_html()}</div>
   <div class="pbk" id="blk_native_paint" data-options-page="pattern">${native_paint_html()}</div>
-  <div class="pbk" id="blk_size" data-options-page="size">
-    <div class="plab">ふとさ</div>
-    <div class="szrow" id="size_row">${size_buttons(sizes)}</div>
-    <div class="prow" id="size_free"><input type="range" id="size_range" min="${size_min}" max="${size_max}" step="1"><input type="number" class="numin" id="size_num" min="${size_min}" max="${size_max}" step="1"><span class="plab">px</span></div>
-  </div>
   <div class="pbk" id="blk_pat" data-options-page="pattern">
     <div class="plab">もよう</div>
     <div class="seg" id="paint_mode"><button id="paint_normal" aria-pressed="false">ふつうのペイント</button><button id="paint_over" aria-pressed="false">うわがきペイント</button></div>
     <div class="patgrid">${pat_pop()}</div>
+  </div>
+  <div class="pbk" id="blk_size" data-options-page="size">
+    <div class="plab">ふとさ</div>
+    <div class="szrow" id="size_row">${size_buttons(sizes)}</div>
+    <div class="prow" id="size_free"><input type="range" id="size_range" min="${size_min}" max="${size_max}" step="1"><input type="number" class="numin" id="size_num" min="${size_min}" max="${size_max}" step="1"><span class="plab">px</span></div>
   </div>
   <div class="pbk" id="blk_stroke" data-options-page="detail">
     <div class="opt_row"><label class="plab" for="opt_smooth">手ぶれ補正</label><input type="range" id="opt_smooth" min="0" max="4" step="1"><output id="opt_smooth_val">2</output></div>
@@ -148,7 +144,7 @@ export function tool_pop(): string {
 
 export function color_pop(): string {
   return `
-  <div class="ink_sample"><span id="color_preview" aria-hidden="true"></span><div><b>いまのいろ</b><span id="color_preview_label"></span></div></div>
+  <div class="ink_sample"><span id="color_preview" aria-hidden="true"></span><div><b>いまの色</b><span id="color_preview_label"></span></div></div>
   <section class="opt">
     <div class="seg" id="pal_tabs"><button id="pal_tab_0" aria-pressed="false">スタンダード</button><button id="pal_tab_1" aria-pressed="false">DSi</button><button id="pal_tab_2" aria-pressed="false">3DS</button></div>
     <div class="palgrid" id="pal_grid"></div>
@@ -156,9 +152,9 @@ export function color_pop(): string {
   <section class="opt" id="custom_color_options">
     <div class="opt_head"><b>じぶんの色</b></div>
     <div class="palgrid" id="cust_grid" title="長押しで削除"></div>
-    <div class="opt_row"><input type="color" id="pick_in" title="いろをえらぶ"><input type="text" class="mtxt" id="hex_in" maxlength="7" placeholder="#RRGGBB"><button class="pbtn" id="cust_add" title="いまの色をとうろく">${ic('plus')}とうろく</button></div>
+    <div class="opt_row"><input type="color" id="pick_in" title="色をえらぶ"><input type="text" class="mtxt" id="hex_in" maxlength="7" placeholder="#RRGGBB"><button class="pbtn" id="cust_add" title="いまの色をとうろく">${ic('plus')}とうろく</button></div>
   </section>
-  <section class="opt"><button class="link_row" id="paper_color_btn">${ic('note')}<span>紙のいろ</span><span id="paper_chip" aria-hidden="true"></span>${ic('next')}</button></section>`
+  <section class="opt"><button class="link_row" id="paper_color_btn">${ic('note')}<span>紙の色</span><span id="paper_chip" aria-hidden="true"></span>${ic('next')}</button></section>`
 }
 
 // レイヤーのパネル。レイヤーの一覧と操作、写真レイヤーの2ページ。
@@ -170,7 +166,7 @@ export function layer_pop(): string {
       {
         id: 'layers',
         icon: 'layers',
-        label: 'レイヤー',
+        label: '一覧',
         body: `<section class="opt" id="penbox_row">
           <div class="opt_head"><b>ふでばこ</b></div>
           <div class="seg"><button id="penbox_normal" aria-pressed="false">普通・1枚の紙</button><button id="penbox_advanced" aria-pressed="false">上級・3枚</button></div>
@@ -192,7 +188,8 @@ export function layer_pop(): string {
         label: '写真',
         body: `<section class="opt">
           <div class="opt_head"><b>写真レイヤー</b></div>
-          <div class="acts">${action_tile('photo_layer_btn', 'image', '画像を追加')}${action_tile('photo_draft_btn', 'eye', '下書き35%')}${action_tile('photo_clear_btn', 'trash', '写真を消去')}</div>
+          <p class="photo_hint">写真は、いまのコマの絵のいちばん下に入ります。下書きにするとうすく見えるので、なぞって描けます。</p>
+          <div class="acts photo_acts">${action_tile('photo_layer_btn', 'image', '画像を追加')}${action_tile('photo_draft_btn', 'eye', '下書き35%')}${action_tile('photo_clear_btn', 'trash', '写真を消去')}</div>
         </section>`,
       },
     ],
@@ -226,7 +223,7 @@ export function drawing_html(): string {
     <div class="pop drawing_bench sheet" id="pop_color">
       <div class="pop_head">
         <button class="pop_back" id="color_back" title="道具の設定にもどる" hidden>${ic('prev')}<span>設定</span></button>
-        <b>${ic('fill')}いろ</b>
+        <b>${ic('fill')}色</b>
         ${close_html()}
       </div>
       <div class="pop_body">${color_pop()}</div>

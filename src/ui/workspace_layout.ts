@@ -4,6 +4,7 @@ import { pref_layout } from '../prefs'
 import { d_sel, d_timeline } from '../h'
 import { dirty, st } from '../state/store'
 import { layer_rows_limit } from './layer_panel'
+import { timeline_step_changed } from './timeline_render'
 import { overlay_state } from './overlay_state'
 import { workspace_media, workspace_layout_choice, type workspace_profile_t } from './workspace_policy'
 
@@ -33,7 +34,7 @@ export function workspace_layout_render(): void {
   for (const name of ['simple', 'studio']) q('layout_' + name).setAttribute('aria-pressed', String(name.toLowerCase() === body.dataset.layout))
   q('tl_toggle').title = g.view.tlopen ? 'コマ一覧を閉じる' : 'コマ一覧を開く'
   q('tl_toggle').setAttribute('aria-expanded', String(!!g.view.tlopen))
-  if (changed && g.view.tlopen) dirty(d_timeline)
+  if (g.view.tlopen && (changed || timeline_step_changed())) dirty(d_timeline)
   layer_stack_layout()
   drawing_menu_layout(profile)
   layer_cover()
@@ -41,11 +42,11 @@ export function workspace_layout_render(): void {
 }
 
 // 広い画面の右メニューがコマ一覧の上に入りきらないときは、ボタンを低くし (1)、それでも入らなければ見出しも省いて (2)、
-// スクロールで下のボタンが切れないようにする。
+// まだ入らなければ (低い画面のスタジオなど)、さらにボタンを低くして (3)、スクロールで下のボタンが切れないようにする。
 function dock_fit(wide: number): void {
   const dock = q('mobile_tools')
   const row = q('dock_row')
-  for (const level of ['0', '1', '2']) {
+  for (const level of ['0', '1', '2', '3']) {
     document.body.dataset.dockFit = level
     if (!wide || dock.scrollHeight <= dock.clientHeight + 1 && row.scrollHeight <= row.clientHeight + 1) return
   }
@@ -243,7 +244,6 @@ function drawing_menu_layout(profile: workspace_profile_t): void {
   const drawing = overlay_state.pop === 'pop_tool' || overlay_state.pop === 'pop_color' || overlay_state.pop === 'pop_tf'
   const rail = q('rail').classList.contains('on')
   document.body.dataset.toolbox = rail ? '1' : '0'
-  q('view_onion_btn').setAttribute('aria-expanded', String(!!rail))
   const active = drawing || rail
   document.body.dataset.drawingMenu = active ? '1' : '0'
   document.body.dataset.pop = overlay_state.pop

@@ -18,7 +18,7 @@ export function photo_import(): void {
   file_pick('image/*', file => {
     image_file_decode(file, source => {
       if (!source) {
-        toast('画像を読めなかった…')
+        toast('画像を読めませんでした')
         return
       }
       try {
@@ -40,7 +40,7 @@ export function photo_import(): void {
         toast('ドラッグで位置、ボタンで回転・大きさ、✓で決定')
       } catch (error) {
         report_warning('画像を写真レイヤーへ取り込めませんでした', error)
-        toast('画像を取り込めなかった…')
+        toast('画像を取り込めませんでした')
       } finally {
         try {
           source.close()
@@ -48,10 +48,6 @@ export function photo_import(): void {
       }
     })
   })
-}
-
-export function video_import(): void {
-  file_pick('video/*,.mp4,.mov,.m4v,.webm,.mkv', video_open_selected)
 }
 
 export function video_open_selected(file: File): void {
@@ -89,7 +85,7 @@ export function video_open_selected(file: File): void {
     }).catch(error => {
       prog.close()
       report_warning('動画の取り込みを中止しました', error)
-      toast(error instanceof Error ? error.message : '動画を読めなかった…')
+      toast(error instanceof Error ? error.message : '動画を読めませんでした')
     })
   })
 }
@@ -100,10 +96,6 @@ export function file_open_any(): void {
     else if (/\.(kwz|ppm)$/i.test(file.name)) flip_open_selected(file)
     else file_open_selected(file)
   })
-}
-
-export function flip_import_ui(): void {
-  file_pick('.kwz,.ppm', flip_open_selected)
 }
 
 // 通常モードで開くときの画質。いまのキャンバスが通常モードの画質ならそれに合わせ、うごメモの実寸などなら低画質にする。
@@ -238,7 +230,7 @@ function flip_open_run(f: File, normal: Omit<flip_normal_t, 'progress'> | null):
     prog.close()
     if (added < 0) return
     if (!added) {
-      toast('読み込めなかった…（.kwz / .ppm の中身を確認してください）')
+      toast('読み込めませんでした（.kwz / .ppm の中身を確認してください）')
       return
     }
     q('drawer_close').click()

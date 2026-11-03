@@ -11,7 +11,7 @@ function color_cells(id: string, inks: readonly string[], custom: number): void 
     node.classList.toggle('on', color.toUpperCase() === current)
     node.style.background = color
     node.title = custom ? tr('長押しで削除') : color
-    node.setAttribute('aria-label', tr(custom ? 'じぶんの色' : 'いろ') + ' ' + color)
+    node.setAttribute('aria-label', tr(custom ? 'じぶんの色' : '色') + ' ' + color)
     node.setAttribute('aria-pressed', String(color.toUpperCase() === current))
   })
 }

@@ -1,6 +1,6 @@
 import { doc_frame_snap, doc_goto, doc_frame_insert, doc_frame_delete, doc_frame_move, doc_pack_layer, doc_pack_live, doc_unpack_live } from './doc'
 import { live_slot, live_write, live_bytes } from './engine'
-import { op_pix, op_frame_ins, op_frame_del, op_frame_move, op_se, op_layer_alpha, op_frame_cursor, op_note, op_paper, type hist_ent_t, type frame_t, type rle_t } from './h'
+import { op_pix, op_frame_ins, op_frame_del, op_frame_move, op_se, op_layer_alpha, op_frame_cursor, op_note, op_paper, type hist_ent_t, type frame_t, type note_state_t, type rle_t } from './h'
 import { rle_pack, rle_unpack } from './lib'
 import { memory_budget } from './memory'
 import type { globals_t } from './state/store'
@@ -19,7 +19,7 @@ function ent_bytes(e: hist_ent_t): number {
   if (e.before) b += e.before.byteLength
   if (e.after) b += e.after.byteLength
   if (e.snap) for (const pk of e.snap.pk) if (pk) b += pk.byteLength
-  if (e.note) b += e.note.frames.length * 64
+  if (e.note) b += e.note.frames.length * 64 + e.note.lord.length * 8
   return b
 }
 
@@ -126,37 +126,77 @@ export function hist_paper(g: globals_t, after: string): void {
   push_ent(g, { op: op_paper, grp: hist_grp(), paper, f: 0, l: 0, x: 0, y: 0, w: 0, h: 0, before: null, after: null, snap: null, a: 0, b: 0, bytes: 0 })
 }
 
-// コマ全体と再生の速さを、記録の中身と入れかえる (もどすときも、やり直すときも同じ)。いまのコマは同じコマのまま。
+// いまのコマ全体の状態を取っておく。このあとコマのならびや設定を変えて、hist_note_push で記録する。
+// 中身を変えるコマは、取っておいたコマを書きかえずに、新しいコマへ置きかえること。
+export function hist_note_take(g: globals_t): note_state_t {
+  doc_pack_live(g)
+  return { frames: g.doc.frames.slice(), fps: g.doc.fps, loop_a: g.doc.loop_a, loop_b: g.doc.loop_b, lord: [...g.doc.lord], lvis: g.doc.lvis.slice(), lalpha: g.doc.lalpha.slice() }
+}
+
+// 続けて同じ変更をしたときに、1回の「もどす」でもどるようにまとめる印 (スライダーを動かしているあいだなど)。0 はまとめない。
+export const hist_merge_hold = 1
+// この時間 (ミリ秒) より間があいたら、まとめない。
+const hist_merge_ms = 1500
+
+// hist_note_take で取っておいた状態へ、1回の「もどす」でもどれるようにする。
+// merge と target (コマの番号など) が直前の記録と同じなら、直前の記録にまとめる (取っておいた状態は直前のもののまま)。
+// op_note の記録では、a にまとめる印、l に target、b に記録した時刻を入れる。
+export function hist_note_push(g: globals_t, before: note_state_t, merge = 0, target = 0): void {
+  const now = performance.now()
+  const top = undo_stack[undo_stack.length - 1]
+  if (merge && top && top.op === op_note && top.a === merge && top.l === target && now - top.b < hist_merge_ms && !redo_stack.length) {
+    top.b = now
+    return
+  }
+  push_ent(g, { op: op_note, grp: hist_grp(), note: before, f: 0, l: target, x: 0, y: 0, w: 0, h: 0, before: null, after: null, snap: null, a: merge, b: now, bytes: 0 })
+}
+
+// list の中身を from に入れかえ、もとの中身を返す。
+function list_swap(list: Uint8Array, from: Uint8Array): Uint8Array {
+  const old = list.slice()
+  list.set(from)
+  return old
+}
+
+// コマ全体の状態を、記録の中身と入れかえる (もどすときも、やり直すときも同じ)。いまのコマは同じコマのまま。
 function note_swap(g: globals_t, e: hist_ent_t): void {
-  const note = e.note as NonNullable<hist_ent_t['note']>
+  const note = e.note as note_state_t
   const id = g.doc.frames[g.doc.cur].id
   doc_pack_live(g)
   const frames = g.doc.frames
   const fps = g.doc.fps
   const loop_a = g.doc.loop_a
   const loop_b = g.doc.loop_b
+  const lord = g.doc.lord
   g.doc.frames = note.frames
   g.doc.fps = note.fps
   g.doc.loop_a = note.loop_a
   g.doc.loop_b = note.loop_b
-  note.frames = frames
-  note.fps = fps
-  note.loop_a = loop_a
-  note.loop_b = loop_b
+  g.doc.lord = note.lord
+  const lvis = list_swap(g.doc.lvis, note.lvis)
+  const lalpha = list_swap(g.doc.lalpha, note.lalpha)
+  e.note = { frames, fps, loop_a, loop_b, lord, lvis, lalpha }
   const at = g.doc.frames.findIndex(frame => frame.id === id)
   g.doc.cur = at >= 0 ? at : Math.min(g.doc.cur, g.doc.frames.length - 1)
+  if (g.doc.lord.indexOf(g.pen.layer) < 0 && g.doc.lord.length) g.pen.layer = g.doc.lord[0]
 }
 
 // コマ全体を frames に、再生の速さを fps に置きかえて記録する。A-B 区間は同じコマのまま。
 export function hist_note(g: globals_t, frames: frame_t[], fps: number): void {
+  const before = hist_note_take(g)
   const marker = (value: number): number => {
     if (value < 0) return value
     const id = g.doc.frames[value]?.id
     return frames.findIndex(frame => frame.id === id)
   }
-  const e: hist_ent_t = { op: op_note, grp: hist_grp(), note: { frames, fps, loop_a: marker(g.doc.loop_a), loop_b: marker(g.doc.loop_b) }, f: 0, l: 0, x: 0, y: 0, w: 0, h: 0, before: null, after: null, snap: null, a: 0, b: 0, bytes: 0 }
-  note_swap(g, e)
-  push_ent(g, e)
+  const id = g.doc.frames[g.doc.cur].id
+  g.doc.loop_a = marker(g.doc.loop_a)
+  g.doc.loop_b = marker(g.doc.loop_b)
+  g.doc.frames = frames
+  g.doc.fps = fps
+  const at = frames.findIndex(frame => frame.id === id)
+  g.doc.cur = at >= 0 ? at : Math.min(g.doc.cur, frames.length - 1)
+  hist_note_push(g, before)
 }
 
 function apply_undo(g: globals_t, e: hist_ent_t): void {
@@ -227,16 +267,19 @@ function apply_redo(g: globals_t, e: hist_ent_t): void {
   if (e.op === op_layer_alpha) g.doc.lalpha[e.l] = e.b
 }
 
+// もどせたら 1、コマ全体の状態までもどしたら 2 を返す。もどせなければ 0。
 export function hist_undo(g: globals_t): number {
   if (undo_stack.length === 0) return 0
   const g0 = undo_stack[undo_stack.length - 1].grp
   let first = undo_stack.length - 1
   while (first > 0 && undo_stack[first - 1].grp === g0) first--
   let select_id = undo_stack.slice(first).every(e => e.op === op_frame_move) ? g.doc.frames[g.doc.cur]?.id : undefined
+  let whole = 0
   while (undo_stack.length > 0 && undo_stack[undo_stack.length - 1].grp === g0) {
     const e = undo_stack.pop() as hist_ent_t
     if (e.op === op_frame_cursor) select_id = e.a
     else apply_undo(g, e)
+    if (e.op === op_note) whole = 1
     redo_stack.push(e)
   }
   if (select_id !== undefined) {
@@ -244,19 +287,22 @@ export function hist_undo(g: globals_t): number {
     if (i >= 0) g.doc.cur = i
   }
   doc_unpack_live(g)
-  return 1
+  return whole ? 2 : 1
 }
 
+// やり直せたら 1、コマ全体の状態までやり直したら 2 を返す。やり直せなければ 0。
 export function hist_redo(g: globals_t): number {
   if (redo_stack.length === 0) return 0
   const g0 = redo_stack[redo_stack.length - 1].grp
   let first = redo_stack.length - 1
   while (first > 0 && redo_stack[first - 1].grp === g0) first--
   let select_id = redo_stack.slice(first).every(e => e.op === op_frame_move) ? g.doc.frames[g.doc.cur]?.id : undefined
+  let whole = 0
   while (redo_stack.length > 0 && redo_stack[redo_stack.length - 1].grp === g0) {
     const e = redo_stack.pop() as hist_ent_t
     if (e.op === op_frame_cursor) select_id = e.b
     else apply_redo(g, e)
+    if (e.op === op_note) whole = 1
     undo_stack.push(e)
   }
   if (select_id !== undefined) {
@@ -264,7 +310,7 @@ export function hist_redo(g: globals_t): number {
     if (i >= 0) g.doc.cur = i
   }
   doc_unpack_live(g)
-  return 1
+  return whole ? 2 : 1
 }
 
 export function hist_can_undo(): number {

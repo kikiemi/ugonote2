@@ -50,6 +50,13 @@ function tool_first_page(tool: number): string {
   }
 }
 
+// ふとさを出すページ。ペンと図形はペンの種類と、模様ブラシはもようと同じページにする。けしごむは、けしごむの形と同じページ。
+function tool_size_page(tool: number): string {
+  if (tool === t_patbrush) return 'pattern'
+  if (tool === t_eraser) return 'size'
+  return 'brush'
+}
+
 function tool_detail_label(tool: number): string {
   switch (tool) {
     case t_fill: return '塗り方'
@@ -63,6 +70,7 @@ export function tool_page_show(page?: string, scroll = true): void {
   tool_blocks_sync()
   const body = q('tool_options')
   const t = st().pen.tool
+  q('blk_size').dataset.optionsPage = tool_size_page(t)
   const available: string[] = []
   for (const block of body.querySelectorAll<HTMLElement>('.pbk:not(.off)')) {
     const name = block.dataset.optionsPage

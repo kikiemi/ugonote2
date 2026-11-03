@@ -45,7 +45,7 @@ export function tr_line(value: string): string {
     .replace(/^曲\s*(\d+)$/, 'Track $1')
     .replace(/^(?:いろ|色) (#[A-Fa-f0-9]+)$/, 'Color $1')
     .replace(/^ふとさ (\d+)$/, 'Size $1')
-    .replace(/^紙のいろ (\d+) (#[A-Fa-f0-9]+)$/, 'Paper color $1 $2')
+    .replace(/^紙の(?:いろ|色) (\d+) (#[A-Fa-f0-9]+)$/, 'Paper color $1 $2')
     .replace(/^([\d.]+) px \/ ドット$/, '$1 px / pixel')
     .replace(/([\d.]+) コマ\/秒$/, '$1 fps')
 }

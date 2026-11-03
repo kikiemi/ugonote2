@@ -73,7 +73,7 @@ export function modal_text(bx: number, by: number): void {
         txt_fam = list[list.length - 1].family
         font.innerHTML = font_opts()
         font.value = txt_fam
-        toast('フォントを取り込んだよ（このセッションの間つかえます）')
+        toast('フォントを取り込みました（アプリを開いているあいだ使えます）')
       })
     )
   })

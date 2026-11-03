@@ -104,7 +104,7 @@ export function modal_note_meta(): void {
   query(box, '#mt_no').addEventListener('click', () => modal_close())
   query(box, '#mt_ok').addEventListener('click', () => {
     dispatch('doc.set_meta', collect())
-    toast('作品情報を保存しました')
+    toast('作品情報を書きかえました')
     modal_close()
   })
 }

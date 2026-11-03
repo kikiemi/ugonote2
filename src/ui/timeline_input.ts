@@ -5,7 +5,9 @@ import { drag_slop, longpress_ms, thumb_w, thumb_h } from '../h'
 import { tr } from '../lang'
 import { clamp } from '../lib'
 import { drag_scroll } from './drag_scroll'
-import { modal_addmany, modal_prompt_num } from './modal'
+import { modal_addmany, modal_goto, modal_prompt_num } from './modal'
+import { modal_range } from './frame_panel'
+import { toolbox_open } from './toolbox'
 import { sfx_play } from '../snd'
 import { dispatch } from '../state/commands/index'
 import { anim_playing } from '../state/commands/play'
@@ -123,20 +125,24 @@ function tl_more_open(): void {
     return
   }
   pop_close()
+  // 画面に出ているボタンと同じ操作は、メニューに重ねて出さない。
+  const shown = (id: string): number => q(id).getClientRects().length ? 1 : 0
   const items = [
-    { label: tr(g.doc.loop ? 'ループを解除' : 'ループ再生'), icon: 'loop', fn: loop_toggle },
-    { label: tr('A-B区間ループ'), icon: 'ab', fn: ab_cycle },
-    { label: tr('このコマの表示時間'), icon: 'clock', fn: () => hold_toggle(button) },
+    ...(shown('loop_btn') ? [] : [{ label: tr(g.doc.loop ? 'ループを解除' : 'ループ再生'), icon: 'loop', fn: loop_toggle }]),
+    ...(shown('ab_btn') ? [] : [{ label: tr('A-B区間ループ'), icon: 'ab', fn: ab_cycle }]),
+    ...(shown('hold_btn') ? [] : [{ label: tr('このコマの表示時間'), icon: 'clock', fn: () => hold_toggle(button) }]),
     { label: tr('コマをうつす'), icon: 'swap', off: g.doc.frames.length <= 1 ? 1 : 0, fn: () => {
       const frame_id = st().doc.frames[st().doc.cur].id
-      modal_prompt_num('コマをうつす', 'このコマを何コマ目に置く？（1〜' + st().doc.frames.length + '）', st().doc.cur + 1, 1, st().doc.frames.length, v => {
+      modal_prompt_num('コマをうつす', 'このコマを何コマ目に置きますか？（1〜' + st().doc.frames.length + '）', st().doc.cur + 1, 1, st().doc.frames.length, v => {
         const from = st().doc.frames.findIndex(frame => frame.id === frame_id)
         if (from >= 0 && dispatch('frame.move', { a: from, b: v - 1 }) === 0) sfx_play('move')
       })
     } },
     { label: tr('まとめて追加'), icon: 'many', fn: modal_addmany },
-    { label: tr('はやさ'), icon: 'clock', fn: () => fps_toggle(button) },
-    { label: tr('みえかた'), icon: 'onion', fn: () => pop_toggle('pop_view', button) },
+    { label: tr('まとめてコピー・変更'), icon: 'ab', fn: modal_range },
+    { label: tr('コマ番号へとぶ'), icon: 'goto', fn: modal_goto },
+    ...(shown('fps_btn') ? [] : [{ label: tr('はやさ'), icon: 'clock', fn: () => fps_toggle(button) }]),
+    ...(shown('view_btn') ? [] : [{ label: tr('みえかた'), icon: 'onion', fn: () => toolbox_open('toolbox_onion') }]),
   ]
   ctx_show_above(button, items)
 }
@@ -405,7 +411,7 @@ export function tl_events(): void {
   q('last_btn').addEventListener('click', frame_last)
   q('frame_no').addEventListener('click', () => {
     dispatch('play.stop', null)
-    modal_prompt_num('コマへジャンプ', '何コマ目にとぶ？（1〜' + g.doc.frames.length + '）', g.doc.cur + 1, 1, g.doc.frames.length, v => {
+    modal_prompt_num('コマへジャンプ', '何コマ目にとびますか？（1〜' + g.doc.frames.length + '）', g.doc.cur + 1, 1, g.doc.frames.length, v => {
       dispatch('frame.goto', v - 1)
     })
   })
@@ -425,9 +431,10 @@ export function tl_events(): void {
   q<HTMLInputElement>('fps_range').addEventListener('input', e => {
     dispatch('doc.set_fps_idx', Number((e.target as HTMLInputElement).value))
   })
+  // スライダーを動かしているあいだの変化は、1回の「もどす」でもどるようにまとめる。
   q<HTMLInputElement>('hold_range').addEventListener('input', e => {
     const cur = g.doc.cur
-    dispatch('frame.set_hold_range', { a: cur, b: cur, hold: Number((e.target as HTMLInputElement).value) })
+    dispatch('frame.set_hold_range', { a: cur, b: cur, hold: Number((e.target as HTMLInputElement).value), merge: 1 })
   })
 }
 

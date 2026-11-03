@@ -121,7 +121,7 @@ export function modal_transition(): void {
         </section>`,
       },
     ],
-    actions: '<span class="sheet_note">この操作はもどせません</span><button class="pbtn primary" id="tr_go">入れる</button>',
+    actions: '<button class="pbtn primary" id="tr_go">入れる</button>',
   })
   const steps = query<HTMLInputElement>(box, '#tr_steps')
   const sync = (): void => {

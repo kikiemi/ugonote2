@@ -24,6 +24,10 @@ const st_auto = 'auto'
 export type slot_row_t = { key: string, name: string, ts: number, thumb: Blob | null, size: number }
 
 let save_state = 0
+// 保存が終わったら呼ぶ関数。ok は保存できたら 1。
+let save_waiters: ((ok: number) => void)[] = []
+// 保存しているあいだに、もう一度保存をたのまれたか。
+let save_again = 0
 let backoff = 2000
 let retry_t: ReturnType<typeof setTimeout> | 0 = 0
 let blink_t: ReturnType<typeof setTimeout> | 0 = 0
@@ -141,10 +145,31 @@ function pk_same(a: readonly (rle_t | null)[] | undefined, f: { readonly pk: rea
   return 1
 }
 
-export function store_save_auto(): void {
+// 保存が終わったときに、待っている関数を呼ぶ。保存中にたのまれた分があれば、先にそれを保存する。
+function save_finish(ok: number): void {
+  if (ok && save_again) {
+    save_again = 0
+    store_save_auto()
+    return
+  }
+  save_again = 0
+  const list = save_waiters
+  save_waiters = []
+  for (const done of list) done(ok)
+}
+
+// この端末へ自動保存する。done は書きこみが終わってから呼ぶ (保存できたら 1)。
+export function store_save_auto(done?: (ok: number) => void): void {
   const g = st()
-  if (!g.booted) return
-  if (save_state === 1) return
+  if (!g.booted) {
+    if (done) done(0)
+    return
+  }
+  if (done) save_waiters.push(done)
+  if (save_state === 1) {
+    save_again = 1
+    return
+  }
   save_state = 1
   dirty(d_save)
   const seq_at_start = dirty_seq
@@ -221,6 +246,7 @@ export function store_save_auto(): void {
       if (dirty_seq === seq_at_start) project_dirty = 0
       blink_once()
       dirty(d_save)
+      save_finish(1)
     }
     tx.onerror = event => fail_transaction(database_event_error(event))
     tx.onabort = event => fail_transaction(database_event_error(event))
@@ -235,6 +261,7 @@ export function store_save_auto(): void {
       store_save_auto()
     }, backoff)
     backoff = Math.min(30000, backoff * 2)
+    save_finish(0)
   }
 }
 

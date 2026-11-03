@@ -21,7 +21,7 @@ export function zip_import(): void {
         zip_read(buffer).then(
           entries => {
             if (!entries) {
-              toast('ZIPを読めなかった…')
+              toast('ZIPを読めませんでした')
               return
             }
             const png_entries: zip_entry_t[] = []
@@ -30,7 +30,7 @@ export function zip_import(): void {
             }
             png_entries.sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }))
             if (!png_entries.length) {
-              toast('PNGが入ってないみたい')
+              toast('PNGが入っていないようです')
               return
             }
             const g = st()
@@ -38,7 +38,7 @@ export function zip_import(): void {
             const room = mode_frame_limit(g.doc.mode) - initial_frame_count
             const entry_count = Math.min(room, png_entries.length)
             if (entry_count < 1) {
-              toast('これ以上コマを増やせないよ')
+              toast('これ以上コマを増やせません')
               return
             }
             dispatch('frame.sync_live', null)
@@ -64,7 +64,7 @@ export function zip_import(): void {
                 return
               }
               if (dispatch('frame.append_bulk', { frames, set_cur: initial_frame_count + frames.length - 1 }) < 0) {
-                toast('PNG連番を追加できなかった…')
+                toast('PNG連番を追加できませんでした')
                 return
               }
               toast(frames.length + 'コマ取り込みました' + (failed_count ? '（' + failed_count + '件は読込失敗）' : ''))
@@ -118,13 +118,13 @@ export function zip_import(): void {
           },
           error => {
             report_warning('ZIPファイルを読み込めませんでした', error)
-            toast('ZIPを読めなかった…')
+            toast('ZIPを読めませんでした')
           }
         )
       },
       error => {
         report_warning('ZIPファイルの内容を読み出せませんでした', error)
-        toast('ZIPを読めなかった…')
+        toast('ZIPを読めませんでした')
       }
     )
   })

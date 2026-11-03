@@ -11,7 +11,7 @@ import { live_canvas, live_peek, live_write, snd_buf_set } from '../../engine'
 import type { loaded_project_t } from '../../fmt'
 import { canvas_flip, canvas_affine } from '../../gfx'
 import { d_all, err_bad, err_noop, err_full, hold_max, l_base_n, l_draw_default, l_draw_max, l_n, mode_3_d, mode_normal, pal_std, anim_fx_zero, note_meta_zero, type frame_t, type mark_def_t, type note_meta_t } from '../../h'
-import { hist_clear, hist_grp, hist_pix, rect_grab } from '../../hist'
+import { hist_clear, hist_grp, hist_note_push, hist_note_take, hist_pix, rect_grab } from '../../hist'
 import { canvas_affine_matrix, canvas_make, clamp } from '../../lib'
 import { mode_allows_runtime_anim, mode_canvas, mode_frame_limit, mode_ink, mode_name, mode_one_sheet, mode_speeds, mode_speed_index, mode_order, mode_pal, mode_paper_opts, sheet_layer } from '../../mode'
 import { paint_active, pat_custom } from '../../paint'
@@ -429,8 +429,11 @@ export const project_commands = {
     const op = (c: HTMLCanvasElement): HTMLCanvasElement => transform ? canvas_affine(c, transform.angle, transform.smooth, transform.scale, transform.dx, transform.dy) : canvas_flip(c, p.kind === 'fliph' ? 1 : 0)
     if (p.scope === 'all') {
       const matrix: [number, number, number, number, number, number] = transform ? canvas_affine_matrix(g.doc.w, g.doc.h, transform.angle, transform.scale, transform.dx, transform.dy) : p.kind === 'fliph' ? [-1, 0, 0, 1, g.doc.w, 0] : [1, 0, 0, -1, 0, g.doc.h]
+      // 取っておいたコマを書きかえないよう、全部のコマを新しいコマにしてから変える。
+      const before = hist_note_take(g)
+      g.doc.frames = g.doc.frames.map(frame => ({ ...frame }))
       doc_transform_all(g, op, transform?.source, packed => pixel_source_transform(packed, g.doc.w, g.doc.h, ...matrix))
-      hist_clear()
+      hist_note_push(g, before)
     } else {
       const grp = hist_grp()
       const [source, context] = canvas_make(g.doc.w, g.doc.h, 1)
@@ -492,7 +495,7 @@ function project_new_body(g: globals_t, name: string): number {
   hist_clear()
   thumb_clear()
   view_fit_after(g)
-  fx_toast('あたらしいノート！')
+  fx_toast('あたらしいノートをつくりました')
   fx_sfx('paper')
   return 0
 }

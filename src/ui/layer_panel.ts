@@ -7,9 +7,10 @@ import { clamp } from '../lib'
 import { layer_name, mode_allows_layer_alpha, mode_one_sheet } from '../mode'
 import { st } from '../state/store'
 
-// レイヤーの行の見え方。limit は一度に出す行の数 (0 なら全部)、first は出す行の先頭、layer は前に選んでいたレイヤー、
-// follow が 1 なら、選んだレイヤーの行が見える所へ first を動かす。
-const row_view = { limit: 0, first: 0, layer: -1, follow: 1 }
+// レイヤーの行の見え方。limit は一度に出す行の数 (0 なら全部)、first は出したい行の先頭、shown はいま出している行の先頭、
+// layer は前に選んでいたレイヤー。follow が 1 なら、選んだレイヤーの行が見える所へ first を動かす
+// (「ほか n 枚」で動かすと 0、ほかのレイヤーを選ぶと 1 にもどす)。
+const row_view = { limit: 0, first: 0, shown: 0, layer: -1, follow: 1 }
 
 const l_tints = ['#8A7B72', '#E0443B', '#2E6BE0', '#20A464', '#D48824', '#8C59C7', '#1F9FA8', '#D05C91', '#667085']
 
@@ -35,13 +36,13 @@ function layer_rows_render(): void {
     row_view.layer = layer
     row_view.follow = 1
   }
+  // 出す行の数は、入りきるまで何度か減らして決めるので、そのたびに選んでいる行を真ん中へもどす。
   if (row_view.follow && limit < count) {
-    row_view.follow = 0
     for (let i = 0; i < count; i++) if (rows[i].dataset.l === String(layer)) row_view.first = i - (limit >> 1)
   }
-  // 全部の行を出すあいだは first を残しておく (測りなおしのあとで、見ていた所へもどれるように)。
+  // 測りなおしのあいだは行の数が何度か変わるので、first はおさめた値で上書きしない (見ていた所へもどれるように)。
   const first = clamp(row_view.first, 0, count - limit)
-  if (limit < count) row_view.first = first
+  row_view.shown = first
   for (let i = 0; i < count; i++) rows[i].classList.toggle('folded', i < first || i >= first + limit)
   const below = count - first - limit
   const up = q<HTMLButtonElement>('layer_fold_up')
@@ -62,7 +63,8 @@ export function layer_rows_limit(limit: number): void {
 
 // 「ほか n 枚」のボタンで、出す行を上下へ動かす。
 export function layer_rows_move(direction: number): void {
-  row_view.first += direction * Math.max(1, row_view.limit - 1)
+  row_view.follow = 0
+  row_view.first = row_view.shown + direction * Math.max(1, row_view.limit - 1)
   layer_rows_render()
 }
 

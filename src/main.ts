@@ -33,7 +33,7 @@ function boot(): void {
   const embedded = !!(globalThis as { __ug2_embedded?: number }).__ug2_embedded
   const root = document.getElementById('app')
   if (!root) {
-    document.body.textContent = '#app が見つからないよ'
+    document.body.textContent = '#app が見つかりません'
     return
   }
   fx_hooks_set({
@@ -78,7 +78,7 @@ function boot(): void {
   window.addEventListener('error', e => {
     report_error('実行時エラー', e.error || e.message)
     const at = e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : ''
-    toast('エラー: ' + (e.message || 'なにかおかしいかも') + at)
+    toast('エラー: ' + (e.message || 'うまく動いていないようです') + at)
   })
   window.addEventListener('unhandledrejection', e => {
     report_error('未処理の非同期エラー', e.reason)
@@ -88,7 +88,7 @@ function boot(): void {
   if (!menu_seen) q('menu_btn').classList.add('pulse')
   store_boot(loaded => {
     dispatch('project.set_booted', null)
-    if (loaded) toast('まえのつづきから再開したよ')
+    if (loaded) toast('まえのつづきから再開しました')
     dirty(d_all)
     const seen = embedded || storage_get('ug2_seen') === '1' ? 1 : 0
     requestAnimationFrame(() => {

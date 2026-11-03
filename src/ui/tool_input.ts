@@ -42,11 +42,6 @@ export function rail_events(): void {
     tool_page_show('shape')
     pop_toggle('pop_tool', button)
   })
-  q('color_btn').addEventListener('click', () => pop_toggle('pop_color', q('color_btn')))
-  q('tool_settings_btn').addEventListener('click', () => {
-    tool_page_show('tool')
-    pop_toggle('pop_tool', q('tool_settings_btn'))
-  })
   // 道具の設定から色へ飛び、色の画面の「設定」でもとの設定へもどる。
   q('tool_color_btn').addEventListener('click', () => pop_open('pop_color', q('tool_color_btn')))
   q('color_back').addEventListener('click', () => pop_open('pop_tool', q('dock_settings')))
@@ -111,7 +106,7 @@ export function color_pop_events(): void {
   const apply_hex = () => {
     const v = q<HTMLInputElement>('hex_in').value.trim()
     if (!hex_ok(v)) {
-      toast('#RRGGBB の形で入れてね')
+      toast('#RRGGBB の形で入れてください')
       return
     }
     dispatch('pen.set_color', v)
@@ -280,7 +275,7 @@ function mark_grid_events(id: string): void {
     const id = b.dataset.markid
     mark_place(id, canvas => {
       if (!canvas) {
-        toast('マークを読み込めなかった…')
+        toast('マークを読み込めませんでした')
         return
       }
       dispatch('flo.begin_image', { canvas, kind: k_paste, x: g.doc.w / 2, y: g.doc.h / 2, continuous: 1 })
@@ -320,11 +315,11 @@ export function mark_events(): void {
       mark_wait_start(st().pen.tool)
       pop_close()
       tool_pick(t_select)
-      toast('マークにしたい所をかこんで、「マーク登録」を押してね')
+      toast('マークにしたい所をかこんで、「マーク登録」を押してください')
       return
     }
     mark_capture_from_selection('マーク', ok => {
-      toast(ok ? 'マークに登録しました' : 'いまのレイヤーの、えらんだ所に絵がありません（レイヤーを切りかえてね）')
+      toast(ok ? 'マークに登録しました' : 'いまのレイヤーの、えらんだ所に絵がありません（レイヤーを切りかえてください）')
       if (ok) sfx_play('save')
     })
   })

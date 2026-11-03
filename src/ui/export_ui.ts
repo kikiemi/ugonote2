@@ -88,7 +88,7 @@ function export_png(alpha: number): void {
     c.width = 0
     if (!blob) {
       report_warning('PNG画像を作成できませんでした', error)
-      toast('PNGを作れなかった…')
+      toast('PNGを作れませんでした')
       return
     }
     export_done(blob, safe_name() + '_' + pad3(g.doc.cur + 1) + '.png', '')
@@ -150,7 +150,7 @@ function export_gif(): void {
   const fail = (error: unknown): void => {
     prog.close()
     report_warning('GIFを書き出せませんでした', error)
-    toast(error instanceof Error ? error.message : 'GIFを作れなかった…')
+    toast(error instanceof Error ? error.message : 'GIFを作れませんでした')
   }
   dispatch('frame.sync_live', null)
   if (!animfx_active(g.doc.anim)) {
@@ -188,7 +188,7 @@ function export_zip(alpha: number): void {
     progress.close()
     if (canvas) canvas.width = 0
     entries.length = 0
-    toast(error instanceof Error ? error.message : 'PNG連番ZIPを作れなかった…')
+    toast(error instanceof Error ? error.message : 'PNG連番ZIPを作れませんでした')
   }
 
   const input = { w: width, h: height, fps: g.doc.fps, holds: jobs.map(job => job.hold), format: 'pngzip' as const, name: base_name, budget }
@@ -256,7 +256,7 @@ function export_zip(alpha: number): void {
 function export_webm(): void {
   const g = st()
   if (!vid_supported()) {
-    toast('このブラウザは動画書き出しに対応してないみたい…')
+    toast('このブラウザは動画の書き出しに対応していないようです')
     return
   }
   if (anim_playing()) anim_stop()
@@ -267,7 +267,7 @@ function export_webm(): void {
   vid_export(exp_scale, p => prog.set(p), blob => {
     prog.close()
     if (!blob) {
-      toast('動画を作れなかった…')
+      toast('動画を作れませんでした')
       return
     }
     export_done(blob, safe_name() + '.webm', '')
@@ -280,7 +280,7 @@ export function file_save(): void {
   dispatch('frame.sync_live', null)
   store_export_ugn2(bytes => {
     if (!bytes) {
-      toast('保存に失敗しました…')
+      toast('保存できませんでした')
       return
     }
     download_blob(bytes instanceof Blob ? bytes : new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer], { type: 'application/octet-stream' }), safe_name() + '.ugn2')
@@ -292,14 +292,14 @@ export function file_save(): void {
 export function file_open_selected(file: File): void {
   file.arrayBuffer().then(
     buffer => {
-      modal_confirm('ファイルを開く', 'いまのノートは自動保存ぶんだけ残るよ。<br>「' + esc(file.name) + '」を開く？', '開く', () => {
+      modal_confirm('ファイルを開く', 'いまのノートは、自動保存した分だけ残ります。<br>「' + esc(file.name) + '」を開きますか？', '開く', () => {
         const project = fmt_parse(new Uint8Array(buffer))
         if (!project) {
-          toast('開けなかった…（こわれてるかも）')
+          toast('開けませんでした（ファイルがこわれているかもしれません）')
           return
         }
         if (dispatch('project.apply_loaded', project) < 0) {
-          toast('開けなかった…（内容が正しくないみたい）')
+          toast('開けませんでした（中身が正しくないようです）')
           return
         }
         q('drawer_close').click()
@@ -309,7 +309,7 @@ export function file_open_selected(file: File): void {
     },
     error => {
       report_warning('UGN2ファイルを読み出せませんでした', error)
-      toast('ファイルを読めなかった…')
+      toast('ファイルを読めませんでした')
     }
   )
 }
@@ -318,7 +318,7 @@ function export_mp4(): void {
   if (anim_playing()) anim_stop()
   const mode = vid_mp4_mode()
   if (!mode) {
-    toast('この環境はMP4に未対応。WebMをつかってね')
+    toast('この環境はMP4に対応していません。WebMを使ってください')
     return
   }
   const prog = modal_progress('MP4を書き出し中')
@@ -326,7 +326,7 @@ function export_mp4(): void {
   vid_export_mp4(exp_scale, p => prog.set(p), (blob, note) => {
     prog.close()
     if (!blob) {
-      toast(note || 'MP4を作れなかった…')
+      toast(note || 'MP4を作れませんでした')
       return
     }
     export_done(blob, safe_name() + '.mp4', note || '')
@@ -338,11 +338,11 @@ function export_mp4(): void {
 function export_kwz_ui(): void {
   if (anim_playing()) anim_stop()
   const prog = modal_progress('KWZ（うごメモ3D）を書き出し中')
-  prog.note('3レイヤー・6色に量子化するよ')
+  prog.note('3レイヤー・6色に変換します')
   exp_kwz(p => prog.set(p), (bytes, note, filename) => {
     prog.close()
     if (!bytes) {
-      toast(note || 'KWZを作れなかった…')
+      toast(note || 'KWZを作れませんでした')
       return
     }
     export_done(new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer], { type: 'application/octet-stream' }), filename, note || '')
@@ -354,11 +354,11 @@ function export_kwz_ui(): void {
 function export_ppm_ui(): void {
   if (anim_playing()) anim_stop()
   const prog = modal_progress('PPM（うごメモDSi）を書き出し中')
-  prog.note('2レイヤー・3色に量子化するよ')
+  prog.note('2レイヤー・3色に変換します')
   exp_ppm(p => prog.set(p), (bytes, note, filename) => {
     prog.close()
     if (!bytes) {
-      toast(note || 'PPMを作れなかった…')
+      toast(note || 'PPMを作れませんでした')
       return
     }
     export_done(new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer], { type: 'application/octet-stream' }), filename, note || '')

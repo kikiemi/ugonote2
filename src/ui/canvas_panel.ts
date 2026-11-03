@@ -12,10 +12,10 @@ export function apply_canvas(): void {
   const res = q<HTMLSelectElement>('reso_sel').value
   const s = ratio === 'free' && res === 'free' ? { w: g.doc.w, h: g.doc.h } : reso_size(ratio, res)
   if (s.w === g.doc.w && s.h === g.doc.h && ratio === g.doc.ratio && res === g.doc.res) {
-    toast('いまと同じサイズだよ')
+    toast('いまと同じサイズです')
     return
   }
-  modal_confirm('キャンバス変更', '全コマを ' + s.w + '×' + s.h + ' に作りかえるよ。<br><b>この操作は「もどす」できない</b>（履歴は消えるよ）。', '作りかえる', () => {
+  modal_confirm('キャンバス変更', '全コマを ' + s.w + '×' + s.h + ' に作りかえます。<br><b>この操作は「もどす」でもどせません</b>（もどす・すすむの記録も消えます）。', '作りかえる', () => {
     void project_rebuild(s.w, s.h, ratio, res)
   })
 }
@@ -27,6 +27,6 @@ export function transform_canvas(kind: 'rotate' | 'scale' | 'fliph' | 'flipv', v
     try { dispatch('project.transform', { kind, angle: kind === 'rotate' ? value : 0, scale: kind === 'scale' ? value : undefined, scope }) }
     catch (error) { report_warning('絵の変形を中止しました', error); toast(error instanceof Error ? error.message : '絵を変形できませんでした') }
   }
-  if (scope === 'all') modal_confirm('全コマを' + label, '全部のコマにかかるよ。<br><b>この操作は「もどす」できない</b>（履歴は消えるよ）。', '実行する', apply)
+  if (scope === 'all') modal_confirm('全コマを' + label, '全部のコマにかかります。「もどす」でもどせます。', '実行する', apply)
   else apply()
 }

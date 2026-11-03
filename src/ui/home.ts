@@ -45,7 +45,7 @@ function preview_tick(): void {
 export function home_group_show(group: string): void {
   home_preview_stop()
   q('drawer').dataset.page = group
-  q('menu_heading').textContent = tr_line(({ home: 'メニュー', files: '保存・ひらく', imports: 'とりこむ', sound: '音をつける', canvas: '紙とサイズ', frames: 'コマのこと', settings: 'せってい', project: 'さくひん設定' } as Record<string, string>)[group] || 'メニュー')
+  q('menu_heading').textContent = tr_line(({ home: 'メニュー', files: '保存・ひらく', sound: '音をつける', canvas: '紙とサイズ', settings: 'せってい', project: 'さくひん設定' } as Record<string, string>)[group] || 'メニュー')
   for (const section of q('drawer_body').children) {
     const el = section as HTMLElement
     el.hidden = el.dataset.menuGroup !== group
@@ -66,7 +66,6 @@ export function home_mount(resume: () => void, frames: () => void): void {
   q('menu_draw').addEventListener('click', resume)
   q('menu_frames').addEventListener('click', frames)
   q('menu_details').addEventListener('click', () => home_group_show('project'))
-  q('project_mode').addEventListener('click', () => q('mode_btn').click())
   q('project_meta').addEventListener('click', modal_note_meta)
   q('menu_new').addEventListener('click', () => { home_preview_stop(); q('new_btn').click() })
   q('menu_preview_play').addEventListener('click', () => {

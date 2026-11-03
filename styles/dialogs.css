@@ -42,9 +42,9 @@
   touch-action: pan-y;
   background: var(--bg2);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: var(--mpad);
-  box-shadow: none;
+  box-shadow: var(--shadow_lg);
 }
 
 .mbox.wide {

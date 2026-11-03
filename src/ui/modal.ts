@@ -178,7 +178,7 @@ export function modal_addmany(): void {
   const limit = mode_frame_limit(st().doc.mode)
   const room = Math.max(0, limit - st().doc.frames.length)
   if (!room) {
-    toast('これ以上コマを増やせないよ（最大' + limit + '）')
+    toast('これ以上コマを増やせません（最大' + limit + '）')
     return
   }
   let presets = ''

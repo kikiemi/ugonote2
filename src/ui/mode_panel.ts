@@ -34,7 +34,7 @@ export function modal_mode(): void {
     modal_close()
     modal_confirm(
       mode_name(m) + 'モードへ',
-      'キャンバスを <b>' + mc.w + '×' + mc.h + '</b> に作りかえて、' + mode_name(m) + 'の制限（色・レイヤー）にそろえるよ。<br><b>この操作は「もどす」できない</b>（履歴は消えるよ）。' + anim_notice,
+      'キャンバスを <b>' + mc.w + '×' + mc.h + '</b> に作りかえて、' + mode_name(m) + 'の制限（色・レイヤー）にそろえます。<br><b>この操作は「もどす」でもどせません</b>（もどす・すすむの記録も消えます）。' + anim_notice,
       '切りかえる',
       () => {
         void project_rebuild(mc.w, mc.h, mc.ratio, mc.res, m).then(result => { if (result === 0) drawer_set(0) })

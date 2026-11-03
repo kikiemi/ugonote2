@@ -26,20 +26,22 @@
   --bg: #fff;
   --bg2: #fff;
   --bg3: #fff3e5;
-  --bg4: #e8ebf2;
-  --line: #e3e6ed;
-  --line2: #d0d0d0;
-  --tx: #565b67;
+  --bg4: #fbefe4;
+  --btn: #fff;
+  --line: #f8e3d1;
+  --line2: #f3c9a6;
+  --tx: #5c4a3c;
   --tx2: #4c5049;
-  --dim: #858b98;
+  --dim: #8b7768;
   --acc: #ff7b1c;
   --acc_d: #a54d11;
   --acc2: #ffae60;
-  --acc_soft: #ffdbaf;
+  --acc_soft: #ffe1c4;
+  --acc_line: #f6b98a;
   --ok: #3b9c79;
   --warn: #d05c4c;
-  --shadow: none;
-  --shadow_lg: none;
+  --shadow: 0 2px 0 rgba(120, 90, 60, 0.12);
+  --shadow_lg: 0 2px 6px rgba(90, 60, 30, 0.08), 0 10px 28px rgba(90, 60, 30, 0.14);
   --desk_line: #e9ecf2;
   --r: 24px;
   --r_sm: 14px;
@@ -47,6 +49,7 @@
 
 body[data-theme="dark"] {
   --bg: #232722;
+  --btn: #363c33;
   --desk_line: #30362e;
   --bg2: #30352e;
   --bg3: #393f35;
@@ -60,6 +63,9 @@ body[data-theme="dark"] {
   --acc_d: #ffd1a1;
   --acc2: #ffc186;
   --acc_soft: #4c3b28;
+  --acc_line: #8a5a32;
+  --shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow_lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
 
@@ -97,8 +103,8 @@ button {
   transition: background-color 0.12s, border-color 0.12s, color 0.12s;
 }
 
-.dkb[aria-haspopup]::after,
-.rb.hasopts::after {
+.dkb.on[aria-haspopup]::after,
+.rb.on.hasopts::after {
   content: "▾";
   position: absolute;
   top: 2px;
@@ -107,6 +113,10 @@ button {
   line-height: 1;
   color: var(--acc_d);
   pointer-events: none;
+}
+
+.dkb.on[aria-haspopup]::after {
+  color: var(--acc);
 }
 
 button:disabled {

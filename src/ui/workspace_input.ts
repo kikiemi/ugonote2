@@ -73,22 +73,13 @@ export function dock_events(): void {
 }
 
 export function quick_events(): void {
-  q('view_btn').addEventListener('click', () => pop_toggle('pop_view', q('view_btn')))
+  q('view_btn').addEventListener('click', () => toolbox_open('toolbox_onion'))
   q('layer_btn').addEventListener('click', () => {
     layer_fold(0)
     pop_toggle('pop_layer', q('layer_btn'))
   })
   q('tf_btn').addEventListener('click', tf_open)
   q('onion_btn').addEventListener('click', () => toolbox_open('toolbox_onion'))
-  q('view_onion_btn').addEventListener('click', () => toolbox_open('toolbox_onion'))
-  q('grid_btn').addEventListener('click', () => {
-    dispatch('view.toggle_grid', null)
-    sfx_play('tap')
-  })
-  q('vflip_btn').addEventListener('click', () => {
-    dispatch('view.toggle_flip', null)
-    sfx_play('tap')
-  })
   q('fit_btn').addEventListener('click', () => {
     pop_close()
     rail_sheet(0)

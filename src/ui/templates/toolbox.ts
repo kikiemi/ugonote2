@@ -18,12 +18,6 @@ export function toolbox_settings_html(page: 'transform' | 'view'): string {
   </section>
 `
   return `
-  <section class="opt">${switch_row('toolbox_mirror', 'fliph', '画面を左右反転')}</section>
-  <section class="opt" id="blk_grid">
-    ${switch_row('adjust_grid', 'grid', '方眼')}
-    ${choices('grid_choices', 'grid-size', [['8', '8px'], ['16', '16px'], ['32', '32px'], ['64', '64px']])}
-    <div class="opt_row"><label class="plab" for="grid_step_num">間隔</label><input type="range" id="grid_step_num" min="4" max="64" step="1"><output id="grid_step_val"></output></div>
-  </section>
   <section class="opt" id="toolbox_onion">
     <div class="opt_head"><b>前後のコマを透かす</b></div>
     ${choices('onion_choices', 'onion-count', [['0', 'オフ'], ['1', '1枚'], ['2', '2枚'], ['3', '3枚']])}
@@ -32,5 +26,11 @@ export function toolbox_settings_html(page: 'transform' | 'view'): string {
     <div class="seg onion_directions"><button id="onion_prev" aria-pressed="true"><i class="onion_dot" aria-hidden="true"></i>前のコマ</button><button id="onion_next" aria-pressed="true"><i class="onion_dot" aria-hidden="true"></i>後のコマ</button></div>
     </div>
   </section>
+  <section class="opt" id="blk_grid">
+    ${switch_row('adjust_grid', 'grid', '方眼')}
+    ${choices('grid_choices', 'grid-size', [['8', '8px'], ['16', '16px'], ['32', '32px'], ['64', '64px']])}
+    <div class="opt_row"><label class="plab" for="grid_step_num">間隔</label><input type="range" id="grid_step_num" min="4" max="64" step="1"><output id="grid_step_val"></output></div>
+  </section>
+  <section class="opt">${switch_row('toolbox_mirror', 'fliph', '画面を左右反転')}</section>
 `
 }

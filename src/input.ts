@@ -15,7 +15,7 @@ import { rail_events, custom_load, color_pop_events, tool_pop_events, tf_pop_eve
 import { selection_toolbar_events } from './ui/selection_toolbar'
 import { dock_events, quick_events, header_events, pop_chrome_events, outside_close } from './ui/workspace_input'
 import { keydown, keyup } from './ui/keyboard_input'
-import { view_fit_if_stale } from './ui/viewport'
+import { view_fit_if_stale, view_stage_resized } from './ui/viewport'
 
 function input_interrupt(): void {
   fs_drag_clear()
@@ -77,9 +77,9 @@ export function input_mount(): void {
   window.addEventListener('resize', () => { view_fit_if_stale(); workspace_layout_render() })
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
-      view_fit_if_stale()
+      view_stage_resized(wrap.clientWidth, wrap.clientHeight)
       workspace_layout_render()
-    }).observe(q('stage_wrap'))
+    }).observe(wrap)
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'hidden') return

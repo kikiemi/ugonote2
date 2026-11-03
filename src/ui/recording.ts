@@ -24,7 +24,7 @@ export function rec_toggle(kind: string): void {
   }
   if (snd_recording()) {
     if (recording_kind !== kind) {
-      toast('べつのスロットで録音中だよ')
+      toast('べつのスロットで録音しています')
       return
     }
     rec_finishing = 1
@@ -44,7 +44,7 @@ export function rec_toggle(kind: string): void {
     }
     recording_kind = kind
     dirty(d_sound)
-    toast('録音中…もういちど押すと止まるよ')
+    toast('録音しています。もう一度押すと止まります')
   })
 }
 
@@ -84,7 +84,7 @@ export function recsync_toggle(): void {
     return
   }
   if (snd_recording()) {
-    toast('音のスロットで録音中だよ。先にその録音を止めてね')
+    toast('音のスロットで録音しています。先にその録音を止めてください')
     return
   }
   const g = st()

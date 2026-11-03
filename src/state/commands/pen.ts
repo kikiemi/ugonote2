@@ -49,7 +49,7 @@ export const pen_commands = {
   'pen.set_tool': (g: globals_t, t: number): number => {
     if (!Number.isInteger(t)) return err_bad
     if (t === t_paste && !g.clip) {
-      fx_toast('先に選択ツールでコピーしてね')
+      fx_toast('先に選択ツールでコピーしてください')
       return err_noop
     }
     if (g.pen.tool !== t_eyedrop && g.pen.tool !== t) g.pen.prev_tool = g.pen.tool
@@ -252,7 +252,7 @@ export const pen_commands = {
   'pen.custom_add': (g: globals_t, c: string): number => {
     const up = c.toUpperCase()
     if (g.pen.custom.indexOf(up) >= 0) {
-      fx_toast('もう登録されてるよ')
+      fx_toast('すでに登録されています')
       return err_noop
     }
     if (g.pen.custom.length >= 16) g.pen.custom.shift()

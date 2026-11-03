@@ -6,6 +6,7 @@ import type { globals_t } from '../store'
 export type cmds_t = {
   'view.fit': null
   'view.fit_if_stale': null
+  'view.stage_resized': { dw: number, dh: number }
   'view.zoom_at': { sx: number, sy: number, factor: number }
   'view.pan_to': { px: number, py: number }
   'view.set_viewport': { z: number, px: number, py: number }
@@ -40,6 +41,16 @@ export const view_commands = {
   'view.fit_if_stale': (g: globals_t, _p: null): number => {
     if (g.view.fit_z !== 0 && Math.abs(g.view.z - g.view.fit_z) >= 0.001) return err_noop
     return fit(g, null)
+  },
+
+  // 描くところの大きさが dw・dh だけ変わったとき。合わせた表示のままなら合わせなおし、
+  // 拡大・移動していれば、同じ所が描くところのまんなかに見えるよう、半分だけずらす。
+  'view.stage_resized': (g: globals_t, p: { dw: number, dh: number }): number => {
+    if (!Number.isFinite(p.dw) || !Number.isFinite(p.dh)) return err_bad
+    if (g.view.fit_z === 0 || Math.abs(g.view.z - g.view.fit_z) < 0.001) return fit(g, null)
+    g.view.px += p.dw / 2
+    g.view.py += p.dh / 2
+    return 0
   },
 
   'view.zoom_at': (g: globals_t, p: { sx: number, sy: number, factor: number }): number => {
@@ -125,6 +136,7 @@ export const view_commands = {
 export const view_effects: Partial<Record<keyof cmds_t, number>> = {
   'view.fit': d_stage | d_zoom,
   'view.fit_if_stale': d_stage | d_zoom,
+  'view.stage_resized': d_stage | d_zoom,
   'view.zoom_at': d_zoom,
   'view.pan_to': d_stage | d_zoom,
   'view.set_viewport': d_stage | d_zoom,

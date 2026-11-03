@@ -78,7 +78,7 @@ export function tool_pick(t: number, repeat = 1): void {
   if (flo_active()) dispatch('flo.cancel', null)
   if (t === t_paste) {
     if (!g.clip) {
-      toast('さきに「はんい」でコピーしてね')
+      toast('先に「はんい」でコピーしてください')
       return
     }
     dispatch('pen.set_tool', t)

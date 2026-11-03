@@ -77,8 +77,8 @@ export function keydown(e: KeyboardEvent): void {
   }
   if ((e.ctrlKey || e.metaKey) && key_lower === 'S') {
     e.preventDefault()
-    store_save_auto()
-    toast('保存したよ')
+    toast('保存しています…')
+    store_save_auto(ok => toast(ok ? 'この端末に保存しました' : '保存できませんでした。少しあとで自動でやり直します'))
     return
   }
   if (e.ctrlKey || e.metaKey) return

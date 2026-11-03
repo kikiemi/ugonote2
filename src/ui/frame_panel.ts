@@ -83,7 +83,7 @@ export function modal_range(): void {
   b2('rg_rev', () => {
     const [a, b] = get_ab()
     if (a === b) {
-      toast('2コマ以上のはんいでつかってね')
+      toast('2コマ以上のはんいで使ってください')
       return
     }
     if (dispatch('frame.reverse_range', { a, b }) < 0) return
@@ -92,7 +92,7 @@ export function modal_range(): void {
   b2('rg_dup', () => {
     const [a, b] = get_ab()
     if (dispatch('frame.duplicate_range', { a, b, ping_pong: 0 }) < 0) {
-      toast('これ以上コマを増やせないよ')
+      toast('これ以上コマを増やせません')
       return
     }
     finish('複製しました')
@@ -100,11 +100,11 @@ export function modal_range(): void {
   b2('rg_ping', () => {
     const [a, b] = get_ab()
     if (b - a < 2) {
-      toast('3コマ以上のはんいでつかってね')
+      toast('3コマ以上のはんいで使ってください')
       return
     }
     if (dispatch('frame.duplicate_range', { a, b, ping_pong: 1 }) < 0) {
-      toast('これ以上コマを増やせないよ')
+      toast('これ以上コマを増やせません')
       return
     }
     finish('往復にしました')
@@ -112,10 +112,10 @@ export function modal_range(): void {
   b2('rg_del', () => {
     const [a, b] = get_ab()
     if (b - a + 1 >= st().doc.frames.length) {
-      toast('全部のコマは消せないよ')
+      toast('全部のコマは消せません')
       return
     }
-    modal_confirm('はんいを削除', a + 1 + '〜' + (b + 1) + 'コマ目を消すよ。', '消す', () => {
+    modal_confirm('はんいを削除', a + 1 + '〜' + (b + 1) + 'コマ目を消します。', '消す', () => {
       if (dispatch('frame.delete_range', { a, b }) < 0) return
       sfx_play('paper')
       toast('消しました')
@@ -126,7 +126,7 @@ export function modal_range(): void {
   b2('rg_hold_go', () => {
     const [a, b] = get_ab()
     if (dispatch('frame.set_hold_range', { a, b, hold: Number(hr.value) }) < 0) return
-    toast('ホールドをそろえました（もどす不可）')
+    toast('ホールドをそろえました')
   })
 }
 

@@ -2,7 +2,8 @@ import { animfx_cache_clear } from '../../animfx'
 import { doc_frame_order, doc_cache_clear, doc_frame_clone, doc_frame_new, doc_frame_snap, doc_frame_insert, doc_frame_delete, doc_frame_move, doc_goto, doc_pack_live, doc_pack_layer, doc_unpack_live, doc_loop_insert, doc_loop_delete, doc_loop_move } from '../../doc'
 import { live_write, live_drop, live_accept, live_canvas } from '../../engine'
 import { d_all, d_stage, d_thumb, d_timeline, d_frameinfo, d_layer, d_tools, d_play, d_sound, d_page, l_draw_max, l_n, hold_max, err_bad, err_noop, err_full, mode_normal, mode_3_d, type frame_t, type note_meta_t, type rle_t } from '../../h'
-import { hist_grp, hist_frame_ins, hist_frame_del, hist_frame_move, hist_se, hist_pix, rect_grab, hist_undo, hist_redo, hist_clear, hist_layer_alpha, hist_frame_cursor, hist_note, hist_paper } from '../../hist'
+import { canvas_transform_clear } from '../../canvas_transform'
+import { hist_grp, hist_frame_ins, hist_frame_del, hist_frame_move, hist_se, hist_pix, rect_grab, hist_undo, hist_redo, hist_layer_alpha, hist_frame_cursor, hist_merge_hold, hist_note, hist_note_push, hist_note_take, hist_paper } from '../../hist'
 import { canvas_make, clamp, hex_rgb } from '../../lib'
 import { kwz_flag_advanced, mode_allows_layer_alpha, mode_frame_limit, mode_one_sheet, mode_speeds, mode_order, mode_paper_opts, sheet_layer } from '../../mode'
 import { thumb_clear } from '../../thumb'
@@ -41,7 +42,7 @@ function frame_room(g: globals_t): number {
 }
 
 function frame_full(g: globals_t): number {
-  fx_toast('これ以上コマを増やせないよ（最大' + frame_limit(g) + '）')
+  fx_toast('これ以上コマを増やせません（最大' + frame_limit(g) + '）')
   return err_full
 }
 
@@ -104,7 +105,8 @@ export type cmds_t = {
   'frame.move': { a: number, b: number }
   'frame.add_many': number
   'frame.se_toggle': { i: number, bit: number }
-  'frame.set_hold_range': { a: number, b: number, hold: number }
+  // merge が 1 なら、続けて同じコマの長さを変えた分を、1回の「もどす」にまとめる。
+  'frame.set_hold_range': { a: number, b: number, hold: number, merge?: number }
   'frame.insert_bulk': { at: number, frames: frame_t[], set_cur: number }
   'frame.append_bulk': { frames: frame_t[], set_cur: number }
   'frame.replace_current_bulk': { frames: frame_t[] }
@@ -136,6 +138,27 @@ export type cmds_t = {
   'doc.clear_loop_ab': null
   'doc.set_meta': note_meta_t
   'doc.set_penbox': number
+}
+
+// 全部のコマから layer の絵をなくす。取っておいた状態 (hist_note_take) を書きかえないよう、絵のあるコマは新しいコマにする。
+function layer_empty(g: globals_t, layer: number): void {
+  for (let i = 0; i < g.doc.frames.length; i++) {
+    const frame = g.doc.frames[i]
+    if (!frame.pk[layer]) continue
+    const pk = [...frame.pk]
+    pk[layer] = null
+    g.doc.frames[i] = { ...frame, pk }
+  }
+  live_drop(layer)
+  live_accept(layer, null)
+}
+
+// コマ全体の状態をもどしたあとに、作りなおす表示の控え。
+function note_caches_clear(): void {
+  thumb_clear()
+  doc_cache_clear()
+  animfx_cache_clear()
+  canvas_transform_clear()
 }
 
 export const frame_commands = {
@@ -178,7 +201,7 @@ export const frame_commands = {
     const mark_b = g.doc.loop_b === i ? 1 : 0
     const removed = doc_frame_delete(g, i)
     if (!removed) {
-      fx_toast('最後の1枚は消せないよ')
+      fx_toast('最後の1枚は消せません')
       return err_noop
     }
     hist_frame_del(g, hist_grp(), i, removed, mark_a, mark_b)
@@ -195,7 +218,7 @@ export const frame_commands = {
 
   'frame.paste': (g: globals_t, _p: null): number => {
     if (!frame_clip) {
-      fx_toast('コピーしたコマがないよ')
+      fx_toast('コピーしたコマがありません')
       return err_noop
     }
     if (frame_clip.w !== g.doc.w || frame_clip.h !== g.doc.h || frame_clip.mode !== g.doc.mode) {
@@ -260,18 +283,21 @@ export const frame_commands = {
     return 0
   },
 
-  'frame.set_hold_range': (g: globals_t, p: { a: number, b: number, hold: number }): number => {
+  'frame.set_hold_range': (g: globals_t, p: { a: number, b: number, hold: number, merge?: number }): number => {
     if (!Number.isFinite(p.a) || !Number.isFinite(p.b) || !Number.isFinite(p.hold)) return err_bad
     const [a, b] = range_bounds(g, p.a, p.b)
     const hold = clamp(Math.round(p.hold), 1, hold_max)
+    const before = hist_note_take(g)
     let changed = 0
     for (let i = a; i <= b; i++) {
       if (g.doc.frames[i].hold === hold) continue
-      g.doc.frames[i].hold = hold
+      g.doc.frames[i] = { ...g.doc.frames[i], hold }
       changed = 1
     }
-    if (changed && g.play.on) play_commands['play.retime'](g, null)
-    return changed ? 0 : err_noop
+    if (!changed) return err_noop
+    hist_note_push(g, before, p.merge && a === b ? hist_merge_hold : 0, g.doc.frames[a].id)
+    if (g.play.on) play_commands['play.retime'](g, null)
+    return 0
   },
 
   'frame.insert_bulk': (g: globals_t, p: { at: number, frames: frame_t[], set_cur: number }): number => {
@@ -280,13 +306,13 @@ export const frame_commands = {
     const room = frame_room(g)
     if (room < 1) return err_full
     stop_if_playing(g)
-    doc_pack_live(g)
+    const before = hist_note_take(g)
     const at = clamp(Math.round(p.at), 0, g.doc.frames.length)
     const frames = p.frames.slice(0, room)
     g.doc.frames.splice(at, 0, ...frames)
     doc_loop_insert(g, at, frames.length)
     g.doc.cur = clamp(Math.trunc(p.set_cur), 0, g.doc.frames.length - 1)
-    hist_clear()
+    hist_note_push(g, before)
     thumb_clear()
     animfx_cache_clear()
     doc_unpack_live(g)
@@ -299,10 +325,10 @@ export const frame_commands = {
     const room = frame_room(g)
     if (room < 1) return err_full
     stop_if_playing(g)
-    doc_pack_live(g)
+    const before = hist_note_take(g)
     g.doc.frames.push(...p.frames.slice(0, room))
     g.doc.cur = clamp(Math.trunc(p.set_cur), 0, g.doc.frames.length - 1)
-    hist_clear()
+    hist_note_push(g, before)
     thumb_clear()
     animfx_cache_clear()
     doc_unpack_live(g)
@@ -314,7 +340,7 @@ export const frame_commands = {
     if (g.doc.frames.length - 1 + p.frames.length > frame_limit(g)) return err_full
     for (const frame of p.frames) if (!frame || !Array.isArray(frame.pk) || frame.pk.length !== l_n) return err_bad
     stop_if_playing(g)
-    doc_pack_live(g)
+    const before = hist_note_take(g)
     const at = g.doc.cur
     const delta = p.frames.length - 1
     g.doc.frames.splice(at, 1, ...p.frames)
@@ -322,7 +348,7 @@ export const frame_commands = {
     g.doc.loop_a = move_marker(g.doc.loop_a)
     g.doc.loop_b = move_marker(g.doc.loop_b)
     g.doc.cur = at
-    hist_clear()
+    hist_note_push(g, before)
     thumb_clear()
     doc_cache_clear()
     animfx_cache_clear()
@@ -373,14 +399,14 @@ export const frame_commands = {
     const [a, b] = range_bounds(g, p.a, p.b)
     if (b - a + 1 >= g.doc.frames.length) return err_bad
     stop_if_playing(g)
-    doc_pack_live(g)
+    const before = hist_note_take(g)
     const current = g.doc.frames[g.doc.cur]
     const count = b - a + 1
     g.doc.frames.splice(a, count)
     doc_loop_delete(g, a, count)
     const keep = g.doc.frames.indexOf(current)
     g.doc.cur = keep >= 0 ? keep : Math.min(a, g.doc.frames.length - 1)
-    hist_clear()
+    hist_note_push(g, before)
     thumb_clear()
     animfx_cache_clear()
     doc_unpack_live(g)
@@ -433,7 +459,7 @@ export const frame_commands = {
     }
     hist_frame_cursor(g, grp, before_id, g.doc.frames[g.doc.cur].id)
     doc_unpack_live(g)
-    if (take < src.length) fx_toast('上限で一部だけ足したよ')
+    if (take < src.length) fx_toast('上限に届いたので、一部だけ足しました')
     return 0
   },
 
@@ -452,14 +478,18 @@ export const frame_commands = {
 
   'history.undo': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
-    if (!hist_undo(g)) return err_noop
+    const done = hist_undo(g)
+    if (!done) return err_noop
+    if (done === 2) note_caches_clear()
     fx_sfx('undo')
     return 0
   },
 
   'history.redo': (g: globals_t, _p: null): number => {
     stop_if_playing(g)
-    if (!hist_redo(g)) return err_noop
+    const done = hist_redo(g)
+    if (!done) return err_noop
+    if (done === 2) note_caches_clear()
     fx_sfx('redo')
     return 0
   },
@@ -474,6 +504,7 @@ export const frame_commands = {
     const o = doc_frame_order(g.doc.cur)
     if (!Number.isInteger(p.i) || !Number.isInteger(p.j) || p.i < 0 || p.j < 0 || p.i >= o.length || p.j >= o.length) return err_bad
     if (p.i === p.j) return err_noop
+    const before = hist_note_take(g)
     const previous_native = o.filter(layer => layer >= 1 && layer <= 3)
     const t = o[p.i]
     o[p.i] = o[p.j]
@@ -484,11 +515,14 @@ export const frame_commands = {
     if (native_changed && (g.doc.mode === mode_3_d || g.doc.mode === mode_normal && g.doc.frames.some(frame => frame.kwz))) {
       const depth = [0, 0, 0]
       for (let i = 0; i < native.length; i++) depth[native[i] - 1] = i
-      for (const frame of g.doc.frames) {
+      for (let i = 0; i < g.doc.frames.length; i++) {
+        const frame = g.doc.frames[i]
         if (g.doc.mode !== mode_3_d && !frame.kwz) continue
-        frame.kwz = frame.kwz ? { ...frame.kwz, depth: [...depth] } : { depth: [...depth], colors: [1, 2, 1, 3, 1, 4], author: /^[0-9a-f]{20}$/i.test(g.doc.meta.cur_id) ? g.doc.meta.cur_id : '00000000000000000000', camera: 0, reserved: 0 }
+        const kwz = frame.kwz ? { ...frame.kwz, depth: [...depth] } : { depth: [...depth], colors: [1, 2, 1, 3, 1, 4], author: /^[0-9a-f]{20}$/i.test(g.doc.meta.cur_id) ? g.doc.meta.cur_id : '00000000000000000000', camera: 0, reserved: 0 }
+        g.doc.frames[i] = { ...frame, kwz }
       }
     }
+    hist_note_push(g, before)
     thumb_clear()
     return 0
   },
@@ -524,7 +558,7 @@ export const frame_commands = {
     const order = doc_frame_order(g.doc.cur)
     const k = order.indexOf(src)
     if (k < 0 || k >= order.length - 1) {
-      fx_toast('いちばん下のレイヤーは結合できないよ')
+      fx_toast('いちばん下のレイヤーは結合できません')
       return err_noop
     }
     const dst = order[k + 1]
@@ -566,7 +600,7 @@ export const frame_commands = {
   'layer.add': (g: globals_t, _p: null): number => {
     if (g.doc.mode !== mode_normal) return err_bad
     if (g.doc.lord.length >= l_draw_max) {
-      fx_toast('レイヤーは最大' + l_draw_max + '枚だよ')
+      fx_toast('レイヤーは最大' + l_draw_max + '枚までです')
       return err_full
     }
     stop_if_playing(g)
@@ -578,14 +612,14 @@ export const frame_commands = {
       }
     }
     if (!layer) return err_full
-    for (const frame of g.doc.frames) frame.pk[layer] = null
-    live_drop(layer)
-    live_accept(layer, null)
+    const before = hist_note_take(g)
+    layer_empty(g, layer)
     g.doc.lvis[layer] = 1
     g.doc.lalpha[layer] = 255
     g.doc.lord.unshift(layer)
     g.pen.layer = layer
-    hist_clear()
+    hist_note_push(g, before)
+    doc_unpack_live(g)
     thumb_clear()
     doc_cache_clear()
     animfx_cache_clear()
@@ -600,14 +634,14 @@ export const frame_commands = {
     // さいごの1枚は消さない。
     if (index < 0 || g.doc.lord.length < 2) return err_bad
     stop_if_playing(g)
-    for (const frame of g.doc.frames) frame.pk[layer] = null
-    live_drop(layer)
-    live_accept(layer, null)
+    const before = hist_note_take(g)
+    layer_empty(g, layer)
     g.doc.lord.splice(index, 1)
     g.doc.lvis[layer] = 0
     g.doc.lalpha[layer] = 255
     if (g.pen.layer === layer) g.pen.layer = g.doc.lord[Math.min(index, g.doc.lord.length - 1)] || 1
-    hist_clear()
+    hist_note_push(g, before)
+    doc_unpack_live(g)
     thumb_clear()
     doc_cache_clear()
     animfx_cache_clear()

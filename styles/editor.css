@@ -36,12 +36,11 @@
   height: 50px;
   min-height: 44px;
   padding: 5px 12px;
-  border: 3px solid var(--bg2);
-  outline: 1px solid var(--line);
+  border: 1px solid var(--line2);
   border-radius: 14px;
-  background: var(--acc_soft);
+  background: var(--btn);
   color: var(--acc_d);
-  box-shadow: 0 2px 0 var(--line);
+  box-shadow: 0 2px 0 var(--line2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,16 +153,20 @@ body[data-theme="dark"] #stage {
   pointer-events: none;
 }
 
+/* 倍率は、拡大・縮小したときだけ紙のまん中に出す (下のボタンに重なっていた)。 */
 #zoom_label {
   position: absolute;
-  bottom: 9px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
+  transform: translate(-50%, -50%);
+  padding: 6px 14px;
   border-radius: 20px;
+  border: 1px solid var(--line2);
   background: var(--bg2);
-  font-size: 11px;
-  color: var(--dim);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--acc_d);
   opacity: 0;
   pointer-events: none;
   z-index: 5;
@@ -221,15 +224,17 @@ body[data-theme="dark"] #stage {
   color: var(--acc);
 }
 
+/* えらんでいる道具と、画面を開いているボタン (色・道具箱など) は、道具箱と同じく薄いオレンジで塗ってオレンジのふちを付ける。 */
 .dkb.on,
 .dkb[aria-expanded="true"] {
-  background: var(--bg2);
-  outline: 2px solid var(--acc);
+  background: var(--acc_soft);
+  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc), 0 2px 0 var(--acc_line);
   color: var(--acc_d);
 }
 
 .dkb.on .ic {
-  color: var(--acc_d);
+  color: var(--acc);
 }
 
 .dkb i.long {
@@ -294,7 +299,7 @@ body[data-theme="dark"] #stage {
   background: var(--acc_soft);
   color: var(--acc_d);
   border-color: var(--acc);
-  box-shadow: inset 0 0 0 1px var(--acc), 0 2px 0 var(--line);
+  box-shadow: inset 0 0 0 1px var(--acc), 0 2px 0 var(--acc_line);
 }
 
 .live_layer .ic {
@@ -359,8 +364,14 @@ body[data-theme="dark"] #stage {
 
 .tl_transport #play_btn {
   display: flex;
-  background: var(--acc_soft);
-  color: var(--acc);
+  background: var(--acc);
+  border-color: var(--acc);
+  box-shadow: 0 2px 0 var(--acc_d);
+  color: rgb(255, 255, 255);
+}
+
+.tl_transport #play_btn .ic {
+  color: rgb(255, 255, 255);
 }
 
 .tl_transport .tb .ic {
@@ -723,7 +734,6 @@ body[data-drawing-layout="full"] .dkb {
   position: relative;
   min-height: 48px;
   font-size: 10px;
-  border-width: 2px;
   padding: 2px;
   gap: 2px;
 }
@@ -744,9 +754,9 @@ body.canvas_writing #flo_bar {
   position: relative;
   height: 100dvh;
   overflow: hidden;
-  --desk_grid: linear-gradient(rgba(115, 135, 165, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(115, 135, 165, 0.3) 1px, transparent 1px);
+  --desk_grid: linear-gradient(rgba(120, 130, 150, 0.17) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 130, 150, 0.17) 1px, transparent 1px);
   background-size: 30px 30px;
-  background-color: #fff;
+  background-color: var(--bg);
   background-image: var(--desk_grid);
 }
 
@@ -805,12 +815,11 @@ body[data-free="1"] #stage_pan {
   justify-content: center;
   font-size: 24px;
   font-weight: 700;
-  background: var(--bg4);
+  background: var(--btn);
   color: var(--acc);
-  border: 3px solid var(--bg2);
-  outline: 1px solid var(--line);
-  border-radius: 9px;
-  box-shadow: 0 2px 0 var(--line);
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  box-shadow: 0 2px 0 var(--line2);
   box-sizing: border-box;
   text-shadow: none;
 }
@@ -826,21 +835,18 @@ body[data-free="1"] #stage_pan {
   justify-content: center;
   gap: 3px;
   padding: 4px 2px;
-  border: 3px solid var(--bg2);
-  outline: 1px solid var(--line);
+  border: 1px solid var(--line2);
   border-radius: 14px;
-  background: var(--acc_soft);
+  background: var(--btn);
   color: var(--acc_d);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 2px 0 var(--line);
-  border-width: 3px;
+  box-shadow: 0 2px 0 var(--line2);
   box-sizing: border-box;
 }
 
 #tl_bar .tb {
-  border-width: 3px;
   box-sizing: border-box;
 }
 
@@ -865,7 +871,6 @@ body[data-drawing-layout="full"] #dock_grid {
 
 body[data-drawing-layout="full"][data-pop=""] #mobile_tools .dkb {
   position: relative;
-  border-width: 3px;
   touch-action: pan-y;
 }
 
@@ -919,10 +924,14 @@ body[data-drawing-layout="full"][data-pop=""] #mobile_tools .dkb {
 #hd .hbtn::before {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 1px;
   z-index: -1;
-  background: var(--acc_soft);
+  background: var(--btn);
   clip-path: inherit;
+}
+
+#hd .hbtn .ic {
+  color: var(--acc);
 }
 
 #hd #undo_btn {
@@ -1664,6 +1673,43 @@ body[data-desktop="1"][data-recordsync="1"] #paper_fit {
     width: 20px;
     height: 20px;
   }
+
+  /* コマ一覧と下のバーも少し低くして、紙・右メニュー・道具の設定に高さをゆずる (上下でかさならないように)。 */
+  body[data-desktop="1"] #frame_panel {
+    min-height: 46px;
+    padding: 3px 12px;
+  }
+
+  body[data-desktop="1"] #frame_operations .tb {
+    height: 38px;
+    min-height: 38px;
+  }
+
+  body[data-desktop="1"] #tl_close {
+    width: 38px;
+    height: 38px;
+  }
+
+  body[data-desktop="1"] #fs {
+    height: 76px;
+    --fcw: 92px;
+  }
+
+  body[data-desktop="1"] .fcell,
+  body[data-desktop="1"] #fs_track {
+    height: 52px;
+  }
+
+  body[data-desktop="1"] #fs_ghost {
+    width: 92px;
+    height: 52px;
+  }
+
+  body[data-desktop="1"] #tl_bar {
+    height: 62px;
+    min-height: 62px;
+    padding: 6px 12px;
+  }
 }
 
 #layout_choices {
@@ -1782,7 +1828,29 @@ body[data-wide-tools="1"][data-layout="studio"] #quick_sizes button {
   font-size: 10px;
 }
 
+/* スタジオは、描くところを上のボタン・左のレイヤー・右メニュー・コマ一覧のあいだの枠に区切る。
+   拡大しても、コマ一覧を開いても、紙はこの枠の中だけに出て、どのボタンの下にも入らない。 */
+body[data-layout="studio"]:not([data-free="1"]):not([data-recordsync="1"]) #stage_wrap {
+  inset: 64px calc(var(--wide_dock_width) + 18px) calc(var(--tl_space) + 8px) 72px;
+  border-radius: 18px;
+}
+
+body[data-layout="studio"]:not([data-free="1"]):not([data-recordsync="1"]) #stage_wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border: 1px solid var(--line2);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+body[data-layout="studio"]:not([data-free="1"]):not([data-recordsync="1"]) #paper_fit {
+  inset: 0;
+}
+
 /* 右メニューがコマ一覧の上に入りきらないときは、ボタンを低くする (1)。それでも入らなければ見出しを省き、ふとさのボタンも低くする (2)。
+   低い画面のスタジオなどで、まだ入らなければ、道具とふとさのボタンをもう一段低くする (3)。
    スクロールで下のボタンが切れて見えなくならないように (workspace_layout.ts の dock_fit)。 */
 body[data-wide-tools="1"][data-dock-fit="1"] #mobile_tools .dkb,
 body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dkb {
@@ -1791,17 +1859,39 @@ body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dkb {
   padding: 2px;
 }
 
+body[data-wide-tools="1"][data-dock-fit="3"] #mobile_tools .dkb {
+  min-height: 36px;
+  gap: 0;
+  padding: 1px 2px;
+}
+
+body[data-wide-tools="1"][data-dock-fit="3"] #mobile_tools .dkb .ic {
+  width: 18px;
+  height: 18px;
+}
+
 body[data-wide-tools="1"][data-dock-fit="1"] #dock_row,
-body[data-wide-tools="1"][data-dock-fit="2"] #dock_row {
+body[data-wide-tools="1"][data-dock-fit="2"] #dock_row,
+body[data-wide-tools="1"][data-dock-fit="3"] #dock_row {
   gap: 5px;
 }
 
-body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dock_heading {
+body[data-wide-tools="1"][data-dock-fit="2"] #mobile_tools .dock_heading,
+body[data-wide-tools="1"][data-dock-fit="3"] #mobile_tools .dock_heading {
   display: none;
 }
 
 body[data-wide-tools="1"][data-dock-fit="2"] #quick_sizes button {
   min-height: 32px;
+}
+
+body[data-wide-tools="1"][data-dock-fit="3"] #quick_sizes button {
+  min-height: 28px;
+}
+
+body[data-wide-tools="1"][data-dock-fit="3"] #studio_quick {
+  gap: 6px;
+  padding: 8px 6px;
 }
 
 body[data-recordsync="1"] #layout_choices,

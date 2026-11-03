@@ -1090,3 +1090,251 @@
     flex: 1 1 0%;
   }
 }
+
+/* メニューのページは、どれも「見出し + 白い角丸のまとまり + アイコン付きの行」の形にそろえる。
+   行はまとまりの中で線で区切り、まとまりごとに見出しを付ける。 */
+#drawer_body .menu_page > * + * {
+  margin-top: 8px;
+}
+
+#drawer_body .page_rule {
+  margin: 22px 6px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--acc_d);
+}
+
+#drawer_body .page_rule:first-child {
+  margin-top: 2px;
+}
+
+#drawer_body .page_rule::after {
+  display: none;
+}
+
+#drawer_body .page_rule output {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+#drawer_body .menu_actions,
+#drawer_body .menu_page > .opt,
+#drawer_body .volume_controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+#drawer_body .menu_page > .opt {
+  padding: 6px 14px;
+}
+
+#drawer_body .menu_page > .opt + .opt {
+  border-top: 1px solid var(--line2);
+}
+
+#drawer_body .menu_action {
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#drawer_body .menu_action + .menu_action {
+  border-top: 1px solid var(--line);
+}
+
+#drawer_body .menu_action::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-top: 2px solid var(--line2);
+  border-right: 2px solid var(--line2);
+  transform: rotate(45deg);
+}
+
+/* いちばん使うもの (この作品を保存・音を鳴らすコマ) は、アイコンだけオレンジで塗る。 */
+#drawer_body .menu_action.featured {
+  background: none;
+  color: var(--tx);
+}
+
+#drawer_body .menu_action.featured .action_glyph {
+  background: var(--acc);
+  color: rgb(255, 255, 255);
+}
+
+#drawer_body .menu_action.featured .ic {
+  color: rgb(255, 255, 255);
+}
+
+#drawer_body .menu_action.featured small {
+  color: var(--dim);
+}
+
+#drawer_body .note_name_input {
+  width: 100%;
+  min-height: 44px;
+  margin: 6px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#drawer_body .volume_controls {
+  padding: 8px 14px;
+}
+
+#drawer_body .sound_slot {
+  box-shadow: var(--shadow);
+  border-radius: 16px;
+}
+
+/* ホームの下の一覧も、同じ形のまとまりにする。 */
+.menu_home_foot {
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.menu_home_foot > button {
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.menu_home_foot > button + button {
+  border-top: 1px solid var(--line);
+}
+
+/* 音: 曲と効果音は、それぞれ1つのまとまりにし、1つの音を1行 (名前とボタン) にする。
+   効果音の「見本の音」と「鳴らすコマを選ぶ」は、その下に1行でならべる。 */
+#drawer_body .sound_tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+#drawer_body .sound_slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
+#drawer_body .sound_slot + .sound_slot {
+  border-top: 1px solid var(--line);
+}
+
+#drawer_body .sound_slot_head {
+  flex: 1 1 100px;
+  margin: 0;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+#drawer_body .sound_slot_head > b {
+  flex: 0 0 auto;
+}
+
+#drawer_body .sound_slot_head .sndname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+#drawer_body .sound_buttons {
+  gap: 4px;
+}
+
+#drawer_body .sound_buttons .sbtn {
+  flex: 0 0 auto;
+  width: 48px;
+  min-height: 46px;
+  gap: 2px;
+  border-color: var(--line2);
+  border-radius: 12px;
+  box-shadow: 0 2px 0 var(--line2);
+  color: var(--acc_d);
+}
+
+#drawer_body .sound_slot > .opt_row,
+#drawer_body .sound_slot > .link_row {
+  margin: 0;
+}
+
+#drawer_body .sound_slot > .opt_row {
+  min-height: 40px;
+}
+
+#drawer_body .sound_slot > .opt_row select {
+  flex: 1 1 auto;
+  min-height: 40px;
+}
+
+#drawer_body .sound_slot > .link_row {
+  min-height: 40px;
+}
+
+
+#drawer_body .sound_buttons .sbtn {
+  white-space: nowrap;
+  letter-spacing: -0.04em;
+}
+
+/* 効果音の「見本の音」と「鳴らすコマ」は、1行にならべる。 */
+#drawer_body .sound_slot > .opt_row {
+  flex: 1 1 160px;
+  min-width: 0;
+  gap: 6px;
+}
+
+#drawer_body .sound_slot > .opt_row .plab {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+#drawer_body .sound_slot > .link_row {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 1行に入る幅では、曲と効果音のボタンが同じ所にならぶよう、名前の幅をそろえる。 */
+@media (min-width: 700px) {
+  #drawer_body .sound_slot {
+    display: grid;
+    grid-template-columns: 150px auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+}

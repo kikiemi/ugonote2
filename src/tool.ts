@@ -875,7 +875,7 @@ function fill_all_same(bx: number, by: number): void {
     frame: g.doc.cur,
     changes: [{ layer: l, x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, before }],
   })
-  toast('同じ色をぜんぶ塗りかえたよ')
+  toast('同じ色をぜんぶ塗りかえました')
   sfx_play('tap')
 }
 
@@ -900,7 +900,7 @@ function native_bucket(bx: number, by: number): void {
     box_union(s.x0, s.y0, s.x1, s.y1)
     nd_put(s.x0, s.y0, s.x1 - s.x0 + 1, s.y1 - s.y0 + 1)
     nd_commit(hist_grp())
-    if (g.pen.fill_all) toast('同じ色をぜんぶ塗りかえたよ')
+    if (g.pen.fill_all) toast('同じ色をぜんぶ塗りかえました')
     sfx_play('tap')
   }
   nd_layers = []

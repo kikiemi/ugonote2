@@ -35,7 +35,7 @@ export function marks_load(): void {
 }
 
 function marks_save(): void {
-  if (!storage_write_json(ls_key, st().marks)) toast('マークの保存に失敗（容量オーバーかも）')
+  if (!storage_write_json(ls_key, st().marks)) toast('マークを保存できませんでした（容量がいっぱいかもしれません）')
 }
 
 function gen_id(): string {

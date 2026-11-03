@@ -31,7 +31,7 @@ export function font_import(file: File, cb: (ok: number) => void): void {
     })
     .catch(error => {
       report_warning('フォントの読み込みに失敗しました', error)
-      toast('フォントを読み込めなかった…（ttf/otf/woff/woff2）')
+      toast('フォントを読み込めませんでした（ttf/otf/woff/woff2）')
       cb(0)
     })
 }

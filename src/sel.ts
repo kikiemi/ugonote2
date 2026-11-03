@@ -464,7 +464,7 @@ export function sel_register_paint(g: globals_t): number {
     filled += bit
   }
   if (!filled) {
-    toast('選択したレイヤーに絵を描いてから登録してね')
+    toast('選択したレイヤーに絵を描いてから登録してください')
     return err_noop
   }
   const tile = { w: c.width, h: c.height, b, ...(normal ? { rgba: Array.from(img.data) } : {}) }
